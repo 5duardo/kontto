@@ -26,9 +26,10 @@ export interface Category {
 
 export interface Budget {
   id: string;
-  categoryId: string;
+  categoryIds: string[]; // Array de categorías para permitir múltiples categorías en un presupuesto
   amount: number;
-  period: 'weekly' | 'monthly' | 'yearly';
+  currency: string; // Moneda del presupuesto
+  period: 'daily' | 'weekly' | 'monthly' | 'yearly';
   startDate: string;
   endDate: string;
   spent: number;

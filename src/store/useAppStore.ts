@@ -83,6 +83,7 @@ const defaultCategories: Omit<Category, 'id' | 'createdAt'>[] = [
   { name: 'Educación', icon: 'school', color: '#3B82F6', type: 'expense', isDefault: true },
   { name: 'Compras', icon: 'cart', color: '#06B6D4', type: 'expense', isDefault: true },
   { name: 'Servicios', icon: 'flash', color: '#6B7280', type: 'expense', isDefault: true },
+  { name: 'Otros Gastos', icon: 'close-circle', color: '#94A3B8', type: 'expense', isDefault: true },
 ];
 
 export const useAppStore = create<AppState>()(
@@ -129,7 +130,7 @@ export const useAppStore = create<AppState>()(
         }
 
         // Update budget spent if applicable
-        const budget = get().budgets.find(b => b.categoryId === transaction.categoryId);
+        const budget = get().budgets.find(b => b.categoryIds.includes(transaction.categoryId));
         if (budget && transaction.type === 'expense') {
           get().updateBudget(budget.id, {
             spent: budget.spent + transaction.amount,
@@ -213,7 +214,7 @@ export const useAppStore = create<AppState>()(
         }
         
         // Reverse budget spent if applicable
-        const budget = get().budgets.find(b => b.categoryId === transaction?.categoryId);
+        const budget = transaction?.categoryId ? get().budgets.find(b => b.categoryIds.includes(transaction.categoryId)) : undefined;
         if (budget && transaction?.type === 'expense') {
           get().updateBudget(budget.id, {
             spent: Math.max(0, budget.spent - transaction.amount),

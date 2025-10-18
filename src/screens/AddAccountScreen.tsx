@@ -8,6 +8,7 @@ import {
   TextInput,
   Switch,
   Alert,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, typography, useTheme } from '../theme';
@@ -36,9 +37,54 @@ const ACCOUNT_ICONS = [
 ];
 
 const CURRENCIES = [
-  { code: 'HNL', name: 'Lempira hondureño', symbol: 'L' },
-  { code: 'USD', name: 'Dólar estadounidense', symbol: '$' },
+  // América
+  { code: 'USD', name: 'Dólar Americano', symbol: '$' },
+  { code: 'CAD', name: 'Dólar Canadiense', symbol: 'C$' },
+  { code: 'MXN', name: 'Peso Mexicano', symbol: '$' },
+  { code: 'BRL', name: 'Real Brasileño', symbol: 'R$' },
+  { code: 'ARS', name: 'Peso Argentino', symbol: '$' },
+  { code: 'CLP', name: 'Peso Chileno', symbol: '$' },
+  { code: 'COP', name: 'Peso Colombiano', symbol: '$' },
+  { code: 'PEN', name: 'Sol Peruano', symbol: 'S/' },
+  { code: 'HNL', name: 'Lempira Hondureño', symbol: 'L' },
+  { code: 'GTQ', name: 'Quetzal Guatemalteco', symbol: 'Q' },
+  { code: 'CRC', name: 'Colón Costarricense', symbol: '₡' },
+  { code: 'PAB', name: 'Balboa Panameño', symbol: 'B/.' },
+  { code: 'NIO', name: 'Córdoba Nicaragüense', symbol: 'C$' },
+  { code: 'DOP', name: 'Peso Dominicano', symbol: 'RD$' },
+  { code: 'UYU', name: 'Peso Uruguayo', symbol: '$U' },
+  { code: 'BOB', name: 'Boliviano', symbol: 'Bs.' },
+  { code: 'PYG', name: 'Guaraní Paraguayo', symbol: '₲' },
+  { code: 'VES', name: 'Bolívar Venezolano', symbol: 'Bs.' },
+  
+  // Europa
   { code: 'EUR', name: 'Euro', symbol: '€' },
+  { code: 'GBP', name: 'Libra Esterlina', symbol: '£' },
+  { code: 'CHF', name: 'Franco Suizo', symbol: 'CHF' },
+  { code: 'SEK', name: 'Corona Sueca', symbol: 'kr' },
+  { code: 'NOK', name: 'Corona Noruega', symbol: 'kr' },
+  { code: 'DKK', name: 'Corona Danesa', symbol: 'kr' },
+  { code: 'PLN', name: 'Zloty Polaco', symbol: 'zł' },
+  { code: 'CZK', name: 'Corona Checa', symbol: 'Kč' },
+  { code: 'HUF', name: 'Forinto Húngaro', symbol: 'Ft' },
+  { code: 'RON', name: 'Leu Rumano', symbol: 'lei' },
+  { code: 'RUB', name: 'Rublo Ruso', symbol: '₽' },
+  { code: 'TRY', name: 'Lira Turca', symbol: '₺' },
+  { code: 'UAH', name: 'Grivna Ucraniana', symbol: '₴' },
+  
+  // Asia
+  { code: 'CNY', name: 'Yuan Chino', symbol: '¥' },
+  { code: 'JPY', name: 'Yen Japonés', symbol: '¥' },
+  { code: 'KRW', name: 'Won Surcoreano', symbol: '₩' },
+  { code: 'INR', name: 'Rupia India', symbol: '₹' },
+  { code: 'IDR', name: 'Rupia Indonesia', symbol: 'Rp' },
+  { code: 'THB', name: 'Baht Tailandés', symbol: '฿' },
+  { code: 'MYR', name: 'Ringgit Malayo', symbol: 'RM' },
+  { code: 'SGD', name: 'Dólar de Singapur', symbol: 'S$' },
+  { code: 'HKD', name: 'Dólar de Hong Kong', symbol: 'HK$' },
+  { code: 'AUD', name: 'Dólar Australiano', symbol: 'A$' },
+  { code: 'NZD', name: 'Dólar Neozelandés', symbol: 'NZ$' },
+  { code: 'ZAR', name: 'Rand Sudafricano', symbol: 'R' },
 ];
 
 const ICON_COLORS = [
@@ -61,7 +107,7 @@ const ICON_COLORS = [
 ];
 
 export const AddAccountScreen = ({ navigation, route }: any) => {
-  const addAccount = useAppStore((state) => state.addAccount);
+  const { addAccount, addTransaction, categories, addCategory } = useAppStore();
   const { colors } = useTheme();
   const params = route?.params || {};
   
@@ -74,6 +120,7 @@ export const AddAccountScreen = ({ navigation, route }: any) => {
   const [balance, setBalance] = useState('0');
   const [creditLimit, setCreditLimit] = useState('0');
   const [includeInTotal, setIncludeInTotal] = useState(true);
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -85,6 +132,9 @@ export const AddAccountScreen = ({ navigation, route }: any) => {
 
     const numBalance = parseFloat(balance) || 0;
     const numCreditLimit = accountType === 'credit' ? parseFloat(creditLimit) || 0 : undefined;
+
+    // Usar generateId del store o crear uno manualmente
+    const accountId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     addAccount({
       title: title.trim(),
@@ -98,6 +148,44 @@ export const AddAccountScreen = ({ navigation, route }: any) => {
       includeInTotal,
       isArchived: false,
     });
+
+    // Si hay balance inicial mayor a 0, crear transacción de ingreso (sin accountId para no duplicar)
+    if (numBalance > 0) {
+      let otrosIngresosCategory = categories.find((c: any) => c.name === 'Otros Ingresos' && c.type === 'income');
+      
+      // Si la categoría no existe, crearla
+      if (!otrosIngresosCategory) {
+        addCategory({
+          name: 'Otros Ingresos',
+          icon: 'cash',
+          color: '#06B6D4',
+          type: 'income',
+          isDefault: true,
+        });
+        // Esperar un poco para que se actualice el estado y buscar nuevamente
+        setTimeout(() => {
+          const updatedStore = useAppStore.getState();
+          otrosIngresosCategory = updatedStore.categories.find((c: any) => c.name === 'Otros Ingresos' && c.type === 'income');
+          if (otrosIngresosCategory) {
+            addTransaction({
+              type: 'income',
+              amount: numBalance,
+              categoryId: otrosIngresosCategory.id,
+              description: `Saldo inicial de ${title.trim()}`,
+              date: new Date().toISOString(),
+            });
+          }
+        }, 100);
+      } else if (otrosIngresosCategory) {
+        addTransaction({
+          type: 'income',
+          amount: numBalance,
+          categoryId: otrosIngresosCategory.id,
+          description: `Saldo inicial de ${title.trim()}`,
+          date: new Date().toISOString(),
+        });
+      }
+    }
 
     Alert.alert('Éxito', 'Cuenta creada correctamente', [
       { text: 'OK', onPress: () => navigation.goBack() },
@@ -117,6 +205,22 @@ export const AddAccountScreen = ({ navigation, route }: any) => {
             placeholder="Escriba el título"
             placeholderTextColor={colors.textSecondary}
           />
+        </View>
+
+        {/* Saldo actual */}
+        <View style={styles.section}>
+          <Text style={styles.label}>Saldo actual</Text>
+          <View style={styles.amountContainer}>
+            <TextInput
+              style={styles.amountInput}
+              value={balance}
+              onChangeText={setBalance}
+              keyboardType="numeric"
+              placeholder="0"
+              placeholderTextColor={colors.textSecondary}
+            />
+            <Text style={styles.currencyLabel}>{currency}</Text>
+          </View>
         </View>
 
         {/* Icono */}
@@ -215,35 +319,63 @@ export const AddAccountScreen = ({ navigation, route }: any) => {
         {/* Moneda */}
         <View style={styles.section}>
           <Text style={styles.label}>Moneda de la cuenta</Text>
-          {CURRENCIES.map((curr) => (
-            <TouchableOpacity
-              key={curr.code}
-              style={styles.currencyOption}
-              onPress={() => setCurrency(curr.code)}
-            >
-              <Text style={styles.currencyText}>{curr.name}</Text>
-              {currency === curr.code && (
-                <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
-              )}
-            </TouchableOpacity>
-          ))}
+          <TouchableOpacity 
+            style={styles.currencyButton}
+            onPress={() => setShowCurrencyModal(true)}
+          >
+            <Text style={styles.currencyButtonText}>
+              {CURRENCIES.find(c => c.code === currency)?.name} ({CURRENCIES.find(c => c.code === currency)?.symbol})
+            </Text>
+            <Ionicons name="chevron-down" size={24} color={colors.primary} />
+          </TouchableOpacity>
         </View>
 
-        {/* Saldo actual */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Saldo actual</Text>
-          <View style={styles.amountContainer}>
-            <TextInput
-              style={styles.amountInput}
-              value={balance}
-              onChangeText={setBalance}
-              keyboardType="numeric"
-              placeholder="0"
-              placeholderTextColor={colors.textSecondary}
-            />
-            <Text style={styles.currencyLabel}>{currency}</Text>
+        {/* Modal de selección de moneda */}
+        <Modal
+          visible={showCurrencyModal}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setShowCurrencyModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+              <View style={styles.modalHeader}>
+                <TouchableOpacity onPress={() => setShowCurrencyModal(false)}>
+                  <Ionicons name="close" size={28} color={colors.textPrimary} />
+                </TouchableOpacity>
+                <Text style={styles.modalTitle}>Seleccionar moneda</Text>
+                <View style={{ width: 28 }} />
+              </View>
+              
+              <ScrollView style={styles.currencyList}>
+                {CURRENCIES.map((curr) => (
+                  <TouchableOpacity
+                    key={curr.code}
+                    style={[
+                      styles.currencyListItem,
+                      currency === curr.code && styles.currencyListItemSelected,
+                    ]}
+                    onPress={() => {
+                      setCurrency(curr.code);
+                      setShowCurrencyModal(false);
+                    }}
+                  >
+                    <View style={styles.currencyListItemContent}>
+                      <Text style={styles.currencyCode}>{curr.code}</Text>
+                      <Text style={styles.currencyName}>{curr.name}</Text>
+                    </View>
+                    <View style={styles.currencyListItemRight}>
+                      <Text style={styles.currencySymbol}>{curr.symbol}</Text>
+                      {currency === curr.code && (
+                        <Ionicons name="checkmark" size={24} color={colors.primary} />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
           </View>
-        </View>
+        </Modal>
 
         {/* Límite de crédito (solo para cuentas de crédito) */}
         {accountType === 'credit' && (
@@ -411,6 +543,84 @@ const createStyles = (colors: any) => StyleSheet.create({
   currencyText: {
     fontSize: typography.sizes.base,
     color: colors.textPrimary,
+  },
+  currencyButton: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  currencyButtonText: {
+    fontSize: typography.sizes.base,
+    color: colors.textPrimary,
+    fontWeight: typography.weights.semibold,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    maxHeight: '90%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.semibold,
+    color: colors.textPrimary,
+  },
+  currencyList: {
+    paddingVertical: spacing.sm,
+  },
+  currencyListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  currencyListItemSelected: {
+    backgroundColor: `${colors.primary}10`,
+  },
+  currencyListItemContent: {
+    flex: 1,
+  },
+  currencyCode: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    color: colors.textPrimary,
+  },
+  currencyName: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  currencyListItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  currencySymbol: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold,
+    color: colors.primary,
   },
   amountContainer: {
     flexDirection: 'row',

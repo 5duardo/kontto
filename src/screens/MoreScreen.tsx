@@ -58,9 +58,9 @@ const MENU_SECTIONS: MenuSection[] = [
       {
         id: 'budgets',
         title: 'Presupuestos',
-        icon: 'document',
+        icon: 'wallet',
         color: '#06B6D4',
-        screen: 'More', // Placeholder
+        screen: 'Budgets',
       },
     ],
   },

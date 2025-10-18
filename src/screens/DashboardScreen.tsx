@@ -340,11 +340,15 @@ export const DashboardScreen = ({ navigation }: any) => {
                 {/* Total Metas Convertido */}
                 <View style={styles.totalRowHighlight}>
                   <Text style={styles.totalConvertedLabel}>Total</Text>
-                  <Text style={styles.totalConvertedAmount}>
-                    {formatCurrency(
-                      goals.reduce((sum, g) => sum + g.currentAmount, 0)
-                    )}
-                  </Text>
+                    <Text style={styles.totalConvertedAmount}>
+                      {!getDisplayInfo().isHidden ? (
+                        formatCurrency(
+                          goals.reduce((sum, g) => sum + g.currentAmount, 0)
+                        )
+                      ) : (
+                        '••••••'
+                      )}
+                    </Text>
                 </View>
               </View>
             </View>
@@ -463,14 +467,18 @@ export const DashboardScreen = ({ navigation }: any) => {
                       <View style={{ flex: 1 }}>
                         <Text style={styles.accountName}>{goal.name}</Text>
                         <Text style={styles.goalTarget}>
-                          Objetivo: {formatCurrency(goal.targetAmount, goal.currency)}
+                          Objetivo: {!getDisplayInfo().isHidden ? formatCurrency(goal.targetAmount, goal.currency) : '••••••'}
                         </Text>
                       </View>
                     </View>
                     <View style={styles.goalAmount}>
-                      <Text style={styles.goalCurrentAmount}>
-                        {formatCurrency(goal.currentAmount, goal.currency)}
-                      </Text>
+                      {!getDisplayInfo().isHidden ? (
+                        <Text style={styles.goalCurrentAmount}>
+                          {formatCurrency(goal.currentAmount, goal.currency)}
+                        </Text>
+                      ) : (
+                        <Text style={styles.goalCurrentAmount}>••••••</Text>
+                      )}
                       <Text style={styles.goalProgress}>{Math.round(progress)}%</Text>
                     </View>
                   </View>

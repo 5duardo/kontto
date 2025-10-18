@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,6 @@ import {
   Alert,
   Modal,
   TextInput,
-  FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, typography, useTheme } from '../theme';
@@ -17,7 +16,6 @@ import { useAppStore } from '../store/useAppStore';
 interface ScheduledPayment {
   id: string;
   title: string;
-  description: string;
   amount: number;
   frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
   nextDate: string;
@@ -26,596 +24,405 @@ interface ScheduledPayment {
   icon: string;
   color: string;
   currency: string;
-  accountId?: string;
+  accountId: string;
   reminder: string;
   autoRenewal: boolean;
-  hasEndDate: boolean;
 }
 
 const FREQUENCY_LABELS = {
-  daily: 'Diaria',
-  weekly: 'Semanal',
-  biweekly: 'Quincenal',
-  monthly: 'Mensual',
-  yearly: 'Anual',
+  daily: 'Día',
+  weekly: 'Semana',
+  biweekly: 'Quincena',
+  monthly: 'Mes',
+  yearly: 'Año',
 };
 
-const AVAILABLE_CURRENCIES = [
-  { code: 'HNL', name: 'Lempira Hondureño', symbol: 'L' },
-  { code: 'USD', name: 'Dólar Estadounidense', symbol: '$' },
-  { code: 'EUR', name: 'Euro', symbol: '€' },
+const CURRENCIES = [
+  { code: 'HNL', name: 'Lempira Hondureño' },
+  { code: 'USD', name: 'Dólar Estadounidense' },
+  { code: 'EUR', name: 'Euro' },
 ];
 
-const REMINDER_OPTIONS = [
+const REMINDERS = [
   { id: 'never', label: 'Nunca' },
   { id: '1day', label: '1 día antes' },
   { id: '3days', label: '3 días antes' },
   { id: '1week', label: '1 semana antes' },
 ];
 
-const AVAILABLE_ICONS = [
-  'cash',
-  'card',
-  'wallet',
-  'wifi',
-  'phone-portrait',
-  'water',
-  'flash',
-  'play-circle',
-  'barbell-outline',
-  'medkit',
-  'school',
-  'home',
-  'car',
-  'restaurant',
-  'airplane',
-  'heart',
-  'cart',
-  'briefcase',
-  'tv',
-  'fitness',
+const ICONS = [
+  'cash', 'card', 'wallet', 'wifi', 'phone-portrait',
+  'water', 'flash', 'play-circle', 'barbell-outline', 'medkit',
+  'school', 'home', 'car', 'restaurant', 'airplane',
+  'heart', 'cart', 'briefcase', 'tv', 'fitness',
 ];
 
-const AVAILABLE_COLORS = [
-  '#3B82F6', // Blue
-  '#06B6D4', // Cyan
-  '#10B981', // Green
-  '#8B5CF6', // Purple
-  '#EC4899', // Pink
-  '#EF4444', // Red
-  '#F59E0B', // Amber
-  '#6B7280', // Gray
-  '#14B8A6', // Teal
-  '#F97316', // Orange
+const COLORS = [
+  '#3B82F6', '#06B6D4', '#10B981', '#8B5CF6', '#EC4899',
+  '#EF4444', '#F59E0B', '#6B7280', '#14B8A6', '#F97316',
 ];
-
-const INITIAL_PAYMENTS: ScheduledPayment[] = [];
 
 export const ScheduledPaymentsScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
   const categories = useAppStore((state) => state.categories);
   const accounts = useAppStore((state) => state.accounts);
-  const preferredCurrency = useAppStore((state) => state.preferredCurrency);
   const initializeDefaultData = useAppStore((state) => state.initializeDefaultData);
   const isInitialized = useAppStore((state) => state.isInitialized);
 
-  // Inicializar datos del store si no están inicializados
-  React.useEffect(() => {
-    if (!isInitialized) {
-      initializeDefaultData();
-    }
-  }, [isInitialized, initializeDefaultData]);
+  const [payments, setPayments] = useState<ScheduledPayment[]>([]);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [showDateModal, setShowDateModal] = useState(false);
 
-  const [payments, setPayments] = React.useState(INITIAL_PAYMENTS);
-  const [modalVisible, setModalVisible] = React.useState(false);
-  const [datePickerVisible, setDatePickerVisible] = React.useState(false);
-  const [categoryPickerVisible, setCategoryPickerVisible] = React.useState(false);
-  const [currencyPickerVisible, setCurrencyPickerVisible] = React.useState(false);
-  const [accountPickerVisible, setAccountPickerVisible] = React.useState(false);
-  const [reminderPickerVisible, setReminderPickerVisible] = React.useState(false);
-
-  const defaultPaymentState = {
+  const [form, setForm] = useState({
     title: '',
-    description: '',
     amount: '',
-    frequency: 'monthly' as 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly',
+    frequency: 'monthly' as any,
+    nextDate: new Date().toISOString().split('T')[0],
+    categoryId: '',
     icon: 'calendar',
     color: '#3B82F6',
-    nextDate: new Date().toISOString().split('T')[0],
-    categoryId: categories.length > 0 ? categories[0].id : '',
-    currency: preferredCurrency || 'HNL',
-    accountId: accounts.length > 0 ? accounts[0].id : '',
+    currency: 'HNL',
+    accountId: '',
     reminder: 'never',
     autoRenewal: true,
-    hasEndDate: false,
-  };
+  });
 
-  const [newPayment, setNewPayment] = React.useState(defaultPaymentState);
-
-  const [tempDate, setTempDate] = React.useState({
+  const [dateForm, setDateForm] = useState({
     day: new Date().getDate(),
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
   });
 
-  const styles = React.useMemo(() => createStyles(colors), [colors]);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
-  // Actualizar categoryId y accountId cuando los datos del store cambian
-  React.useEffect(() => {
-    if (isInitialized && categories.length > 0 && !newPayment.categoryId) {
-      setNewPayment(prev => ({
-        ...prev,
-        categoryId: categories[0].id,
-      }));
+  useEffect(() => {
+    if (!isInitialized) {
+      initializeDefaultData();
     }
-  }, [isInitialized, categories]);
+  }, []);
 
-  React.useEffect(() => {
-    if (isInitialized && accounts.length > 0 && !newPayment.accountId) {
-      setNewPayment(prev => ({
-        ...prev,
-        accountId: accounts[0].id,
-      }));
+  useEffect(() => {
+    if (categories.length > 0 && !form.categoryId) {
+      setForm(prev => ({ ...prev, categoryId: categories[0].id }));
     }
-  }, [isInitialized, accounts]);
+  }, [categories]);
 
-  // Sincronizar tempDate cuando se abre el modal
-  React.useEffect(() => {
-    if (datePickerVisible) {
-      const date = new Date(newPayment.nextDate);
-      setTempDate({
-        day: date.getDate(),
-        month: date.getMonth() + 1,
-        year: date.getFullYear(),
-      });
-    }
-  }, [datePickerVisible]);
-
-  const handleTogglePayment = (id: string) => {
-    setPayments(prev =>
-      prev.map(p =>
-        p.id === id ? { ...p, isActive: !p.isActive } : p
-      )
-    );
-  };
-
-  const handleDeletePayment = (id: string) => {
-    Alert.alert(
-      'Eliminar pago programado',
-      '¿Estás seguro de que quieres eliminar este pago?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: () => {
-            setPayments(prev => prev.filter(p => p.id !== id));
-            Alert.alert('Éxito', 'Pago eliminado correctamente');
-          },
-        },
-      ]
-    );
-  };
-
-  const handleAddPayment = () => {
-    if (!newPayment.title || !newPayment.amount) {
-      Alert.alert('Error', 'Por favor completa los campos requeridos');
+  const handleAdd = () => {
+    if (!form.title.trim() || !form.amount) {
+      Alert.alert('Error', 'Completa los campos requeridos');
       return;
     }
 
-    const payment: ScheduledPayment = {
+    const newPayment: ScheduledPayment = {
       id: Date.now().toString(),
-      title: newPayment.title,
-      description: newPayment.description,
-      amount: parseFloat(newPayment.amount),
-      frequency: newPayment.frequency,
-      nextDate: newPayment.nextDate,
-      categoryId: newPayment.categoryId,
+      title: form.title.trim(),
+      amount: parseFloat(form.amount),
+      frequency: form.frequency,
+      nextDate: form.nextDate,
+      categoryId: form.categoryId,
+      icon: form.icon,
+      color: form.color,
+      currency: form.currency,
+      accountId: form.accountId,
+      reminder: form.reminder,
+      autoRenewal: form.autoRenewal,
       isActive: true,
-      icon: newPayment.icon,
-      color: newPayment.color,
-      currency: newPayment.currency,
-      accountId: newPayment.accountId,
-      reminder: newPayment.reminder,
-      autoRenewal: newPayment.autoRenewal,
-      hasEndDate: newPayment.hasEndDate,
     };
 
-    setPayments(prev => [payment, ...prev]);
-    setNewPayment({ 
-      title: '', 
-      description: '', 
-      amount: '', 
+    setPayments([newPayment, ...payments]);
+    setForm({
+      title: '',
+      amount: '',
       frequency: 'monthly',
+      nextDate: new Date().toISOString().split('T')[0],
+      categoryId: categories[0]?.id || '',
       icon: 'calendar',
       color: '#3B82F6',
-      nextDate: new Date().toISOString().split('T')[0],
-      categoryId: categories.length > 0 ? categories[0].id : '',
-      currency: preferredCurrency || 'HNL',
-      accountId: accounts.length > 0 ? accounts[0].id : '',
+      currency: 'HNL',
+      accountId: '',
       reminder: 'never',
       autoRenewal: true,
-      hasEndDate: false,
     });
-    setModalVisible(false);
-    Alert.alert('Éxito', 'Pago programado creado correctamente');
+    setShowAddModal(false);
+    Alert.alert('Éxito', 'Pago programado creado');
   };
 
-  const getFrequencyColor = (frequency: string) => {
-    const colors: Record<string, string> = {
-      daily: '#EF4444',
-      weekly: '#F59E0B',
-      biweekly: '#06B6D4',
-      monthly: '#3B82F6',
-      yearly: '#8B5CF6',
-    };
-    return colors[frequency] || '#6B7280';
+  const handleDelete = (id: string) => {
+    Alert.alert('Eliminar', '¿Eliminar este pago?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: () => setPayments(payments.filter(p => p.id !== id)),
+      },
+    ]);
   };
 
-  const renderPaymentItem = (payment: ScheduledPayment) => {
-    const daysUntil = Math.ceil((new Date(payment.nextDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-    let timeText = '';
-    
-    if (daysUntil === 1) {
-      timeText = 'mañana';
-    } else if (daysUntil <= 7) {
-      timeText = `en ${daysUntil} días`;
-    } else if (daysUntil <= 30) {
-      const weeks = Math.ceil(daysUntil / 7);
-      timeText = `en ${weeks} semana${weeks > 1 ? 's' : ''}`;
-    } else {
-      const months = Math.ceil(daysUntil / 30);
-      timeText = `en ${months} mes${months > 1 ? 'es' : ''}`;
-    }
-
-    return (
-      <TouchableOpacity
-        key={payment.id}
-        style={[styles.paymentCard, !payment.isActive && styles.inactivePayment]}
-        onLongPress={() => Alert.alert('Opciones', 'Toca el ícono de eliminar para borrar', [{ text: 'OK' }])}
-      >
-        <View style={styles.paymentLeft}>
-          <View style={[styles.paymentIcon, { backgroundColor: payment.color }]}>
-            <Ionicons name={payment.icon as any} size={24} color="#FFF" />
-          </View>
-          <View style={styles.paymentContent}>
-            <Text style={styles.paymentTitle}>{payment.title}</Text>
-            <Text style={styles.paymentTimeText}>{timeText}</Text>
-          </View>
-        </View>
-        <View style={styles.paymentRight}>
-          <Text style={styles.paymentAmount}>${payment.amount.toFixed(2)}</Text>
-          <Text style={styles.paymentFrequencyLabel}>{FREQUENCY_LABELS[payment.frequency]}</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={() => handleDeletePayment(payment.id)}
-        >
-          <Ionicons name="trash" size={18} color={colors.error} />
-        </TouchableOpacity>
-      </TouchableOpacity>
-    );
+  const getDaysUntil = (dateStr: string) => {
+    const days = Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    if (days === 1) return 'mañana';
+    if (days <= 7) return `en ${days} días`;
+    const weeks = Math.ceil(days / 7);
+    if (days <= 30) return `en ${weeks} semana${weeks > 1 ? 's' : ''}`;
+    const months = Math.ceil(days / 30);
+    return `en ${months} mes${months > 1 ? 'es' : ''}`;
   };
 
-  const totalMonthly = payments
+  const activeCount = payments.filter(p => p.isActive).length;
+  const monthlyTotal = payments
     .filter(p => p.isActive && p.frequency === 'monthly')
     .reduce((sum, p) => sum + p.amount, 0);
 
-  const activePymentsCount = payments.filter(p => p.isActive).length;
-
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Summary Cards */}
-        <View style={styles.summarySection}>
-          <View style={[styles.summaryCard, { backgroundColor: `${colors.primary}20` }]}>
-            <View style={styles.summaryLeft}>
-              <Ionicons name="checkmark-circle" size={32} color={colors.primary} />
-              <View style={styles.summaryContent}>
-                <Text style={styles.summaryLabel}>Pagos activos</Text>
-                <Text style={styles.summaryValue}>{activePymentsCount}</Text>
-              </View>
+      <ScrollView style={styles.scroll}>
+        {/* Summary */}
+        <View style={styles.summaryRow}>
+          <View style={[styles.summaryCard, { backgroundColor: `${colors.primary}15` }]}>
+            <Ionicons name="checkmark-circle" size={28} color={colors.primary} />
+            <View style={styles.summaryText}>
+              <Text style={styles.summaryLabel}>Activos</Text>
+              <Text style={styles.summaryValue}>{activeCount}</Text>
             </View>
           </View>
-
-          <View style={[styles.summaryCard, { backgroundColor: `${colors.success || '#10B981'}20` }]}>
-            <View style={styles.summaryLeft}>
-              <Ionicons
-                name="cash"
-                size={32}
-                color={colors.success || '#10B981'}
-              />
-              <View style={styles.summaryContent}>
-                <Text style={styles.summaryLabel}>Gasto mensual</Text>
-                <Text style={styles.summaryValue}>${totalMonthly.toFixed(2)}</Text>
-              </View>
+          <View style={[styles.summaryCard, { backgroundColor: '#10B98115' }]}>
+            <Ionicons name="cash" size={28} color="#10B981" />
+            <View style={styles.summaryText}>
+              <Text style={styles.summaryLabel}>Mensual</Text>
+              <Text style={styles.summaryValue}>${monthlyTotal.toFixed(2)}</Text>
             </View>
           </View>
         </View>
 
-        {/* Info Message */}
+        {/* Payments List */}
         {payments.length === 0 ? (
-          <View style={[styles.emptyState, { backgroundColor: colors.backgroundSecondary }]}>
+          <View style={styles.empty}>
             <Ionicons name="calendar" size={60} color={colors.textSecondary} />
-            <Text style={styles.emptyStateTitle}>Sin pagos programados</Text>
-            <Text style={styles.emptyStateText}>
-              Crea pagos programados para automatizar tus transacciones recurrentes
-            </Text>
+            <Text style={styles.emptyTitle}>Sin pagos programados</Text>
+            <Text style={styles.emptyText}>Crea pagos para automatizar transacciones</Text>
           </View>
         ) : (
-          <>
-            {/* Payments List */}
-            <View style={styles.paymentsSection}>
-              <Text style={styles.sectionTitle}>Mis pagos programados</Text>
-              <View style={styles.paymentsList}>
-                {payments.map((payment) => renderPaymentItem(payment))}
-              </View>
-            </View>
-
-            {/* Upcoming Payments Info */}
-            <View style={[styles.infoCard, { backgroundColor: `${colors.warning}20` }]}>
-              <Ionicons name="information-circle" size={24} color={colors.warning} />
-              <View style={styles.infoContent}>
-                <Text style={[styles.infoTitle, { color: colors.warning }]}>
-                  Próximos pagos
-                </Text>
-                <Text style={styles.infoText}>
-                  Los pagos programados se ejecutarán automáticamente en las fechas especificadas
-                </Text>
-              </View>
-            </View>
-          </>
+          <View style={styles.list}>
+            {payments.map((payment) => (
+              <TouchableOpacity
+                key={payment.id}
+                style={styles.paymentCard}
+                onLongPress={() => handleDelete(payment.id)}
+              >
+                <View style={[styles.paymentIcon, { backgroundColor: payment.color }]}>
+                  <Ionicons name={payment.icon as any} size={24} color="#FFF" />
+                </View>
+                <View style={styles.paymentContent}>
+                  <Text style={styles.paymentTitle}>{payment.title}</Text>
+                  <Text style={styles.paymentTime}>{getDaysUntil(payment.nextDate)}</Text>
+                </View>
+                <View style={styles.paymentRight}>
+                  <Text style={styles.paymentAmount}>${payment.amount.toFixed(2)}</Text>
+                  <Text style={styles.paymentFreq}>{FREQUENCY_LABELS[payment.frequency]}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
         )}
-
-        <View style={styles.bottomSpacing} />
       </ScrollView>
 
-      {/* Add Button */}
+      {/* FAB */}
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: colors.primary }]}
-        onPress={() => setModalVisible(true)}
+        onPress={() => setShowAddModal(true)}
       >
-        <Ionicons name="add" size={32} color="#FFF" />
+        <Ionicons name="add" size={28} color="#FFF" />
       </TouchableOpacity>
 
-      {/* Add Payment Modal */}
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
-      >
+      {/* Add Modal */}
+      <Modal visible={showAddModal} animationType="slide" transparent onRequestClose={() => setShowAddModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <TouchableOpacity onPress={() => setShowAddModal(false)}>
                 <Ionicons name="close" size={28} color={colors.textPrimary} />
               </TouchableOpacity>
-              <Text style={styles.modalTitle}>Nuevo pago programado</Text>
+              <Text style={styles.modalTitle}>Nuevo Pago</Text>
               <View style={{ width: 28 }} />
             </View>
 
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-              {/* Icon + Name + Amount */}
-              <View style={[styles.paymentFormTopSection, { backgroundColor: `${newPayment.color}15` }]}>
-                <View style={[styles.paymentFormIconPreview, { backgroundColor: newPayment.color }]}>
-                  <Ionicons name={newPayment.icon as any} size={32} color="#FFF" />
+            <ScrollView>
+              {/* Icon Preview + Name */}
+              <View style={[styles.topSection, { backgroundColor: `${form.color}15` }]}>
+                <View style={[styles.iconPreview, { backgroundColor: form.color }]}>
+                  <Ionicons name={form.icon as any} size={32} color="#FFF" />
                 </View>
-                <View style={styles.paymentFormFields}>
-                  <Text style={styles.inputLabel}>Nombre</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>NOMBRE</Text>
                   <TextInput
-                    style={[styles.paymentFormInput, { color: colors.textPrimary, borderColor: colors.border }]}
-                    placeholder="Ej: Servicios de internet"
+                    style={[styles.input, { color: colors.textPrimary, borderColor: colors.border }]}
+                    placeholder="Ej: Internet"
                     placeholderTextColor={colors.textSecondary}
-                    value={newPayment.title}
-                    onChangeText={(text) => setNewPayment({ ...newPayment, title: text })}
+                    value={form.title}
+                    onChangeText={(title) => setForm({ ...form, title })}
                   />
                 </View>
               </View>
 
-              {/* Monto y Moneda */}
-              <View style={styles.amountSection}>
-                <View style={styles.amountField}>
-                  <Text style={styles.inputLabel}>Monto</Text>
+              {/* Amount & Currency */}
+              <View style={styles.row}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>MONTO</Text>
                   <TextInput
                     style={[styles.input, { color: colors.textPrimary, borderColor: colors.border }]}
                     placeholder="0.00"
-                    placeholderTextColor={colors.textSecondary}
-                    value={newPayment.amount}
-                    onChangeText={(text) => setNewPayment({ ...newPayment, amount: text })}
                     keyboardType="decimal-pad"
+                    value={form.amount}
+                    onChangeText={(amount) => setForm({ ...form, amount })}
                   />
                 </View>
-                <View style={styles.currencyField}>
-                  <Text style={styles.inputLabel}>Moneda</Text>
-                  <TouchableOpacity 
-                    activeOpacity={0.7}
-                    style={[styles.currencySelector, { borderColor: colors.border }]}
-                    onPress={() => setCurrencyPickerVisible(true)}
+                <View style={{ flex: 1, marginLeft: spacing.md }}>
+                  <Text style={styles.label}>MONEDA</Text>
+                  <TouchableOpacity
+                    style={[styles.selector, { borderColor: colors.border }]}
+                    onPress={() => setShowCurrencyModal(true)}
                   >
                     <Text style={{ color: colors.textPrimary }}>
-                      {AVAILABLE_CURRENCIES.find(c => c.code === newPayment.currency)?.name || 'Seleccionar'}
+                      {CURRENCIES.find(c => c.code === form.currency)?.name || 'Seleccionar'}
                     </Text>
                     <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
               </View>
 
-              {/* Categoría */}
-              <Text style={styles.inputLabel}>Categoría</Text>
-              <TouchableOpacity 
-                activeOpacity={0.7}
-                style={[styles.categorySelector, { borderColor: colors.border }]}
-                onPress={() => setCategoryPickerVisible(true)}
-              >
-                <Text style={{ color: colors.textPrimary }}>
-                  {categories.find(c => c.id === newPayment.categoryId)?.name || 'Seleccionar'}
-                </Text>
-                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
-
-              {/* Renovación automática */}
-              <View style={styles.toggleSection}>
-                <View>
-                  <Text style={[styles.inputLabel, { marginBottom: 0 }]}>Renovación automática</Text>
-                </View>
-                <TouchableOpacity 
-                  onPress={() => setNewPayment({ ...newPayment, autoRenewal: !newPayment.autoRenewal })}
-                  style={styles.toggleSwitch}
-                >
-                  <View style={[styles.toggleTrack, { backgroundColor: newPayment.autoRenewal ? colors.primary : colors.border }]}>
-                    <View style={[styles.toggleThumb, { left: newPayment.autoRenewal ? 12 : 0 }]} />
-                  </View>
-                </TouchableOpacity>
-              </View>
-
-              {/* Duración */}
-              <View style={styles.toggleSection}>
-                <Text style={[styles.inputLabel, { marginBottom: 0 }]}>Duración</Text>
-                <TouchableOpacity 
-                  onPress={() => setNewPayment({ ...newPayment, hasEndDate: !newPayment.hasEndDate })}
-                  style={styles.toggleSwitch}
-                >
-                  <View style={[styles.toggleTrack, { backgroundColor: newPayment.hasEndDate ? colors.primary : colors.border }]}>
-                    <View style={[styles.toggleThumb, { left: newPayment.hasEndDate ? 12 : 0 }]} />
-                  </View>
-                </TouchableOpacity>
-              </View>
-
-              {/* Inicia */}
-              <Text style={styles.inputLabel}>Inicia</Text>
+              {/* Category */}
+              <Text style={styles.label}>CATEGORÍA</Text>
               <TouchableOpacity
-                activeOpacity={0.7}
-                style={[styles.dateButton, { borderColor: colors.border }]}
-                onPress={() => setDatePickerVisible(true)}
-              >
-                <Text style={[styles.dateButtonText, { color: colors.textPrimary }]}>
-                  {new Date(newPayment.nextDate).toLocaleDateString('es-ES', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </Text>
-              </TouchableOpacity>
-
-              {/* Ciclo */}
-              <Text style={styles.inputLabel}>Ciclo</Text>
-              <View style={styles.cycleSection}>
-                <View style={styles.cycleButtons}>
-                  {(['daily', 'weekly', 'biweekly', 'monthly', 'yearly'] as const).map((freq) => (
-                    <TouchableOpacity
-                      key={freq}
-                      style={[
-                        styles.cycleButton,
-                        newPayment.frequency === freq && { backgroundColor: colors.primary },
-                        newPayment.frequency !== freq && { backgroundColor: colors.backgroundSecondary, borderWidth: 1, borderColor: colors.border },
-                      ]}
-                      onPress={() => setNewPayment({ ...newPayment, frequency: freq })}
-                    >
-                      <Text style={[styles.cycleButtonText, newPayment.frequency === freq && { color: '#FFF' }, newPayment.frequency !== freq && { color: colors.textPrimary }]}>
-                        {FREQUENCY_LABELS[freq]}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                <View style={styles.cycleControls}>
-                  <Text style={{ color: colors.textPrimary, marginRight: spacing.md }}>Mensual</Text>
-                  <TouchableOpacity style={styles.cycleButton}>
-                    <Ionicons name="remove" size={18} color={colors.textPrimary} />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.cycleButton}>
-                    <Ionicons name="add" size={18} color={colors.textPrimary} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Cuenta de pago */}
-              <Text style={styles.inputLabel}>Cuenta de pago</Text>
-              <TouchableOpacity 
-                activeOpacity={0.7}
-                style={[styles.accountSelector, { borderColor: colors.border }]}
-                onPress={() => setAccountPickerVisible(true)}
-              >
-                <Text style={{ color: accounts.find(a => a.id === newPayment.accountId) ? colors.textPrimary : colors.textSecondary }}>
-                  {accounts.find(a => a.id === newPayment.accountId)?.title || 'Ninguno'}
-                </Text>
-                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
-
-              {/* Recordatorio de pago */}
-              <Text style={styles.inputLabel}>Recordatorio de pago</Text>
-              <TouchableOpacity 
-                activeOpacity={0.7}
-                style={[styles.reminderSelector, { borderColor: colors.border }]}
-                onPress={() => setReminderPickerVisible(true)}
+                style={[styles.selector, { borderColor: colors.border }]}
+                onPress={() => setShowCategoryModal(true)}
               >
                 <Text style={{ color: colors.textPrimary }}>
-                  {REMINDER_OPTIONS.find(r => r.id === newPayment.reminder)?.label || 'Nunca'}
+                  {categories.find(c => c.id === form.categoryId)?.name || 'Seleccionar'}
                 </Text>
                 <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
 
-              {/* Icono */}
-              <Text style={styles.inputLabel}>Icono *</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.iconScrollContainer}>
+              {/* Auto Renewal Toggle */}
+              <View style={styles.toggleRow}>
+                <Text style={[styles.label, { marginBottom: 0 }]}>RENOVACIÓN AUTOMÁTICA</Text>
+                <TouchableOpacity onPress={() => setForm({ ...form, autoRenewal: !form.autoRenewal })}>
+                  <View style={[styles.toggle, { backgroundColor: form.autoRenewal ? colors.primary : colors.border }]}>
+                    <View style={[styles.toggleThumb, { marginLeft: form.autoRenewal ? 22 : 2 }]} />
+                  </View>
+                </TouchableOpacity>
+              </View>
+
+              {/* Start Date */}
+              <Text style={styles.label}>INICIA</Text>
+              <TouchableOpacity
+                style={[styles.selector, { borderColor: colors.border }]}
+                onPress={() => setShowDateModal(true)}
+              >
+                <Text style={{ color: colors.textPrimary }}>
+                  {new Date(form.nextDate).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Frequency */}
+              <Text style={styles.label}>CICLO</Text>
+              <View style={styles.chipRow}>
+                {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((freq) => (
+                  <TouchableOpacity
+                    key={freq}
+                    style={[
+                      styles.chip,
+                      form.frequency === freq
+                        ? { backgroundColor: colors.primary }
+                        : { backgroundColor: colors.backgroundSecondary, borderWidth: 1, borderColor: colors.border }
+                    ]}
+                    onPress={() => setForm({ ...form, frequency: freq })}
+                  >
+                    <Text style={[styles.chipText, { color: form.frequency === freq ? '#FFF' : colors.textPrimary }]}>
+                      {FREQUENCY_LABELS[freq]}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Account */}
+              <Text style={styles.label}>CUENTA DE PAGO</Text>
+              <TouchableOpacity
+                style={[styles.selector, { borderColor: colors.border }]}
+                onPress={() => setShowAccountModal(true)}
+              >
+                <Text style={{ color: colors.textPrimary }}>
+                  {accounts.find(a => a.id === form.accountId)?.title || 'Ninguno'}
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+
+              {/* Reminder */}
+              <Text style={styles.label}>RECORDATORIO</Text>
+              <TouchableOpacity
+                style={[styles.selector, { borderColor: colors.border }]}
+                onPress={() => setShowReminderModal(true)}
+              >
+                <Text style={{ color: colors.textPrimary }}>
+                  {REMINDERS.find(r => r.id === form.reminder)?.label || 'Nunca'}
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+
+              {/* Icons */}
+              <Text style={styles.label}>ICONO</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.lg }}>
                 <View style={styles.iconGrid}>
-                  {AVAILABLE_ICONS.map((iconName) => (
+                  {ICONS.map((iconName) => (
                     <TouchableOpacity
                       key={iconName}
                       style={[
-                        styles.iconGridButton,
-                        newPayment.icon === iconName && styles.iconGridButtonSelected,
+                        styles.iconButton,
+                        { borderColor: form.icon === iconName ? colors.primary : colors.border }
                       ]}
-                      onPress={() => setNewPayment({ ...newPayment, icon: iconName })}
+                      onPress={() => setForm({ ...form, icon: iconName })}
                     >
-                      <Ionicons
-                        name={iconName as any}
-                        size={28}
-                        color={newPayment.icon === iconName ? '#FFF' : colors.textSecondary}
-                      />
+                      <Ionicons name={iconName as any} size={24} color={form.icon === iconName ? '#FFF' : colors.textSecondary} />
                     </TouchableOpacity>
                   ))}
                 </View>
               </ScrollView>
 
-              {/* Color */}
-              <Text style={styles.inputLabel}>Color *</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.colorScrollContainer}>
-                <View style={styles.colorGrid}>
-                  {AVAILABLE_COLORS.map((color) => (
+              {/* Colors */}
+              <Text style={styles.label}>COLOR</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.lg }}>
+                <View style={styles.iconGrid}>
+                  {COLORS.map((colorItem) => (
                     <TouchableOpacity
-                      key={color}
+                      key={colorItem}
                       style={[
-                        styles.colorGridButton,
-                        { backgroundColor: color },
-                        newPayment.color === color && styles.colorGridButtonSelected,
+                        styles.colorButton,
+                        { backgroundColor: colorItem, borderColor: form.color === colorItem ? '#FFF' : 'transparent' }
                       ]}
-                      onPress={() => setNewPayment({ ...newPayment, color })}
+                      onPress={() => setForm({ ...form, color: colorItem })}
                     >
-                      {newPayment.color === color && (
-                        <Ionicons name="checkmark" size={20} color="#fff" />
-                      )}
+                      {form.color === colorItem && <Ionicons name="checkmark" size={20} color="#FFF" />}
                     </TouchableOpacity>
                   ))}
                 </View>
               </ScrollView>
 
-              <View style={styles.modalButtons}>
+              {/* Buttons */}
+              <View style={styles.buttonRow}>
                 <TouchableOpacity
-                  style={[styles.modalButton, { backgroundColor: colors.border }]}
-                  onPress={() => setModalVisible(false)}
+                  style={[styles.button, { backgroundColor: colors.border }]}
+                  onPress={() => setShowAddModal(false)}
                 >
-                  <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>
-                    Cancelar
-                  </Text>
+                  <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>Cancelar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.modalButton, { backgroundColor: colors.primary }]}
-                  onPress={handleAddPayment}
+                  style={[styles.button, { backgroundColor: colors.primary }]}
+                  onPress={handleAdd}
                 >
-                  <Text style={[styles.modalButtonText, { color: '#FFF' }]}>
-                    Guardar
-                  </Text>
+                  <Text style={{ color: '#FFF', fontWeight: '600' }}>Guardar</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -623,191 +430,29 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
         </View>
       </Modal>
 
-      {/* Date Picker Modal */}
-      <Modal
-        visible={datePickerVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setDatePickerVisible(false)}
-      >
+      {/* Category Modal */}
+      <Modal visible={showCategoryModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setDatePickerVisible(false)}>
+              <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
                 <Ionicons name="close" size={28} color={colors.textPrimary} />
               </TouchableOpacity>
-              <Text style={styles.modalTitle}>Seleccionar fecha</Text>
+              <Text style={styles.modalTitle}>Categoría</Text>
               <View style={{ width: 28 }} />
             </View>
-
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-              <View style={styles.datePickerContainer}>
-                {/* Day Input */}
-                <View style={styles.dateInputGroup}>
-                  <Text style={styles.dateLabel}>Día</Text>
-                  <TextInput
-                    style={[styles.dateInput, { color: colors.textPrimary, borderColor: colors.border }]}
-                    placeholder="01"
-                    placeholderTextColor={colors.textSecondary}
-                    value={tempDate.day.toString().padStart(2, '0')}
-                    onChangeText={(text) => {
-                      const day = parseInt(text) || 1;
-                      if (day >= 1 && day <= 31) {
-                        setTempDate({ ...tempDate, day });
-                      }
-                    }}
-                    keyboardType="number-pad"
-                    maxLength={2}
-                  />
-                </View>
-
-                {/* Month Input */}
-                <View style={styles.dateInputGroup}>
-                  <Text style={styles.dateLabel}>Mes</Text>
-                  <TextInput
-                    style={[styles.dateInput, { color: colors.textPrimary, borderColor: colors.border }]}
-                    placeholder="01"
-                    placeholderTextColor={colors.textSecondary}
-                    value={tempDate.month.toString().padStart(2, '0')}
-                    onChangeText={(text) => {
-                      const month = parseInt(text) || 1;
-                      if (month >= 1 && month <= 12) {
-                        setTempDate({ ...tempDate, month });
-                      }
-                    }}
-                    keyboardType="number-pad"
-                    maxLength={2}
-                  />
-                </View>
-
-                {/* Year Input */}
-                <View style={styles.dateInputGroup}>
-                  <Text style={styles.dateLabel}>Año</Text>
-                  <TextInput
-                    style={[styles.dateInput, { color: colors.textPrimary, borderColor: colors.border }]}
-                    placeholder="2025"
-                    placeholderTextColor={colors.textSecondary}
-                    value={tempDate.year.toString()}
-                    onChangeText={(text) => {
-                      const year = parseInt(text) || new Date().getFullYear();
-                      setTempDate({ ...tempDate, year });
-                    }}
-                    keyboardType="number-pad"
-                    maxLength={4}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.modalButtons}>
+            <ScrollView>
+              {categories.map((cat) => (
                 <TouchableOpacity
-                  style={[styles.modalButton, { backgroundColor: colors.border }]}
-                  onPress={() => setDatePickerVisible(false)}
-                >
-                  <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>
-                    Cancelar
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, { backgroundColor: colors.primary }]}
+                  key={cat.id}
+                  style={[styles.listItem, { borderColor: colors.border, backgroundColor: colors.backgroundSecondary }]}
                   onPress={() => {
-                    const date = new Date(tempDate.year, tempDate.month - 1, tempDate.day);
-                    const formattedDate = date.toISOString().split('T')[0];
-                    setNewPayment({
-                      ...newPayment,
-                      nextDate: formattedDate,
-                    });
-                    setDatePickerVisible(false);
+                    setForm({ ...form, categoryId: cat.id });
+                    setShowCategoryModal(false);
                   }}
                 >
-                  <Text style={[styles.modalButtonText, { color: '#FFF' }]}>
-                    Confirmar
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Category Picker Modal */}
-      <Modal
-        visible={categoryPickerVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setCategoryPickerVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setCategoryPickerVisible(false)}>
-                <Ionicons name="close" size={28} color={colors.textPrimary} />
-              </TouchableOpacity>
-              <Text style={styles.modalTitle}>Seleccionar categoría</Text>
-              <View style={{ width: 28 }} />
-            </View>
-
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-              {categories && categories.length > 0 ? (
-                categories.map((category) => (
-                  <TouchableOpacity
-                    key={category.id}
-                    style={[
-                      styles.pickerItemRow,
-                      { borderColor: colors.border, backgroundColor: colors.backgroundSecondary },
-                      newPayment.categoryId === category.id && { borderColor: colors.primary, borderWidth: 2 },
-                    ]}
-                    onPress={() => {
-                      setNewPayment({ ...newPayment, categoryId: category.id });
-                      setCategoryPickerVisible(false);
-                    }}
-                  >
-                    <Ionicons name={category.icon as any} size={24} color={category.color} />
-                    <Text style={[styles.pickerItemText, { color: colors.textPrimary }]}>{category.name}</Text>
-                  </TouchableOpacity>
-                ))
-              ) : (
-                <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
-                  <Text style={{ color: colors.textSecondary }}>No hay categorías disponibles</Text>
-                </View>
-              )}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Currency Picker Modal */}
-      <Modal
-        visible={currencyPickerVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setCurrencyPickerVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setCurrencyPickerVisible(false)}>
-                <Ionicons name="close" size={28} color={colors.textPrimary} />
-              </TouchableOpacity>
-              <Text style={styles.modalTitle}>Seleccionar moneda</Text>
-              <View style={{ width: 28 }} />
-            </View>
-
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-              {AVAILABLE_CURRENCIES.map((currency) => (
-                <TouchableOpacity
-                  key={currency.code}
-                  style={[
-                    styles.pickerItemRow,
-                    { borderColor: colors.border, backgroundColor: colors.backgroundSecondary },
-                    newPayment.currency === currency.code && { borderColor: colors.primary, borderWidth: 2 },
-                  ]}
-                  onPress={() => {
-                    setNewPayment({ ...newPayment, currency: currency.code });
-                    setCurrencyPickerVisible(false);
-                  }}
-                >
-                  <Text style={[styles.currencySymbol, { color: colors.primary }]}>{currency.symbol}</Text>
-                  <Text style={[styles.pickerItemText, { color: colors.textPrimary }]}>{currency.name}</Text>
+                  <Ionicons name={cat.icon as any} size={24} color={cat.color} />
+                  <Text style={[styles.listItemText, { color: colors.textPrimary }]}>{cat.name}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -815,103 +460,173 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
         </View>
       </Modal>
 
-      {/* Account Picker Modal */}
-      <Modal
-        visible={accountPickerVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setAccountPickerVisible(false)}
-      >
+      {/* Currency Modal */}
+      <Modal visible={showCurrencyModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setAccountPickerVisible(false)}>
+              <TouchableOpacity onPress={() => setShowCurrencyModal(false)}>
                 <Ionicons name="close" size={28} color={colors.textPrimary} />
               </TouchableOpacity>
-              <Text style={styles.modalTitle}>Seleccionar cuenta</Text>
+              <Text style={styles.modalTitle}>Moneda</Text>
               <View style={{ width: 28 }} />
             </View>
+            <ScrollView>
+              {CURRENCIES.map((curr) => (
+                <TouchableOpacity
+                  key={curr.code}
+                  style={[styles.listItem, { borderColor: colors.border, backgroundColor: colors.backgroundSecondary }]}
+                  onPress={() => {
+                    setForm({ ...form, currency: curr.code });
+                    setShowCurrencyModal(false);
+                  }}
+                >
+                  <Text style={[styles.listItemText, { color: colors.textPrimary }]}>{curr.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+      {/* Account Modal */}
+      <Modal visible={showAccountModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setShowAccountModal(false)}>
+                <Ionicons name="close" size={28} color={colors.textPrimary} />
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Cuenta</Text>
+              <View style={{ width: 28 }} />
+            </View>
+            <ScrollView>
               <TouchableOpacity
-                style={[
-                  styles.pickerItemRow,
-                  { borderColor: colors.border, backgroundColor: colors.backgroundSecondary },
-                  !newPayment.accountId && { borderColor: colors.primary, borderWidth: 2 },
-                ]}
+                style={[styles.listItem, { borderColor: colors.border, backgroundColor: colors.backgroundSecondary }]}
                 onPress={() => {
-                  setNewPayment({ ...newPayment, accountId: '' });
-                  setAccountPickerVisible(false);
+                  setForm({ ...form, accountId: '' });
+                  setShowAccountModal(false);
                 }}
               >
-                <Ionicons name="close-circle" size={24} color={colors.textSecondary} />
-                <Text style={[styles.pickerItemText, { color: colors.textPrimary }]}>Ninguno</Text>
+                <Text style={[styles.listItemText, { color: colors.textSecondary }]}>Ninguno</Text>
               </TouchableOpacity>
-
-              {accounts && accounts.length > 0 ? (
-                accounts.map((account) => (
-                  <TouchableOpacity
-                    key={account.id}
-                    style={[
-                      styles.pickerItemRow,
-                      { borderColor: colors.border, backgroundColor: colors.backgroundSecondary },
-                      newPayment.accountId === account.id && { borderColor: colors.primary, borderWidth: 2 },
-                    ]}
-                    onPress={() => {
-                      setNewPayment({ ...newPayment, accountId: account.id });
-                      setAccountPickerVisible(false);
-                    }}
-                  >
-                    <Ionicons name={account.icon as any} size={24} color={account.color} />
-                    <Text style={[styles.pickerItemText, { color: colors.textPrimary }]}>{account.title}</Text>
-                  </TouchableOpacity>
-                ))
-              ) : (
-                <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
-                  <Text style={{ color: colors.textSecondary }}>No hay cuentas disponibles</Text>
-                </View>
-              )}
+              {accounts.map((acc) => (
+                <TouchableOpacity
+                  key={acc.id}
+                  style={[styles.listItem, { borderColor: colors.border, backgroundColor: colors.backgroundSecondary }]}
+                  onPress={() => {
+                    setForm({ ...form, accountId: acc.id });
+                    setShowAccountModal(false);
+                  }}
+                >
+                  <Ionicons name={acc.icon as any} size={24} color={acc.color} />
+                  <Text style={[styles.listItemText, { color: colors.textPrimary }]}>{acc.title}</Text>
+                </TouchableOpacity>
+              ))}
             </ScrollView>
           </View>
         </View>
       </Modal>
 
-      {/* Reminder Picker Modal */}
-      <Modal
-        visible={reminderPickerVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setReminderPickerVisible(false)}
-      >
+      {/* Reminder Modal */}
+      <Modal visible={showReminderModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setReminderPickerVisible(false)}>
+              <TouchableOpacity onPress={() => setShowReminderModal(false)}>
                 <Ionicons name="close" size={28} color={colors.textPrimary} />
               </TouchableOpacity>
-              <Text style={styles.modalTitle}>Seleccionar recordatorio</Text>
+              <Text style={styles.modalTitle}>Recordatorio</Text>
               <View style={{ width: 28 }} />
             </View>
-
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-              {REMINDER_OPTIONS.map((reminder) => (
+            <ScrollView>
+              {REMINDERS.map((rem) => (
                 <TouchableOpacity
-                  key={reminder.id}
-                  style={[
-                    styles.pickerItemRow,
-                    { borderColor: colors.border, backgroundColor: colors.backgroundSecondary },
-                    newPayment.reminder === reminder.id && { borderColor: colors.primary, borderWidth: 2 },
-                  ]}
+                  key={rem.id}
+                  style={[styles.listItem, { borderColor: colors.border, backgroundColor: colors.backgroundSecondary }]}
                   onPress={() => {
-                    setNewPayment({ ...newPayment, reminder: reminder.id });
-                    setReminderPickerVisible(false);
+                    setForm({ ...form, reminder: rem.id });
+                    setShowReminderModal(false);
                   }}
                 >
-                  <Ionicons name="notifications" size={24} color={colors.primary} />
-                  <Text style={[styles.pickerItemText, { color: colors.textPrimary }]}>{reminder.label}</Text>
+                  <Text style={[styles.listItemText, { color: colors.textPrimary }]}>{rem.label}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Date Modal */}
+      <Modal visible={showDateModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setShowDateModal(false)}>
+                <Ionicons name="close" size={28} color={colors.textPrimary} />
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Fecha</Text>
+              <View style={{ width: 28 }} />
+            </View>
+            <View style={styles.dateRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>DÍA</Text>
+                <TextInput
+                  style={[styles.dateInput, { color: colors.textPrimary, borderColor: colors.border }]}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  value={dateForm.day.toString().padStart(2, '0')}
+                  onChangeText={(text) => {
+                    const day = parseInt(text) || 1;
+                    if (day >= 1 && day <= 31) setDateForm({ ...dateForm, day });
+                  }}
+                />
+              </View>
+              <View style={{ flex: 1, marginLeft: spacing.md }}>
+                <Text style={styles.label}>MES</Text>
+                <TextInput
+                  style={[styles.dateInput, { color: colors.textPrimary, borderColor: colors.border }]}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  value={dateForm.month.toString().padStart(2, '0')}
+                  onChangeText={(text) => {
+                    const month = parseInt(text) || 1;
+                    if (month >= 1 && month <= 12) setDateForm({ ...dateForm, month });
+                  }}
+                />
+              </View>
+              <View style={{ flex: 1, marginLeft: spacing.md }}>
+                <Text style={styles.label}>AÑO</Text>
+                <TextInput
+                  style={[styles.dateInput, { color: colors.textPrimary, borderColor: colors.border }]}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                  value={dateForm.year.toString()}
+                  onChangeText={(text) => {
+                    const year = parseInt(text) || new Date().getFullYear();
+                    setDateForm({ ...dateForm, year });
+                  }}
+                />
+              </View>
+            </View>
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.border }]}
+                onPress={() => setShowDateModal(false)}
+              >
+                <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  const date = new Date(dateForm.year, dateForm.month - 1, dateForm.day);
+                  setForm({ ...form, nextDate: date.toISOString().split('T')[0] });
+                  setShowDateModal(false);
+                }}
+              >
+                <Text style={{ color: '#FFF', fontWeight: '600' }}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -924,73 +639,54 @@ const createStyles = (colors: any) => StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  scrollView: {
+  scroll: {
     flex: 1,
   },
-  summarySection: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.lg,
+  summaryRow: {
+    flexDirection: 'row',
+    padding: spacing.md,
     gap: spacing.md,
   },
   summaryCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  summaryLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
     flex: 1,
+    flexDirection: 'row',
+    padding: spacing.md,
+    borderRadius: 12,
+    alignItems: 'center',
     gap: spacing.md,
   },
-  summaryContent: {
+  summaryText: {
     flex: 1,
   },
   summaryLabel: {
-    fontSize: typography.sizes.sm,
+    fontSize: 12,
     color: colors.textSecondary,
-    marginBottom: spacing.xs,
+    marginBottom: 4,
   },
   summaryValue: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
+    fontSize: 20,
+    fontWeight: 'bold',
     color: colors.textPrimary,
   },
-  emptyState: {
+  empty: {
     alignItems: 'center',
-    paddingVertical: spacing.xl,
-    marginHorizontal: spacing.md,
-    marginVertical: spacing.lg,
-    borderRadius: 12,
+    padding: spacing.xl,
+    marginTop: spacing.xl,
   },
-  emptyStateTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
     color: colors.textPrimary,
     marginTop: spacing.md,
-    marginBottom: spacing.sm,
   },
-  emptyStateText: {
-    fontSize: typography.sizes.sm,
+  emptyText: {
+    fontSize: 14,
     color: colors.textSecondary,
+    marginTop: spacing.sm,
     textAlign: 'center',
-    paddingHorizontal: spacing.md,
   },
-  paymentsSection: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.textPrimary,
-    marginBottom: spacing.lg,
-  },
-  paymentsList: {
+  list: {
+    padding: spacing.md,
     gap: spacing.md,
   },
   paymentCard: {
@@ -998,22 +694,12 @@ const createStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
     padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  inactivePayment: {
-    opacity: 0.6,
-  },
-  paymentLeft: {
-    flexDirection: 'row',
-    flex: 1,
     gap: spacing.md,
   },
   paymentIcon: {
-    width: 50,
-    height: 50,
+    width: 48,
+    height: 48,
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1022,77 +708,26 @@ const createStyles = (colors: any) => StyleSheet.create({
     flex: 1,
   },
   paymentTitle: {
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.bold,
+    fontSize: 16,
+    fontWeight: '600',
     color: colors.textPrimary,
-    marginBottom: spacing.xs,
+    marginBottom: 4,
   },
-  paymentDescription: {
-    fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  paymentMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  paymentFrequency: {
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.medium,
-    color: colors.textSecondary,
-  },
-  paymentFrequencyLabel: {
-    fontSize: typography.sizes.xs,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  paymentTimeText: {
-    fontSize: typography.sizes.xs,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  paymentDot: {
-    color: colors.textSecondary,
-  },
-  paymentDate: {
-    fontSize: typography.sizes.xs,
+  paymentTime: {
+    fontSize: 12,
     color: colors.textSecondary,
   },
   paymentRight: {
-    alignItems: 'center',
-    gap: spacing.sm,
+    alignItems: 'flex-end',
   },
   paymentAmount: {
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.bold,
+    fontSize: 16,
+    fontWeight: 'bold',
     color: colors.textPrimary,
+    marginBottom: 4,
   },
-  toggleButton: {
-    padding: spacing.sm,
-  },
-  deleteButton: {
-    padding: spacing.sm,
-  },
-  infoCard: {
-    flexDirection: 'row',
-    marginHorizontal: spacing.md,
-    marginVertical: spacing.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    borderRadius: 12,
-    gap: spacing.md,
-  },
-  infoContent: {
-    flex: 1,
-  },
-  infoTitle: {
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.bold,
-    marginBottom: spacing.xs,
-  },
-  infoText: {
-    fontSize: typography.sizes.sm,
+  paymentFreq: {
+    fontSize: 12,
     color: colors.textSecondary,
   },
   fab: {
@@ -1107,21 +742,19 @@ const createStyles = (colors: any) => StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowRadius: 4,
     elevation: 5,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '90%',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.lg,
+    padding: spacing.lg,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1130,16 +763,28 @@ const createStyles = (colors: any) => StyleSheet.create({
     marginBottom: spacing.lg,
   },
   modalTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
+    fontSize: 18,
+    fontWeight: 'bold',
     color: colors.textPrimary,
   },
-  modalBody: {
+  topSection: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    padding: spacing.md,
     marginBottom: spacing.lg,
+    gap: spacing.md,
+    alignItems: 'flex-start',
   },
-  inputLabel: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
+  iconPreview: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: 'bold',
     color: colors.textPrimary,
     marginBottom: spacing.sm,
     textTransform: 'uppercase',
@@ -1147,358 +792,110 @@ const createStyles = (colors: any) => StyleSheet.create({
   input: {
     borderWidth: 1,
     borderRadius: 10,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    fontSize: typography.sizes.base,
-    marginBottom: spacing.lg,
-    backgroundColor: colors.background,
-  },
-  inputMultiline: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  iconScrollContainer: {
-    marginBottom: spacing.lg,
-  },
-  iconGrid: {
-    flexDirection: 'row',
-    paddingRight: spacing.md,
-    gap: spacing.md,
-  },
-  iconGridButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.backgroundSecondary,
-    borderWidth: 2,
-    borderColor: colors.border,
-  },
-  iconGridButtonSelected: {
-    borderColor: colors.primary,
-    borderWidth: 3,
-  },
-  colorScrollContainer: {
-    marginBottom: spacing.lg,
-  },
-  colorGrid: {
-    flexDirection: 'row',
-    paddingRight: spacing.md,
-    gap: spacing.md,
-  },
-  colorGridButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  colorGridButtonSelected: {
-    borderColor: '#FFF',
-    borderWidth: 3,
-  },
-  frequencyContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  frequencyButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: 20,
-    flexBasis: '30%',
-    alignItems: 'center',
-  },
-  frequencyButtonText: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
-  },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    marginBottom: spacing.lg,
-    gap: spacing.md,
-    backgroundColor: 'rgba(0,0,0,0)',
-  },
-  dateButtonText: {
-    flex: 1,
-    fontSize: typography.sizes.base,
-  },
-  iconPreviewButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    marginBottom: spacing.lg,
-    gap: spacing.md,
-    backgroundColor: colors.background,
-  },
-  iconPreview: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconPreviewText: {
-    flex: 1,
-    fontSize: typography.sizes.base,
-  },
-  colorPreviewButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    marginBottom: spacing.lg,
-    gap: spacing.md,
-    backgroundColor: colors.background,
-  },
-  colorPreview: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
-  },
-  colorPreviewText: {
-    flex: 1,
-    fontSize: typography.sizes.base,
-  },
-  pickerGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-  },
-  pickerItem: {
-    width: '31%',
-    aspectRatio: 1,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-  },
-  pickerItemSelected: {
-    borderWidth: 3,
-  },
-  datePickerContainer: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  dateInputGroup: {
-    flex: 1,
-  },
-  dateLabel: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-    textTransform: 'uppercase',
-  },
-  dateInput: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    textAlign: 'center',
-    backgroundColor: colors.background,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginTop: spacing.lg,
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  modalButtonText: {
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.bold,
-  },
-  bottomSpacing: {
-    height: spacing.xl,
-  },
-  // Payment Form Styles
-  paymentFormTopSection: {
-    flexDirection: 'row',
-    borderRadius: 12,
     padding: spacing.md,
-    marginBottom: spacing.lg,
-    alignItems: 'flex-start',
-    gap: spacing.md,
+    fontSize: 15,
   },
-  paymentFormIconPreview: {
-    width: 70,
-    height: 70,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  paymentFormFields: {
-    flex: 1,
-  },
-  paymentFormInput: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    fontSize: typography.sizes.base,
-    backgroundColor: 'transparent',
-  },
-  amountSection: {
+  row: {
     flexDirection: 'row',
-    gap: spacing.md,
     marginBottom: spacing.lg,
   },
-  amountField: {
-    flex: 1,
-  },
-  currencyField: {
-    flex: 1,
-  },
-  currencySelector: {
+  selector: {
+    flexDirection: 'row',
     borderWidth: 1,
     borderRadius: 10,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0)',
-  },
-  categorySelector: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    flexDirection: 'row',
+    padding: spacing.md,
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.lg,
-    backgroundColor: 'rgba(0,0,0,0)',
   },
-  tagsSelector: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+  toggleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.lg,
   },
-  toggleSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  toggleSwitch: {
-    width: 50,
-    height: 28,
-  },
-  toggleTrack: {
-    flex: 1,
+  toggle: {
+    width: 48,
     height: 28,
     borderRadius: 14,
-    position: 'relative',
+    padding: 2,
   },
   toggleThumb: {
-    position: 'absolute',
-    top: 2,
     width: 24,
     height: 24,
     borderRadius: 12,
     backgroundColor: '#FFF',
   },
-  cycleSection: {
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
     marginBottom: spacing.lg,
   },
-  cycleButtons: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-    flexWrap: 'wrap',
-  },
-  cycleButton: {
+  chip: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: 20,
-    minWidth: 70,
-    alignItems: 'center',
   },
-  cycleButtonText: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
+  chipText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
-  cycleControls: {
+  iconGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: spacing.sm,
   },
-  accountSelector: {
-    borderWidth: 1,
+  iconButton: {
+    width: 48,
+    height: 48,
     borderRadius: 10,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    borderWidth: 2,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.lg,
-    backgroundColor: 'rgba(0,0,0,0)',
+    backgroundColor: colors.backgroundSecondary,
   },
-  reminderSelector: {
-    borderWidth: 1,
+  colorButton: {
+    width: 48,
+    height: 48,
     borderRadius: 10,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    borderWidth: 3,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.lg,
-    backgroundColor: 'rgba(0,0,0,0)',
   },
-  historySelector: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+  buttonRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    gap: spacing.md,
+    marginTop: spacing.lg,
+  },
+  button: {
+    flex: 1,
+    padding: spacing.md,
+    borderRadius: 10,
     alignItems: 'center',
-    marginBottom: spacing.lg,
   },
-  pickerItemRow: {
+  listItem: {
     flexDirection: 'row',
     borderWidth: 1,
     borderRadius: 10,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    marginBottom: spacing.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
     alignItems: 'center',
     gap: spacing.md,
   },
-  pickerItemText: {
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.medium,
+  listItemText: {
+    fontSize: 15,
+    fontWeight: '500',
   },
-  currencySymbol: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
+  dateRow: {
+    flexDirection: 'row',
+    marginBottom: spacing.lg,
+  },
+  dateInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: spacing.md,
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });

@@ -197,6 +197,18 @@ export const AppNavigator = () => {
           })}
         />
         <Stack.Screen
+          name="Budgets"
+          component={BudgetsScreen}
+          options={({ navigation }) => ({
+            title: 'Presupuestos',
+            headerLeft: () => (
+              <TouchableOpacity onPress={() => navigation.goBack()}>
+                <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+              </TouchableOpacity>
+            ),
+          })}
+        />
+        <Stack.Screen
           name="Settings"
           component={SettingsScreen}
           options={({ navigation }) => ({
