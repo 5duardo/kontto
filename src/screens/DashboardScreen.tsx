@@ -1,0 +1,906 @@
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useAppStore } from '../store/useAppStore';
+import { spacing, typography, useTheme } from '../theme';
+import { AccountDetailModal } from '../components/AccountDetailModal';
+import { Account } from '../types';
+import { useExchangeRates } from '../hooks/useExchangeRates';
+
+// Mapeo de símbolos de moneda
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: '$', CAD: 'C$', MXN: '$', BRL: 'R$', ARS: '$', CLP: '$', COP: '$', PEN: 'S/',
+  HNL: 'L', GTQ: 'Q', CRC: '₡', PAB: 'B/.', NIO: 'C$', DOP: 'RD$', UYU: '$U',
+  BOB: 'Bs.', PYG: '₲', VES: 'Bs.', EUR: '€', GBP: '£', CHF: 'CHF', SEK: 'kr',
+  NOK: 'kr', DKK: 'kr', PLN: 'zł', CZK: 'Kč', HUF: 'Ft', RON: 'lei', RUB: '₽',
+  TRY: '₺', UAH: '₴', CNY: '¥', JPY: '¥', KRW: '₩', INR: '₹', IDR: 'Rp',
+  THB: '฿', MYR: 'RM', SGD: 'S$', PHP: '₱', VND: '₫', PKR: '₨', BDT: '৳',
+  LKR: 'Rs', MMK: 'K', KHR: '៛', LAK: '₭', HKD: 'HK$', TWD: 'NT$', AED: 'د.إ',
+  SAR: '﷼', QAR: 'QR', KWD: 'د.ك', BHD: 'BD', OMR: 'ر.ع.', JOD: 'د.ا', ILS: '₪',
+  IQD: 'د.ع', IRR: '﷼', LBP: 'ل.ل', ZAR: 'R', EGP: 'E£', NGN: '₦', KES: 'KSh',
+  GHS: '₵', TZS: 'TSh', UGX: 'USh', MAD: 'د.م.', TND: 'د.ت', DZD: 'د.ج',
+  AOA: 'Kz', ETB: 'Br', AUD: 'A$', NZD: 'NZ$', FJD: 'FJ$', BTC: '₿', ETH: 'Ξ',
+};
+
+const convertToHNL = (amount: number, currency: string, rates: Record<string, number>): number => {
+  const rate = rates[currency] || 1;
+  return amount * rate;
+};
+
+const convertCurrency = (
+  amount: number,
+  fromCurrency: string,
+  toCurrency: string,
+  rates: Record<string, number>
+): number => {
+  if (fromCurrency === toCurrency) return amount;
+  
+  // Convertir a HNL primero (base), luego a la moneda objetivo
+  const toHNL = convertToHNL(amount, fromCurrency, rates);
+  const targetRate = rates[toCurrency] || 1;
+  
+  return toHNL / targetRate;
+};
+
+export const DashboardScreen = ({ navigation }: any) => {
+  const { colors } = useTheme();
+  const { transactions, goals, accounts, initializeDefaultData, isInitialized, preferredCurrency, favoriteExchangeRate, updateAccount } = useAppStore();
+  const { rates: exchangeRates, isLoading: ratesLoading } = useExchangeRates();
+  const [activeTab, setActiveTab] = useState<'cuentas' | 'total'>('cuentas');
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [archivedExpanded, setArchivedExpanded] = useState(false);
+  
+  // Ciclo de estados: 'base' → 'favorite' → 'hidden' → 'base'
+  const [displayState, setDisplayState] = useState<'base' | 'favorite' | 'hidden'>('base');
+
+  // Crear estilos dinámicamente basados en los colores del tema
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const handleAccountPress = (account: Account) => {
+    setSelectedAccount(account);
+    setModalVisible(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalVisible(false);
+    setTimeout(() => setSelectedAccount(null), 300);
+  };
+
+  // Ciclo a través de los estados al hacer clic en el saldo
+  const handleBalancePress = useCallback(() => {
+    setDisplayState((currentState) => {
+      switch (currentState) {
+        case 'base':
+          return 'favorite';
+        case 'favorite':
+          return 'hidden';
+        case 'hidden':
+          return 'base';
+        default:
+          return 'base';
+      }
+    });
+  }, []);
+
+  // Obtener moneda y visibilidad según estado
+  const getDisplayInfo = () => {
+    switch (displayState) {
+      case 'base':
+        return { currency: preferredCurrency, isHidden: false };
+      case 'favorite':
+        return { currency: favoriteExchangeRate, isHidden: false };
+      case 'hidden':
+        return { currency: preferredCurrency, isHidden: true };
+    }
+  };
+
+  useEffect(() => {
+    if (!isInitialized) {
+      initializeDefaultData();
+    }
+  }, [isInitialized]);
+
+  const stats = useMemo(() => {
+    const totalIncome = transactions
+      .filter((t) => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const totalExpense = transactions
+      .filter((t) => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    // Sumar el saldo de todas las cuentas incluidas en el total (convertidas a HNL primero)
+    const accountsBalanceHNL = accounts
+      .filter((a) => a.includeInTotal && !a.isArchived)
+      .reduce((sum, a) => sum + convertToHNL(a.balance, a.currency, exchangeRates), 0);
+
+    // Obtener el balance en la moneda de display
+    const displayInfo = getDisplayInfo();
+    const displayBalance = convertCurrency(accountsBalanceHNL, 'HNL', displayInfo.currency, exchangeRates);
+
+    return {
+      totalIncome,
+      totalExpense,
+      balance: displayBalance,
+      transactionsBalance: totalIncome - totalExpense,
+    };
+  }, [transactions, accounts, exchangeRates, displayState, preferredCurrency, favoriteExchangeRate]);
+
+  const formatCurrency = (amount: number, currency: string = 'HNL') => {
+    const symbol = CURRENCY_SYMBOLS[currency] || currency;
+    const formattedAmount = amount.toLocaleString('es-HN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    return `${symbol} ${formattedAmount}`;
+  };
+
+  const formatAccountBalance = (amount: number, currency: string) => {
+    const symbol = CURRENCY_SYMBOLS[currency] || currency;
+    const decimals = currency === 'HNL' ? 0 : 2;
+    const formattedAmount = amount.toLocaleString('es-HN', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
+    return `${symbol} ${formattedAmount}`;
+  };
+
+  // Función para obtener el saldo convertido a la moneda preferida
+  const getConvertedBalance = (account: Account): string => {
+    const converted = convertCurrency(
+      account.balance,
+      account.currency,
+      preferredCurrency,
+      exchangeRates
+    );
+    return formatAccountBalance(converted, preferredCurrency);
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* Header con balance total */}
+      <View style={styles.header}>
+        <View style={styles.headerSpacer} />
+        <TouchableOpacity 
+          style={styles.headerContent}
+          onPress={handleBalancePress}
+          activeOpacity={0.7}
+          delayPressIn={0}
+          delayPressOut={0}
+        >
+          <Text style={styles.headerTitle}>Saldo total</Text>
+          <View style={styles.headerBalanceContainer}>
+            {getDisplayInfo().isHidden ? (
+              <Text style={styles.headerBalance}>••••••</Text>
+            ) : (
+              <Text style={styles.headerBalance}>
+                {formatCurrency(stats.balance, getDisplayInfo().currency)}
+              </Text>
+            )}
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.iconButton}
+          onPress={() => navigation.navigate('AddTransaction')}
+        >
+          <Ionicons name="add" size={32} color="#FFFFFF" style={{ fontWeight: '900' }} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Tabs */}
+      <View style={styles.tabs}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'cuentas' && styles.tabActive]}
+          onPress={() => setActiveTab('cuentas')}
+        >
+          <Text style={[styles.tabText, activeTab === 'cuentas' && styles.tabTextActive]}>
+            Cuentas
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'total' && styles.tabActive]}
+          onPress={() => setActiveTab('total')}
+        >
+          <Text style={[styles.tabText, activeTab === 'total' && styles.tabTextActive]}>
+            Total
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {activeTab === 'total' ? (
+          // Vista Total - Desglose por moneda
+          <View style={styles.totalViewContent}>
+            {/* Total general */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Total</Text>
+              
+              <View style={styles.totalCard}>
+                {/* HNL Total */}
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalCurrency}>HNL</Text>
+                  <Text style={styles.totalAmount}>
+                    {formatCurrency(
+                      accounts
+                        .filter(a => a.currency === 'HNL' && a.includeInTotal && !a.isArchived)
+                        .reduce((sum, a) => sum + a.balance, 0)
+                    )}
+                  </Text>
+                </View>
+
+                {/* USD Total */}
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalCurrency}>USD</Text>
+                  <Text style={styles.totalAmount}>
+                    {formatCurrency(
+                      accounts
+                        .filter(a => a.currency === 'USD' && a.includeInTotal && !a.isArchived)
+                        .reduce((sum, a) => sum + a.balance, 0),
+                      'USD'
+                    )}
+                  </Text>
+                </View>
+
+                {/* EUR Total */}
+                {accounts.some(a => a.currency === 'EUR' && a.includeInTotal && !a.isArchived) && (
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalCurrency}>EUR</Text>
+                    <Text style={styles.totalAmount}>
+                      {formatCurrency(
+                        accounts
+                          .filter(a => a.currency === 'EUR' && a.includeInTotal && !a.isArchived)
+                          .reduce((sum, a) => sum + a.balance, 0),
+                        'EUR'
+                      )}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Total Convertido */}
+                <View style={styles.totalRowHighlight}>
+                  <Text style={styles.totalConvertedLabel}>{getDisplayInfo().currency}</Text>
+                  <Text style={styles.totalConvertedAmount}>
+                    {!getDisplayInfo().isHidden ? formatCurrency(stats.balance, getDisplayInfo().currency) : '••••••'}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Cuentas - Todas las cuentas (regulares + ahorro) */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Cuentas</Text>
+              
+              <View style={styles.totalCard}>
+                {/* HNL Cuentas */}
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalCurrency}>HNL</Text>
+                  <Text style={styles.totalAmount}>
+                    {formatCurrency(
+                      accounts
+                        .filter(a => a.currency === 'HNL' && a.includeInTotal && !a.isArchived)
+                        .reduce((sum, a) => sum + a.balance, 0)
+                    )}
+                  </Text>
+                </View>
+
+                {/* USD Cuentas */}
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalCurrency}>USD</Text>
+                  <Text style={styles.totalAmount}>
+                    {formatCurrency(
+                      accounts
+                        .filter(a => a.currency === 'USD' && a.includeInTotal && !a.isArchived)
+                        .reduce((sum, a) => sum + a.balance, 0),
+                      'USD'
+                    )}
+                  </Text>
+                </View>
+
+                {/* EUR Cuentas */}
+                {accounts.some(a => a.currency === 'EUR' && a.includeInTotal && !a.isArchived) && (
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalCurrency}>EUR</Text>
+                    <Text style={styles.totalAmount}>
+                      {formatCurrency(
+                        accounts
+                          .filter(a => a.currency === 'EUR' && a.includeInTotal && !a.isArchived)
+                          .reduce((sum, a) => sum + a.balance, 0),
+                        'EUR'
+                      )}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Total Cuentas Convertido */}
+                <View style={styles.totalRowHighlight}>
+                  <Text style={styles.totalConvertedLabel}>Total</Text>
+                  <Text style={styles.totalConvertedAmount}>
+                    {formatCurrency(
+                      accounts
+                        .filter(a => a.includeInTotal && !a.isArchived)
+                        .reduce((sum, a) => sum + convertToHNL(a.balance, a.currency, exchangeRates), 0)
+                    )}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Metas */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Metas</Text>
+              
+              <View style={styles.totalCard}>
+                {/* Total Metas Convertido */}
+                <View style={styles.totalRowHighlight}>
+                  <Text style={styles.totalConvertedLabel}>Total</Text>
+                  <Text style={styles.totalConvertedAmount}>
+                    {formatCurrency(
+                      goals.reduce((sum, g) => sum + g.currentAmount, 0)
+                    )}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={{ height: 100 }} />
+          </View>
+        ) : (
+          // Vista Cuentas - Original
+          <>
+            {/* Sección Cuentas - Incluye todas las cuentas (regulares + ahorro) */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Cuentas</Text>
+            {!getDisplayInfo().isHidden ? (
+              <Text style={styles.sectionBalance}>
+                {formatCurrency(
+                  accounts
+                    .filter(a => a.includeInTotal && !a.isArchived)
+                    .reduce((sum, a) => sum + convertToHNL(a.balance, a.currency, exchangeRates), 0)
+                )}
+              </Text>
+            ) : (
+              <Text style={styles.sectionBalance}>••••••</Text>
+            )}
+          </View>
+
+          {accounts.filter(a => !a.isArchived).length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="wallet-outline" size={48} color={colors.textSecondary} />
+              <Text style={styles.emptyText}>No tienes cuentas</Text>
+              <Text style={styles.emptySubtext}>Agrega tu primera cuenta financiera</Text>
+            </View>
+          ) : (
+            accounts
+              .filter(a => !a.isArchived)
+              .map((account) => (
+                <TouchableOpacity 
+                  key={account.id} 
+                  style={styles.accountCard}
+                  onPress={() => handleAccountPress(account)}
+                >
+                  <View style={styles.accountLeft}>
+                    <View style={[styles.accountIcon, { backgroundColor: `${account.color}33` }]}>
+                      <Ionicons name={account.icon as any} size={24} color={account.color} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.accountName}>{account.title}</Text>
+                      <View style={styles.accountBalanceContainer}>
+                        {!getDisplayInfo().isHidden ? (
+                          <>
+                            <Text style={styles.accountBalance}>
+                              {formatAccountBalance(account.balance, account.currency)}
+                            </Text>
+                            {account.currency !== preferredCurrency && (
+                              <Text style={styles.accountBalanceConverted}>
+                                ≈ {getConvertedBalance(account)}
+                              </Text>
+                            )}
+                          </>
+                        ) : (
+                          <Text style={styles.accountBalance}>••••••</Text>
+                        )}
+                      </View>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))
+          )}
+
+          <TouchableOpacity 
+            style={styles.addAccountButton}
+            onPress={() => navigation.navigate('AddAccount')}
+          >
+            <Ionicons name="add-circle-outline" size={24} color={colors.primary} />
+            <Text style={styles.addAccountText}>Añadir cuenta financiera</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Sección Metas */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Metas</Text>
+            {!getDisplayInfo().isHidden ? (
+              <Text style={styles.sectionBalance}>
+                {formatCurrency(
+                  goals.reduce((sum, g) => sum + g.currentAmount, 0)
+                )}
+              </Text>
+            ) : (
+              <Text style={styles.sectionBalance}>••••••</Text>
+            )}
+          </View>
+
+          {goals.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="star-outline" size={48} color={colors.textSecondary} />
+              <Text style={styles.emptyText}>No tienes metas</Text>
+              <Text style={styles.emptySubtext}>Agrega tu primera meta de ahorro</Text>
+            </View>
+          ) : (
+            goals.map((goal) => {
+              const progress = (goal.currentAmount / goal.targetAmount) * 100;
+              return (
+                <TouchableOpacity
+                  key={goal.id}
+                  style={styles.goalCard}
+                  onPress={() => {
+                    navigation.navigate('EditGoal', { goal });
+                  }}
+                >
+                  <View style={styles.goalHeader}>
+                    <View style={styles.goalLeft}>
+                      <View style={[styles.accountIcon, { backgroundColor: `${goal.color}33` }]}>
+                        <Ionicons name={goal.icon as any} size={24} color={goal.color} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.accountName}>{goal.name}</Text>
+                        <Text style={styles.goalTarget}>
+                          Objetivo: {formatCurrency(goal.targetAmount, goal.currency)}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.goalAmount}>
+                      <Text style={styles.goalCurrentAmount}>
+                        {formatCurrency(goal.currentAmount, goal.currency)}
+                      </Text>
+                      <Text style={styles.goalProgress}>{Math.round(progress)}%</Text>
+                    </View>
+                  </View>
+                  <View style={styles.progressBarContainer}>
+                    <View style={styles.progressBar}>
+                      <View
+                        style={[
+                          styles.progressBarFill,
+                          {
+                            width: `${Math.min(progress, 100)}%`,
+                            backgroundColor: goal.color,
+                          },
+                        ]}
+                      />
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          )}
+
+          <TouchableOpacity 
+            style={styles.addAccountButton}
+            onPress={() => navigation.navigate('AddGoal')}
+          >
+            <Ionicons name="add-circle-outline" size={24} color={colors.primary} />
+            <Text style={styles.addAccountText}>Añadir meta</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Sección Cuentas Archivadas */}
+        {accounts.some(a => a.isArchived) && (
+          <View style={styles.section}>
+            <TouchableOpacity 
+              style={styles.sectionHeader}
+              onPress={() => setArchivedExpanded(!archivedExpanded)}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Cuentas Archivadas</Text>
+                <Ionicons 
+                  name={archivedExpanded ? "chevron-up" : "chevron-down"} 
+                  size={20} 
+                  color={colors.textSecondary} 
+                  style={styles.chevronIcon}
+                />
+              </View>
+            </TouchableOpacity>
+
+            {archivedExpanded && (
+              <View>
+                {accounts
+                  .filter(a => a.isArchived)
+                  .map((account) => (
+                    <TouchableOpacity 
+                      key={account.id} 
+                      style={styles.accountCard}
+                      onPress={() => handleAccountPress(account)}
+                    >
+                      <View style={styles.accountLeft}>
+                        <View style={[styles.accountIcon, { backgroundColor: `${account.color}33`, opacity: 0.6 }]}>
+                          <Ionicons name={account.icon as any} size={24} color={account.color} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.accountName, { opacity: 0.6 }]}>{account.title}</Text>
+                          <View style={styles.accountBalanceContainer}>
+                            {!getDisplayInfo().isHidden ? (
+                              <>
+                                <Text style={[styles.accountBalance, { opacity: 0.6 }]}>
+                                  {formatAccountBalance(account.balance, account.currency)}
+                                </Text>
+                                {account.currency !== preferredCurrency && (
+                                  <Text style={[styles.accountBalanceConverted, { opacity: 0.6 }]}>
+                                    ≈ {getConvertedBalance(account)}
+                                  </Text>
+                                )}
+                              </>
+                            ) : (
+                              <Text style={[styles.accountBalance, { opacity: 0.6 }]}>••••••</Text>
+                            )}
+                          </View>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        <View style={{ height: 100 }} />
+          </>
+        )}
+      </ScrollView>
+
+      {/* Account Detail Modal */}
+      <AccountDetailModal
+        visible={modalVisible}
+        account={selectedAccount}
+        onClose={handleCloseModal}
+        onEdit={() => {
+          handleCloseModal();
+          navigation.navigate('EditAccount', { account: selectedAccount });
+        }}
+        onArchive={() => {
+          if (selectedAccount) {
+            updateAccount(selectedAccount.id, { isArchived: !selectedAccount.isArchived });
+          }
+          handleCloseModal();
+        }}
+        onTransactions={() => {
+          handleCloseModal();
+          navigation.navigate('Transactions');
+        }}
+        onIncome={() => {
+          handleCloseModal();
+          navigation.navigate('AddTransaction', { type: 'income', accountId: selectedAccount?.id });
+        }}
+        onTransfer={() => {
+          handleCloseModal();
+          navigation.navigate('Transfer', { accountId: selectedAccount?.id });
+        }}
+        onExpense={() => {
+          handleCloseModal();
+          navigation.navigate('AddTransaction', { type: 'expense', accountId: selectedAccount?.id });
+        }}
+      />
+    </View>
+  );
+};
+
+const createStyles = (colors: any) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    paddingTop: spacing.xl + 30,
+    backgroundColor: colors.surface,
+    gap: spacing.md,
+  },
+  headerContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerSpacer: {
+    width: 48,
+  },
+  headerBalanceContainer: {
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  headerTitle: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  headerBalance: {
+    fontSize: typography.sizes['2xl'],
+    fontWeight: typography.weights.bold as any,
+    color: colors.textPrimary,
+  },
+  currencyLabel: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    fontWeight: typography.weights.semibold as any,
+  },
+  stateHint: {
+    fontSize: typography.sizes.xs,
+    color: colors.textTertiary,
+    fontStyle: 'italic' as any,
+    marginTop: spacing.xs,
+  },
+  iconButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tabs: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabActive: {
+    borderBottomColor: colors.primary,
+  },
+  tabText: {
+    fontSize: typography.sizes.base,
+    color: colors.textSecondary,
+    fontWeight: typography.weights.medium as any,
+  },
+  tabTextActive: {
+    color: colors.primary,
+    fontWeight: typography.weights.semibold as any,
+  },
+  content: {
+    flex: 1,
+  },
+  section: {
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  sectionTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.semibold as any,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
+  },
+  sectionBalance: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.medium as any,
+    color: colors.textSecondary,
+  },
+  accountCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: 12,
+    marginBottom: spacing.sm,
+  },
+  accountLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  accountIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  accountName: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.medium as any,
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  accountBalance: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.semibold as any,
+    color: colors.textPrimary,
+  },
+  accountBalanceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  accountBalanceConverted: {
+    fontSize: typography.sizes.xs,
+    color: colors.textSecondary,
+    fontWeight: typography.weights.medium as any,
+  },
+  goalCard: {
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: 12,
+    marginBottom: spacing.sm,
+  },
+  goalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  goalLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    flex: 1,
+  },
+  goalTarget: {
+    fontSize: typography.sizes.xs,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
+  goalAmount: {
+    alignItems: 'flex-end',
+  },
+  goalCurrentAmount: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold as any,
+    color: '#FFFFFF',
+  },
+  goalProgress: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    marginTop: 4,
+    fontWeight: typography.weights.medium as any,
+  },
+  progressBarContainer: {
+    marginBottom: spacing.sm,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: colors.border,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  addAccountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    padding: spacing.md,
+    borderRadius: 12,
+    marginTop: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+  },
+  addAccountText: {
+    fontSize: typography.sizes.base,
+    color: colors.primary,
+    fontWeight: typography.weights.medium as any,
+    marginLeft: spacing.sm,
+  },
+  emptyGoalCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: 12,
+    marginBottom: spacing.sm,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xl,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    marginBottom: spacing.md,
+  },
+  emptyText: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold as any,
+    color: colors.textPrimary,
+    marginTop: spacing.md,
+  },
+  emptySubtext: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  totalViewContent: {
+    flex: 1,
+  },
+  totalCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  totalCurrency: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold as any,
+    color: colors.textPrimary,
+  },
+  totalAmount: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold as any,
+    color: colors.primary,
+  },
+  totalRowHighlight: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    backgroundColor: `${colors.primary}15`,
+  },
+  totalConvertedLabel: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold as any,
+    color: colors.textPrimary,
+  },
+  totalConvertedAmount: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold as any,
+    color: colors.primary,
+  },
+  chevronIcon: {
+    marginLeft: spacing.xs,
+  },
+});

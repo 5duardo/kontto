@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "Kontto",
+    "slug": "kontto-app-react-native",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/kontto.jpg",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/kontto.jpg",
+      "resizeMode": "contain",
+      "backgroundColor": "#0D1117"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kontto.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/kontto.jpg",
+        "backgroundColor": "#0D1117"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "com.kontto.app"
+    },
+    "web": {
+      "favicon": "./assets/kontto.jpg"
+    }
+  }
+}
