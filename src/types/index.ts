@@ -108,3 +108,14 @@ export interface MonthlyData {
   expense: number;
   balance: number;
 }
+
+export interface User {
+  id: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  avatar?: string;
+  bio?: string;
+  createdAt: string;
+  updatedAt: string;
+}

@@ -8,10 +8,13 @@ import {
   Alert,
   Switch,
   Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../store/useAppStore';
-import { spacing, typography, useTheme } from '../theme';
+import { spacing, typography, useTheme, borderRadius } from '../theme';
 
 const AVAILABLE_CURRENCIES = [
   // América
@@ -108,11 +111,25 @@ const AVAILABLE_CURRENCIES = [
 
 export const SettingsScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
-  const { preferredCurrency, setPreferredCurrency, favoriteExchangeRate, setFavoriteExchangeRate, theme, setTheme } = useAppStore();
+  const { 
+    preferredCurrency, setPreferredCurrency, 
+    favoriteExchangeRate, setFavoriteExchangeRate, 
+    theme, setTheme,
+    biometricEnabled, setBiometricEnabled,
+    pinEnabled, setPinEnabled,
+    pin, setPin,
+    validatePin,
+  } = useAppStore();
   
   // Estados para los modales
   const [showPreferredCurrencyModal, setShowPreferredCurrencyModal] = useState(false);
   const [showFavoriteRateModal, setShowFavoriteRateModal] = useState(false);
+  const [showSecurityModal, setShowSecurityModal] = useState(false);
+  const [securityMode, setSecurityMode] = useState<'pin' | 'biometric'>('pin');
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [pinStep, setPinStep] = useState<'create' | 'confirm'>('create');
+  const [showPin, setShowPin] = useState(false);
   
   // Crear estilos dinámicamente basados en los colores del tema
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -137,6 +154,66 @@ export const SettingsScreen = ({ navigation }: any) => {
     const newTheme = isLight ? 'light' : 'dark';
     setTheme(newTheme);
     Alert.alert('Éxito', `Tema cambiado a ${isLight ? 'claro' : 'oscuro'}`);
+  };
+
+  const handleBiometricToggle = (enabled: boolean) => {
+    if (enabled) {
+      Alert.alert('Información', 'La autenticación biométrica se activará en la próxima sesión');
+    }
+    setBiometricEnabled(enabled);
+  };
+
+  const handlePinToggle = (enabled: boolean) => {
+    if (enabled) {
+      setSecurityMode('pin');
+      setPinStep('create');
+      setNewPin('');
+      setConfirmPin('');
+      setShowSecurityModal(true);
+    } else {
+      Alert.alert(
+        'Desactivar PIN',
+        '¿Deseas desactivar la protección por PIN?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Desactivar',
+            style: 'destructive',
+            onPress: () => {
+              setPinEnabled(false);
+              setPin('');
+              Alert.alert('Éxito', 'PIN desactivado');
+            },
+          },
+        ]
+      );
+    }
+  };
+
+  const handleSetPin = () => {
+    if (pinStep === 'create') {
+      if (!newPin || newPin.length < 4) {
+        Alert.alert('Error', 'El PIN debe tener al menos 4 dígitos');
+        return;
+      }
+      setPinStep('confirm');
+    } else {
+      if (newPin !== confirmPin) {
+        Alert.alert('Error', 'Los PINs no coinciden');
+        setNewPin('');
+        setConfirmPin('');
+        setPinStep('create');
+        return;
+      }
+      
+      setPin(newPin);
+      setPinEnabled(true);
+      setShowSecurityModal(false);
+      setNewPin('');
+      setConfirmPin('');
+      setPinStep('create');
+      Alert.alert('Éxito', 'PIN configurado correctamente');
+    }
   };
 
   return (
@@ -215,6 +292,53 @@ export const SettingsScreen = ({ navigation }: any) => {
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Seguridad */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Seguridad</Text>
+
+          {/* Bloqueo Biométrico */}
+          <View style={styles.settingGroup}>
+            <View style={styles.settingHeader}>
+              <Ionicons name="finger-print" size={24} color={colors.primary} />
+              <Text style={styles.settingLabel}>Bloqueo Biométrico</Text>
+              <View style={{ marginLeft: 'auto' }}>
+                <Switch
+                  value={biometricEnabled}
+                  onValueChange={handleBiometricToggle}
+                  thumbColor={biometricEnabled ? colors.primary : colors.textSecondary}
+                  trackColor={{ false: colors.border, true: `${colors.primary}40` }}
+                />
+              </View>
+            </View>
+            <Text style={styles.settingDescription}>
+              {biometricEnabled 
+                ? 'La app se abrirá con reconocimiento facial o huella' 
+                : 'Activar para mayor seguridad'}
+            </Text>
+          </View>
+
+          {/* PIN de Seguridad */}
+          <View style={styles.settingGroup}>
+            <View style={styles.settingHeader}>
+              <Ionicons name="lock-closed" size={24} color={colors.primary} />
+              <Text style={styles.settingLabel}>PIN de Seguridad</Text>
+              <View style={{ marginLeft: 'auto' }}>
+                <Switch
+                  value={pinEnabled}
+                  onValueChange={handlePinToggle}
+                  thumbColor={pinEnabled ? colors.primary : colors.textSecondary}
+                  trackColor={{ false: colors.border, true: `${colors.primary}40` }}
+                />
+              </View>
+            </View>
+            <Text style={styles.settingDescription}>
+              {pinEnabled 
+                ? 'La app solicita PIN al abrir' 
+                : 'Configura un PIN de 4 dígitos'}
+            </Text>
           </View>
         </View>
 
@@ -348,6 +472,113 @@ export const SettingsScreen = ({ navigation }: any) => {
             </ScrollView>
           </View>
         </View>
+      </Modal>
+
+      {/* Modal PIN de Seguridad */}
+      <Modal
+        visible={showSecurityModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => {
+          setShowSecurityModal(false);
+          setPinStep('create');
+          setNewPin('');
+          setConfirmPin('');
+        }}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 100}
+          style={styles.pinModalOverlay}
+        >
+          <View style={[styles.modalContent, styles.pinModalContent]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {pinStep === 'create' ? 'Crear PIN' : 'Confirmar PIN'}
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowSecurityModal(false);
+                  setPinStep('create');
+                  setNewPin('');
+                  setConfirmPin('');
+                }}
+              >
+                <Ionicons name="close" size={28} color={colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.pinModalBody}>
+              <Text style={styles.pinLabel}>
+                {pinStep === 'create'
+                  ? 'Ingresa un PIN de 4 dígitos'
+                  : 'Confirma tu PIN'}
+              </Text>
+
+              <TextInput
+                style={styles.pinInput}
+                placeholder="0000"
+                placeholderTextColor={colors.textTertiary}
+                keyboardType="number-pad"
+                maxLength={4}
+                secureTextEntry={!showPin}
+                value={pinStep === 'create' ? newPin : confirmPin}
+                onChangeText={(text) => {
+                  if (pinStep === 'create') {
+                    setNewPin(text);
+                  } else {
+                    setConfirmPin(text);
+                  }
+                }}
+              />
+
+              <TouchableOpacity
+                style={styles.togglePin}
+                onPress={() => setShowPin(!showPin)}
+              >
+                <Ionicons
+                  name={showPin ? 'eye' : 'eye-off'}
+                  size={20}
+                  color={colors.textSecondary}
+                />
+                <Text style={styles.togglePinText}>
+                  {showPin ? 'Ocultar' : 'Mostrar'} PIN
+                </Text>
+              </TouchableOpacity>
+
+              <View style={styles.pinInfo}>
+                <Ionicons name="information-circle" size={20} color={colors.primary} />
+                <Text style={styles.pinInfoText}>
+                  {pinStep === 'create'
+                    ? 'Crea un PIN con al menos 4 dígitos para proteger tu app'
+                    : 'Confirma tu PIN para verificar que es correcto'}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.pinButton, { backgroundColor: colors.primary }]}
+                onPress={handleSetPin}
+              >
+                <Text style={styles.pinButtonText}>
+                  {pinStep === 'create' ? 'Siguiente' : 'Confirmar PIN'}
+                </Text>
+              </TouchableOpacity>
+
+              {pinStep === 'confirm' && (
+                <TouchableOpacity
+                  style={[styles.pinButton, { backgroundColor: colors.textSecondary }]}
+                  onPress={() => {
+                    setPinStep('create');
+                    setNewPin('');
+                    setConfirmPin('');
+                  }}
+                >
+                  <Text style={styles.pinButtonText}>Volver</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -492,5 +723,78 @@ const createStyles = (colors: any) => StyleSheet.create({
   modalItemActive: {
     borderColor: colors.primary,
     backgroundColor: `${colors.primary}10`,
+  },
+  pinModalBody: {
+    padding: spacing.lg,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  pinLabel: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold as any,
+    color: colors.textPrimary,
+    marginBottom: spacing.lg,
+    textAlign: 'center',
+  },
+  pinInput: {
+    fontSize: typography.sizes['2xl'],
+    fontWeight: typography.weights.bold as any,
+    color: colors.textPrimary,
+    textAlign: 'center',
+    padding: spacing.lg,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
+    marginBottom: spacing.lg,
+    letterSpacing: 10,
+  },
+  togglePin: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  togglePinText: {
+    fontSize: typography.sizes.base,
+    color: colors.textSecondary,
+  },
+  pinInfo: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: 12,
+    marginBottom: spacing.lg,
+  },
+  pinInfoText: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  pinButton: {
+    paddingVertical: spacing.md,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  pinButtonText: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.bold as any,
+    color: '#fff',
+  },
+  pinModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  pinModalContent: {
+    marginHorizontal: 0,
+    marginBottom: 0,
+    borderRadius: 16,
+    maxHeight: '75%',
+    alignSelf: 'stretch',
   },
 });

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { borderRadius, spacing, typography, useTheme } from '../../theme';
 
 interface ProgressBarProps {
-  progress: number; // 0 to 1
+  progress: number; // Can be 0-1 or 0-100
   color?: string;
   backgroundColor?: string;
   height?: number;
@@ -21,8 +21,16 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const finalColor = color || colors.primary;
   const finalBackgroundColor = backgroundColor || colors.backgroundTertiary;
-  const clampedProgress = Math.max(0, Math.min(1, progress));
-  const percentage = Math.round(clampedProgress * 100);
+  
+  // Normalize progress: if > 1.5, assume it's a percentage (0-100), otherwise assume 0-1
+  let normalizedProgress = progress;
+  if (progress > 1.5) {
+    normalizedProgress = progress / 100;
+  }
+  
+  // Clamp to 0-1 range for display, but allow visualization up to 100%
+  const displayProgress = Math.min(1, Math.max(0, normalizedProgress));
+  const percentage = Math.round(normalizedProgress * 100);
 
   return (
     <View>
@@ -31,7 +39,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
           style={[
             styles.progress,
             {
-              width: `${percentage}%`,
+              width: `${Math.min(100, displayProgress * 100)}%`,
               backgroundColor: finalColor,
               borderRadius: height / 2,
             },

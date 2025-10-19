@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Transaction, Category, Budget, Goal, RecurringPayment, Account } from '../types';
+import { Transaction, Category, Budget, Goal, RecurringPayment, Account, User } from '../types';
 
 interface AppState {
   // Transactions
@@ -22,6 +22,7 @@ interface AppState {
   addBudget: (budget: Omit<Budget, 'id' | 'createdAt' | 'updatedAt' | 'spent'>) => void;
   updateBudget: (id: string, budget: Partial<Budget>) => void;
   deleteBudget: (id: string) => void;
+  recalculateBudgetsSpent: () => void;
   
   // Goals
   goals: Goal[];
@@ -59,6 +60,23 @@ interface AppState {
   // Theme
   theme: 'dark' | 'light';
   setTheme: (theme: 'dark' | 'light') => void;
+  
+  // User Authentication
+  user: User | null;
+  isLoggedIn: boolean;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => void;
+  register: (fullName: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  updateUserProfile: (user: Partial<User>) => void;
+  
+  // Security
+  biometricEnabled: boolean;
+  pinEnabled: boolean;
+  pin: string;
+  setBiometricEnabled: (enabled: boolean) => void;
+  setPinEnabled: (enabled: boolean) => void;
+  setPin: (pin: string) => void;
+  validatePin: (pin: string) => boolean;
   
   // Initialization
   initializeDefaultData: () => void;
@@ -100,6 +118,11 @@ export const useAppStore = create<AppState>()(
       favoriteExchangeRate: 'USD',
       theme: 'dark',
       isInitialized: false,
+      user: null,
+      isLoggedIn: false,
+      biometricEnabled: false,
+      pinEnabled: false,
+      pin: '',
 
       // Transaction actions
       addTransaction: (transaction) => {
@@ -111,11 +134,11 @@ export const useAppStore = create<AppState>()(
           updatedAt: now,
         };
         
-        set((state) => ({
-          transactions: [newTransaction, ...state.transactions],
-        }));
+        // Calculate updates needed
+        let accountUpdates: any = null;
+        let budgetUpdates: Array<{ id: string; spent: number }> = [];
 
-        // Update account balance if accountId is provided
+        // Prepare account balance update if accountId is provided
         if (transaction.accountId) {
           const account = get().accounts.find(a => a.id === transaction.accountId);
           if (account) {
@@ -123,19 +146,52 @@ export const useAppStore = create<AppState>()(
               ? account.balance + transaction.amount 
               : account.balance - transaction.amount;
             
-            get().updateAccount(account.id, {
+            accountUpdates = {
+              id: account.id,
               balance: newBalance,
-            });
+            };
           }
         }
 
-        // Update budget spent if applicable
-        const budget = get().budgets.find(b => b.categoryIds.includes(transaction.categoryId));
-        if (budget && transaction.type === 'expense') {
-          get().updateBudget(budget.id, {
-            spent: budget.spent + transaction.amount,
-          });
+        // Prepare budget spent updates if applicable
+        if (transaction.type === 'expense') {
+          budgetUpdates = get().budgets
+            .filter(b => b.categoryIds.includes(transaction.categoryId))
+            .map(budget => ({
+              id: budget.id,
+              spent: budget.spent + transaction.amount,
+            }));
         }
+
+        // Apply all updates in a single state update
+        set((state) => {
+          let newState: any = {
+            transactions: [newTransaction, ...state.transactions],
+            accounts: state.accounts,
+            budgets: state.budgets,
+          };
+
+          // Update account if needed
+          if (accountUpdates) {
+            newState.accounts = state.accounts.map(a =>
+              a.id === accountUpdates.id
+                ? { ...a, ...accountUpdates, updatedAt: now }
+                : a
+            );
+          }
+
+          // Update budgets if needed
+          if (budgetUpdates.length > 0) {
+            newState.budgets = state.budgets.map(b => {
+              const update = budgetUpdates.find(u => u.id === b.id);
+              return update
+                ? { ...b, spent: update.spent, updatedAt: now }
+                : b;
+            });
+          }
+
+          return newState;
+        });
       },
 
       updateTransaction: (id, transaction) => {
@@ -185,6 +241,36 @@ export const useAppStore = create<AppState>()(
               get().updateAccount(account.id, { balance: newBalance });
             }
           }
+          
+          // Handle budget spent adjustments if amount, type, or category changed
+          const categoryId = transaction.categoryId ?? oldTransaction.categoryId;
+          const newType = transaction.type ?? oldTransaction.type;
+          const newAmount = transaction.amount ?? oldTransaction.amount;
+          
+          // If category or amount or type changed
+          if (oldTransaction.categoryId !== categoryId || oldTransaction.amount !== newAmount || oldTransaction.type !== newType) {
+            // If it was an expense before, reverse the old amount from old category budgets
+            if (oldTransaction.type === 'expense') {
+              get().budgets
+                .filter(b => b.categoryIds.includes(oldTransaction.categoryId))
+                .forEach(budget => {
+                  get().updateBudget(budget.id, {
+                    spent: Math.max(0, budget.spent - oldTransaction.amount),
+                  });
+                });
+            }
+            
+            // If it's an expense now, add the new amount to new category budgets
+            if (newType === 'expense') {
+              get().budgets
+                .filter(b => b.categoryIds.includes(categoryId))
+                .forEach(budget => {
+                  get().updateBudget(budget.id, {
+                    spent: budget.spent + newAmount,
+                  });
+                });
+            }
+          }
         }
         
         set((state) => ({
@@ -214,11 +300,14 @@ export const useAppStore = create<AppState>()(
         }
         
         // Reverse budget spent if applicable
-        const budget = transaction?.categoryId ? get().budgets.find(b => b.categoryIds.includes(transaction.categoryId)) : undefined;
-        if (budget && transaction?.type === 'expense') {
-          get().updateBudget(budget.id, {
-            spent: Math.max(0, budget.spent - transaction.amount),
-          });
+        if (transaction?.categoryId && transaction.type === 'expense') {
+          get().budgets
+            .filter(b => b.categoryIds.includes(transaction.categoryId))
+            .forEach(budget => {
+              get().updateBudget(budget.id, {
+                spent: Math.max(0, budget.spent - transaction.amount),
+              });
+            });
         }
         
         set((state) => ({
@@ -277,19 +366,72 @@ export const useAppStore = create<AppState>()(
       },
 
       updateBudget: (id, budget) => {
-        set((state) => ({
-          budgets: state.budgets.map((b) =>
-            b.id === id
-              ? { ...b, ...budget, updatedAt: new Date().toISOString() }
-              : b
-          ),
-        }));
+        set((state) => {
+          const budgets = state.budgets.map((b) => {
+            if (b.id === id) {
+              const updatedBudget = { ...b, ...budget, updatedAt: new Date().toISOString() };
+              
+              // Si se actualizan las fechas o categorías, recalcular el spent
+              if (budget.startDate || budget.endDate || budget.categoryIds) {
+                const startDate = new Date(budget.startDate || b.startDate);
+                const endDate = new Date(budget.endDate || b.endDate);
+                const categoryIds = budget.categoryIds || b.categoryIds;
+                
+                // Recalcular spent basado en transacciones en el nuevo período
+                const spent = state.transactions
+                  .filter(t => {
+                    const transactionDate = new Date(t.date);
+                    return (
+                      t.type === 'expense' &&
+                      categoryIds.includes(t.categoryId) &&
+                      transactionDate >= startDate &&
+                      transactionDate <= endDate
+                    );
+                  })
+                  .reduce((sum, t) => sum + t.amount, 0);
+                
+                updatedBudget.spent = spent;
+              }
+              
+              return updatedBudget;
+            }
+            return b;
+          });
+          
+          return { budgets };
+        });
       },
 
       deleteBudget: (id) => {
         set((state) => ({
           budgets: state.budgets.filter((b) => b.id !== id),
         }));
+      },
+
+      recalculateBudgetsSpent: () => {
+        set((state) => {
+          const budgets = state.budgets.map((budget) => {
+            const startDate = new Date(budget.startDate);
+            const endDate = new Date(budget.endDate);
+            
+            // Recalcular spent basado en transacciones en el período
+            const spent = state.transactions
+              .filter(t => {
+                const transactionDate = new Date(t.date);
+                return (
+                  t.type === 'expense' &&
+                  budget.categoryIds.includes(t.categoryId) &&
+                  transactionDate >= startDate &&
+                  transactionDate <= endDate
+                );
+              })
+              .reduce((sum, t) => sum + t.amount, 0);
+            
+            return { ...budget, spent };
+          });
+          
+          return { budgets };
+        });
       },
 
       // Goal actions
@@ -404,6 +546,9 @@ export const useAppStore = create<AppState>()(
           return;
         }
 
+        // Usar la fecha y hora actual del dispositivo
+        const transferDate = new Date().toISOString();
+
         // Create transaction for source account (expense)
         const expenseTransaction: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'> = {
           type: 'expense',
@@ -411,7 +556,7 @@ export const useAppStore = create<AppState>()(
           categoryId: 'transfer', // Special category for transfers
           accountId: sourceAccountId,
           description: `Transferencia a ${destinationAccount.title}`,
-          date: new Date().toISOString().split('T')[0],
+          date: transferDate,
         };
 
         // Create transaction for destination account (income)
@@ -421,7 +566,7 @@ export const useAppStore = create<AppState>()(
           categoryId: 'transfer', // Special category for transfers
           accountId: destinationAccountId,
           description: `Transferencia desde ${sourceAccount.title}`,
-          date: new Date().toISOString().split('T')[0],
+          date: transferDate,
         };
 
         // Update account balances
@@ -466,6 +611,92 @@ export const useAppStore = create<AppState>()(
 
       setTheme: (theme) => {
         set({ theme });
+      },
+
+      // Authentication
+      login: async (email: string, password: string) => {
+        // Simple local authentication (simulated - in real app would connect to backend)
+        if (!email || !password) {
+          return { success: false, error: 'Por favor completa todos los campos' };
+        }
+        
+        if (password.length < 6) {
+          return { success: false, error: 'La contraseña debe tener al menos 6 caracteres' };
+        }
+
+        // Simulated successful login
+        const user: User = {
+          id: generateId(),
+          fullName: email.split('@')[0],
+          email,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        set({ user, isLoggedIn: true });
+        return { success: true };
+      },
+
+      logout: () => {
+        set({ user: null, isLoggedIn: false });
+      },
+
+      register: async (fullName: string, email: string, password: string) => {
+        // Simple local registration (simulated - in real app would connect to backend)
+        if (!fullName || !email || !password) {
+          return { success: false, error: 'Por favor completa todos los campos' };
+        }
+
+        if (password.length < 6) {
+          return { success: false, error: 'La contraseña debe tener al menos 6 caracteres' };
+        }
+
+        // Simple email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          return { success: false, error: 'Por favor ingresa un correo válido' };
+        }
+
+        // Simulated successful registration
+        const user: User = {
+          id: generateId(),
+          fullName,
+          email,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        set({ user, isLoggedIn: true });
+        return { success: true };
+      },
+
+      updateUserProfile: (userData) => {
+        const currentUser = get().user;
+        if (currentUser) {
+          const updatedUser: User = {
+            ...currentUser,
+            ...userData,
+            updatedAt: new Date().toISOString(),
+          };
+          set({ user: updatedUser });
+        }
+      },
+
+      // Security
+      setBiometricEnabled: (enabled) => {
+        set({ biometricEnabled: enabled });
+      },
+
+      setPinEnabled: (enabled) => {
+        set({ pinEnabled: enabled });
+      },
+
+      setPin: (pin) => {
+        set({ pin });
+      },
+
+      validatePin: (pin) => {
+        return get().pin === pin;
       },
 
       // Initialize default data

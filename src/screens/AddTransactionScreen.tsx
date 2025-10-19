@@ -29,6 +29,10 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
   const [description, setDescription] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [selectedAccountId, setSelectedAccountId] = useState(initialAccountId || '');
+  
+  // Store the full Date object with time
+  const [transactionDate, setTransactionDate] = useState<Date>(new Date());
+  
   // Format date using local timezone to avoid UTC offset issues (toISOString can shift date)
   const formatDateLocal = (d: Date) => {
     const y = d.getFullYear();
@@ -45,8 +49,6 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
     return `${day}/${m}/${y}`;
   };
 
-  const [dateObj, setDateObj] = useState<Date>(new Date());
-  const [date, setDate] = useState(formatDateLocal(new Date()));
   const [displayDate, setDisplayDate] = useState(formatDateDisplay(new Date()));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -76,7 +78,7 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
       categoryId: selectedCategoryId,
       accountId: selectedAccountId,
       description: description || selectedCategory?.name || '',
-      date,
+      date: transactionDate.toISOString(), // Guardar fecha y hora completa en formato ISO
     });
 
     navigation.goBack();
@@ -232,24 +234,34 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
           style={[styles.categorySelector, styles.dateSelector]}
           onPress={() => setShowDatePicker(true)}
         >
-          <Text style={styles.categoryName}>{date}</Text>
+          <Text style={styles.categoryName}>{displayDate}</Text>
           <Ionicons name="calendar" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
 
         {showDatePicker && (
           <DateTimePicker
-            value={dateObj}
+            value={transactionDate}
             mode="date"
             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
             onChange={(event: any, selectedDate?: Date) => {
               // selectedDate can be undefined if user cancels on Android
               if (selectedDate) {
-                const currentDate = selectedDate;
+                // Mantener la hora actual del dispositivo, solo cambiar la fecha
+                const currentTime = new Date();
+                const updatedDate = new Date(
+                  selectedDate.getFullYear(),
+                  selectedDate.getMonth(),
+                  selectedDate.getDate(),
+                  currentTime.getHours(),
+                  currentTime.getMinutes(),
+                  currentTime.getSeconds(),
+                  currentTime.getMilliseconds()
+                );
+                
                 // On Android the picker closes after selection; on iOS keep it open if needed
                 setShowDatePicker(Platform.OS === 'ios');
-                setDateObj(currentDate);
-                setDate(formatDateLocal(currentDate));
-                setDisplayDate(formatDateDisplay(currentDate));
+                setTransactionDate(updatedDate);
+                setDisplayDate(formatDateDisplay(selectedDate));
               } else {
                 // user dismissed/cancelled on Android
                 setShowDatePicker(false);

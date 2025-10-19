@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { spacing, typography, useTheme } from '../theme';
 import { useAppStore } from '../store/useAppStore';
 import { AccountType } from '../types';
+import { CurrencySelector } from '../components/CurrencySelector';
 
 const ACCOUNT_TYPES = [
   { id: 'normal' as AccountType, name: 'Normal', icon: 'wallet' },
@@ -34,57 +35,6 @@ const ACCOUNT_ICONS = [
   'heart',
   'airplane',
   'bicycle',
-];
-
-const CURRENCIES = [
-  // América
-  { code: 'USD', name: 'Dólar Americano', symbol: '$' },
-  { code: 'CAD', name: 'Dólar Canadiense', symbol: 'C$' },
-  { code: 'MXN', name: 'Peso Mexicano', symbol: '$' },
-  { code: 'BRL', name: 'Real Brasileño', symbol: 'R$' },
-  { code: 'ARS', name: 'Peso Argentino', symbol: '$' },
-  { code: 'CLP', name: 'Peso Chileno', symbol: '$' },
-  { code: 'COP', name: 'Peso Colombiano', symbol: '$' },
-  { code: 'PEN', name: 'Sol Peruano', symbol: 'S/' },
-  { code: 'HNL', name: 'Lempira Hondureño', symbol: 'L' },
-  { code: 'GTQ', name: 'Quetzal Guatemalteco', symbol: 'Q' },
-  { code: 'CRC', name: 'Colón Costarricense', symbol: '₡' },
-  { code: 'PAB', name: 'Balboa Panameño', symbol: 'B/.' },
-  { code: 'NIO', name: 'Córdoba Nicaragüense', symbol: 'C$' },
-  { code: 'DOP', name: 'Peso Dominicano', symbol: 'RD$' },
-  { code: 'UYU', name: 'Peso Uruguayo', symbol: '$U' },
-  { code: 'BOB', name: 'Boliviano', symbol: 'Bs.' },
-  { code: 'PYG', name: 'Guaraní Paraguayo', symbol: '₲' },
-  { code: 'VES', name: 'Bolívar Venezolano', symbol: 'Bs.' },
-  
-  // Europa
-  { code: 'EUR', name: 'Euro', symbol: '€' },
-  { code: 'GBP', name: 'Libra Esterlina', symbol: '£' },
-  { code: 'CHF', name: 'Franco Suizo', symbol: 'CHF' },
-  { code: 'SEK', name: 'Corona Sueca', symbol: 'kr' },
-  { code: 'NOK', name: 'Corona Noruega', symbol: 'kr' },
-  { code: 'DKK', name: 'Corona Danesa', symbol: 'kr' },
-  { code: 'PLN', name: 'Zloty Polaco', symbol: 'zł' },
-  { code: 'CZK', name: 'Corona Checa', symbol: 'Kč' },
-  { code: 'HUF', name: 'Forinto Húngaro', symbol: 'Ft' },
-  { code: 'RON', name: 'Leu Rumano', symbol: 'lei' },
-  { code: 'RUB', name: 'Rublo Ruso', symbol: '₽' },
-  { code: 'TRY', name: 'Lira Turca', symbol: '₺' },
-  { code: 'UAH', name: 'Grivna Ucraniana', symbol: '₴' },
-  
-  // Asia
-  { code: 'CNY', name: 'Yuan Chino', symbol: '¥' },
-  { code: 'JPY', name: 'Yen Japonés', symbol: '¥' },
-  { code: 'KRW', name: 'Won Surcoreano', symbol: '₩' },
-  { code: 'INR', name: 'Rupia India', symbol: '₹' },
-  { code: 'IDR', name: 'Rupia Indonesia', symbol: 'Rp' },
-  { code: 'THB', name: 'Baht Tailandés', symbol: '฿' },
-  { code: 'MYR', name: 'Ringgit Malayo', symbol: 'RM' },
-  { code: 'SGD', name: 'Dólar de Singapur', symbol: 'S$' },
-  { code: 'HKD', name: 'Dólar de Hong Kong', symbol: 'HK$' },
-  { code: 'AUD', name: 'Dólar Australiano', symbol: 'A$' },
-  { code: 'NZD', name: 'Dólar Neozelandés', symbol: 'NZ$' },
-  { code: 'ZAR', name: 'Rand Sudafricano', symbol: 'R' },
 ];
 
 const ICON_COLORS = [
@@ -120,7 +70,6 @@ export const AddAccountScreen = ({ navigation, route }: any) => {
   const [balance, setBalance] = useState('0');
   const [creditLimit, setCreditLimit] = useState('0');
   const [includeInTotal, setIncludeInTotal] = useState(true);
-  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -318,64 +267,14 @@ export const AddAccountScreen = ({ navigation, route }: any) => {
 
         {/* Moneda */}
         <View style={styles.section}>
-          <Text style={styles.label}>Moneda de la cuenta</Text>
-          <TouchableOpacity 
-            style={styles.currencyButton}
-            onPress={() => setShowCurrencyModal(true)}
-          >
-            <Text style={styles.currencyButtonText}>
-              {CURRENCIES.find(c => c.code === currency)?.name} ({CURRENCIES.find(c => c.code === currency)?.symbol})
-            </Text>
-            <Ionicons name="chevron-down" size={24} color={colors.primary} />
-          </TouchableOpacity>
+          <CurrencySelector
+            selectedCurrency={currency}
+            onCurrencyChange={setCurrency}
+            modalTitle="Seleccionar moneda"
+            label="Moneda de la cuenta"
+            showFullName={true}
+          />
         </View>
-
-        {/* Modal de selección de moneda */}
-        <Modal
-          visible={showCurrencyModal}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setShowCurrencyModal(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-              <View style={styles.modalHeader}>
-                <TouchableOpacity onPress={() => setShowCurrencyModal(false)}>
-                  <Ionicons name="close" size={28} color={colors.textPrimary} />
-                </TouchableOpacity>
-                <Text style={styles.modalTitle}>Seleccionar moneda</Text>
-                <View style={{ width: 28 }} />
-              </View>
-              
-              <ScrollView style={styles.currencyList}>
-                {CURRENCIES.map((curr) => (
-                  <TouchableOpacity
-                    key={curr.code}
-                    style={[
-                      styles.currencyListItem,
-                      currency === curr.code && styles.currencyListItemSelected,
-                    ]}
-                    onPress={() => {
-                      setCurrency(curr.code);
-                      setShowCurrencyModal(false);
-                    }}
-                  >
-                    <View style={styles.currencyListItemContent}>
-                      <Text style={styles.currencyCode}>{curr.code}</Text>
-                      <Text style={styles.currencyName}>{curr.name}</Text>
-                    </View>
-                    <View style={styles.currencyListItemRight}>
-                      <Text style={styles.currencySymbol}>{curr.symbol}</Text>
-                      {currency === curr.code && (
-                        <Ionicons name="checkmark" size={24} color={colors.primary} />
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
 
         {/* Límite de crédito (solo para cuentas de crédito) */}
         {accountType === 'credit' && (

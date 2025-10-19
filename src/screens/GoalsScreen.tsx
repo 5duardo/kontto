@@ -274,7 +274,7 @@ export const GoalsScreen = () => {
                 ))}
               </ScrollView>
 
-              <Button title="Crear Meta" onPress={handleAddGoal} fullWidth />
+              <Button title="Crear Meta" onPress={handleAddGoal} fullWidth variant="solidPrimary" />
             </ScrollView>
           </View>
         </View>
@@ -308,7 +308,7 @@ export const GoalsScreen = () => {
                 autoFocus
               />
 
-              <Button title="Agregar" onPress={handleAddMoney} fullWidth />
+              <Button title="Agregar" onPress={handleAddMoney} fullWidth variant="solidPrimary" />
             </View>
           </View>
         </View>
