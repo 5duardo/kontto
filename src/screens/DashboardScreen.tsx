@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../store/useAppStore';
 import { spacing, typography, useTheme } from '../theme';
 import { AccountDetailModal } from '../components/AccountDetailModal';
+import { ProgressBar } from '../components/common/ProgressBar';
 import { Account } from '../types';
 import { useExchangeRates } from '../hooks/useExchangeRates';
 
@@ -50,7 +51,7 @@ const convertCurrency = (
 
 export const DashboardScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
-  const { transactions, goals, accounts, initializeDefaultData, isInitialized, preferredCurrency, favoriteExchangeRate, updateAccount } = useAppStore();
+  const { transactions, goals, accounts, budgets, recurringPayments, categories, initializeDefaultData, isInitialized, preferredCurrency, favoriteExchangeRate, updateAccount } = useAppStore();
   const { rates: exchangeRates, isLoading: ratesLoading } = useExchangeRates();
   const [activeTab, setActiveTab] = useState<'cuentas' | 'total'>('cuentas');
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
@@ -125,13 +126,28 @@ export const DashboardScreen = ({ navigation }: any) => {
     const displayInfo = getDisplayInfo();
     const displayBalance = convertCurrency(accountsBalanceHNL, 'HNL', displayInfo.currency, exchangeRates);
 
+    // Calcular presupuesto total mensual
+    const currentMonth = new Date().toLocaleString('es-HN', { month: '2-digit', year: 'numeric' });
+    const currentMonthTransactions = transactions.filter((t) => {
+      const transactionMonth = new Date(t.date).toLocaleString('es-HN', { month: '2-digit', year: 'numeric' });
+      return transactionMonth === currentMonth && t.type === 'expense';
+    });
+    
+    const monthlyBudgetAmount = budgets
+      .filter((b) => b.period === 'monthly')
+      .reduce((sum, b) => sum + b.amount, 0);
+    
+    const monthlyExpenseAmount = currentMonthTransactions.reduce((sum, t) => sum + t.amount, 0);
+
     return {
       totalIncome,
       totalExpense,
       balance: displayBalance,
       transactionsBalance: totalIncome - totalExpense,
+      monthlyBudget: monthlyBudgetAmount,
+      monthlyExpense: monthlyExpenseAmount,
     };
-  }, [transactions, accounts, exchangeRates, displayState, preferredCurrency, favoriteExchangeRate]);
+  }, [transactions, accounts, budgets, exchangeRates, displayState, preferredCurrency, favoriteExchangeRate]);
 
   const formatCurrency = (amount: number, currency: string = 'HNL') => {
     const symbol = CURRENCY_SYMBOLS[currency] || currency;
@@ -162,6 +178,23 @@ export const DashboardScreen = ({ navigation }: any) => {
     );
     return formatAccountBalance(converted, preferredCurrency);
   };
+
+  // Función para obtener pagos próximos en los próximos 7 días
+  const getUpcomingPayments = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const sevenDaysFromNow = new Date(today);
+    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+
+    return recurringPayments
+      .filter((payment) => {
+        if (!payment.isActive) return false;
+        const nextDate = new Date(payment.nextDate);
+        nextDate.setHours(0, 0, 0, 0);
+        return nextDate >= today && nextDate <= sevenDaysFromNow;
+      })
+      .sort((a, b) => new Date(a.nextDate).getTime() - new Date(b.nextDate).getTime());
+  }, [recurringPayments]);
 
   return (
     <View style={styles.container}>
@@ -358,6 +391,58 @@ export const DashboardScreen = ({ navigation }: any) => {
         ) : (
           // Vista Cuentas - Original
           <>
+            {/* Presupuesto - movido arriba de Cuentas */}
+            {stats.monthlyBudget > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.budgetTitle}>Presupuesto</Text>
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  onPress={() => navigation.navigate('Budgets')}
+                >
+                  <View style={styles.budgetCard}>
+                    <View style={styles.budgetHeader}>
+                      <View style={styles.budgetLeftInfo}>
+                        <Text style={styles.budgetLabel}>Gasto</Text>
+                        <Text style={styles.budgetAmountSpent}>{getDisplayInfo().isHidden ? '••••••' : formatCurrency(stats.monthlyExpense)}</Text>
+                      </View>
+                      <View style={styles.budgetRightInfo}>
+                        <Text style={styles.budgetLabel}>Presupuesto</Text>
+                        <Text style={styles.budgetAmountTotal}>{getDisplayInfo().isHidden ? '••••••' : formatCurrency(stats.monthlyBudget)}</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.budgetProgressContainer}>
+                      <ProgressBar
+                        progress={(stats.monthlyExpense / (stats.monthlyBudget || 1)) * 100}
+                        color={
+                          stats.monthlyExpense > stats.monthlyBudget * 0.8
+                            ? stats.monthlyExpense > stats.monthlyBudget
+                              ? '#EF4444'
+                              : '#F59E0B'
+                            : colors.primary
+                        }
+                        backgroundColor={colors.backgroundTertiary}
+                        height={8}
+                        showPercentage={false}
+                      />
+                    </View>
+
+                    <View style={styles.budgetFooter}>
+                      <Text style={styles.budgetPercentage}>{`${Math.round((stats.monthlyExpense / (stats.monthlyBudget || 1)) * 100)}% utilizado`}</Text>
+                      <Text style={[
+                        styles.budgetRemaining,
+                        { color: stats.monthlyExpense > stats.monthlyBudget ? '#EF4444' : colors.textSecondary }
+                      ]}>
+                        {getDisplayInfo().isHidden ? '••••••' : (stats.monthlyExpense > stats.monthlyBudget
+                          ? `Excedido: ${formatCurrency(stats.monthlyExpense - stats.monthlyBudget)}`
+                          : `Disponible: ${formatCurrency(Math.max(0, stats.monthlyBudget - stats.monthlyExpense))}`)}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* Sección Cuentas - Incluye todas las cuentas (regulares + ahorro) */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -426,6 +511,55 @@ export const DashboardScreen = ({ navigation }: any) => {
             <Text style={styles.addAccountText}>Añadir cuenta financiera</Text>
           </TouchableOpacity>
         </View>
+
+          
+
+        {/* Sección Pagos Próximos */}
+        {getUpcomingPayments.length > 0 && (
+          <TouchableOpacity
+            activeOpacity={0.9}
+            style={styles.section}
+            onPress={() => navigation.navigate('ScheduledPayments')}
+          >
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Pagos Próximos</Text>
+              <Text style={styles.sectionBalance}>{getDisplayInfo().isHidden ? '••••••' : formatCurrency(getUpcomingPayments.reduce((sum, p) => sum + p.amount, 0))}</Text>
+            </View>
+
+            {getUpcomingPayments.map((payment) => {
+              const category = categories.find((c) => c.id === payment.categoryId);
+              const paymentDate = new Date(payment.nextDate);
+              const today = new Date();
+              const daysUntil = Math.ceil((paymentDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+              const dateFormatted = paymentDate.toLocaleDateString('es-HN', { month: 'short', day: 'numeric' });
+
+              return (
+                <View key={payment.id} style={styles.upcomingPaymentCard}>
+                  <View style={styles.upcomingPaymentLeft}>
+                    <View style={[styles.accountIcon, { backgroundColor: `${category?.color || colors.primary}33` }]}>
+                      <Ionicons name={category?.icon as any || 'cash'} size={24} color={category?.color || colors.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.upcomingPaymentDescription}>{payment.description}</Text>
+                      <Text style={styles.upcomingPaymentCategory}>{category?.name || 'Sin categoría'}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.upcomingPaymentRight}>
+                    <Text style={styles.upcomingPaymentAmount}>{getDisplayInfo().isHidden ? '••••••' : formatCurrency(payment.amount)}</Text>
+                    {!getDisplayInfo().isHidden && (
+                      <View style={[styles.upcomingPaymentDaysTag, { backgroundColor: daysUntil <= 1 ? '#EF4444' : daysUntil <= 3 ? '#F59E0B' : colors.primary }]}>
+                        <Text style={styles.upcomingPaymentDaysText}>
+                          {daysUntil === 0 ? 'Hoy' : daysUntil === 1 ? 'Mañana' : `En ${daysUntil}d`}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </TouchableOpacity>
+        )}
 
         {/* Sección Metas */}
         <View style={styles.section}>
@@ -910,5 +1044,114 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   chevronIcon: {
     marginLeft: spacing.xs,
+  },
+  budgetCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  budgetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  budgetLeftInfo: {
+    flex: 1,
+  },
+  budgetRightInfo: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  budgetLabel: {
+    fontSize: typography.sizes.xs,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+    fontWeight: typography.weights.medium as any,
+  },
+  budgetAmountSpent: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold as any,
+    color: colors.textPrimary,
+  },
+  budgetAmountTotal: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold as any,
+    color: colors.primary,
+  },
+  budgetProgressContainer: {
+    marginBottom: spacing.md,
+  },
+  budgetFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  budgetPercentage: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold as any,
+    color: colors.textPrimary,
+  },
+  budgetRemaining: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium as any,
+  },
+  budgetTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.semibold as any,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  upcomingPaymentCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: 12,
+    marginBottom: spacing.sm,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.primary,
+  },
+  upcomingPaymentLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    flex: 1,
+  },
+  upcomingPaymentRight: {
+    alignItems: 'flex-end',
+    gap: spacing.xs,
+  },
+  upcomingPaymentDescription: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.medium as any,
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  upcomingPaymentCategory: {
+    fontSize: typography.sizes.xs,
+    color: colors.textSecondary,
+    fontWeight: typography.weights.medium as any,
+  },
+  upcomingPaymentAmount: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold as any,
+    color: colors.textPrimary,
+  },
+  upcomingPaymentDaysTag: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  upcomingPaymentDaysText: {
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold as any,
+    color: '#FFFFFF',
   },
 });
