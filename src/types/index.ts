@@ -63,6 +63,8 @@ export interface RecurringPayment {
   isActive: boolean;
   reminderEnabled: boolean;
   reminderDaysBefore: number;
+  currency: string;
+  paid?: boolean;
   createdAt: string;
   updatedAt: string;
 }

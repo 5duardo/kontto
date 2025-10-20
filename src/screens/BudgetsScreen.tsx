@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../store/useAppStore';
 import { spacing, typography, borderRadius, useTheme } from '../theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card, Button, ProgressBar, CategoryIcon } from '../components/common';
 import { Budget } from '../types';
 
@@ -40,6 +41,7 @@ export const BudgetsScreen = ({ navigation }: any) => {
   } = useAppStore();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors, borderRadius), [colors]);
+  const insets = useSafeAreaInsets();
   
   const [modalVisible, setModalVisible] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
@@ -304,7 +306,7 @@ export const BudgetsScreen = ({ navigation }: any) => {
 
       {/* Botón flotante para agregar */}
       <TouchableOpacity
-        style={[styles.fab, { backgroundColor: colors.primary }]}
+        style={[styles.fab, { backgroundColor: colors.primary, bottom: 16 + (insets.bottom || 0) }]}
         onPress={() => {
           resetForm();
           setModalVisible(true);
@@ -424,12 +426,12 @@ export const BudgetsScreen = ({ navigation }: any) => {
               <View style={{ height: 20 }} />
             </ScrollView>
 
-            <View style={styles.modalFooter}>
+            <View style={[styles.modalFooter, { paddingBottom: spacing.xl + (insets.bottom || 0) }]}>
               <Button
                 title={editingBudget ? 'Actualizar' : 'Crear Presupuesto'}
                 onPress={handleAddBudget}
                 variant="solidPrimary"
-                style={styles.button}
+                style={[styles.button, { width: '100%' }]}
               />
             </View>
           </View>
@@ -563,7 +565,7 @@ export const BudgetsScreen = ({ navigation }: any) => {
                   <View style={{ height: 20 }} />
                 </ScrollView>
 
-                <View style={styles.modalFooter}>
+                <View style={[styles.modalFooter, { flexDirection: 'column', paddingBottom: spacing.xl + (insets.bottom || 0) }]}>
                   <Button
                     title="Editar"
                     onPress={() => {
@@ -571,13 +573,13 @@ export const BudgetsScreen = ({ navigation }: any) => {
                       handleEditBudget(selectedBudget);
                     }}
                     variant="solidPrimary"
-                    style={[styles.button, { flex: 1, marginRight: spacing.sm }]}
+                    style={[styles.button, { width: '100%', marginBottom: spacing.sm }]}
                   />
                   <Button
                     title="Eliminar"
                     onPress={() => handleDeleteBudget(selectedBudget.id)}
                     variant="solidPrimary"
-                    style={[styles.button, styles.deleteButton, { flex: 1 }]}
+                    style={[styles.button, styles.deleteButton, { width: '100%' }]}
                   />
                 </View>
               </>

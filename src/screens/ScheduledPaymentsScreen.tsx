@@ -13,9 +13,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../store/useAppStore';
 import { spacing, typography, borderRadius, useTheme } from '../theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card, Button, CategoryIcon } from '../components/common';
+import { CurrencySelector } from '../components/CurrencySelector';
 import { RecurringPayment } from '../types';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useExchangeRates } from '../hooks/useExchangeRates';
 
 const frequencyLabels: Record<string, string> = {
   daily: 'Diario',
@@ -29,6 +32,23 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: '$', CAD: 'C$', MXN: '$', BRL: 'R$', HNL: 'L', EUR: '€', GBP: '£',
 };
 
+const convertToHNL = (amount: number, currency: string, rates: Record<string, number>): number => {
+  const rate = rates[currency] || 1;
+  return amount * rate;
+};
+
+const convertCurrency = (
+  amount: number,
+  fromCurrency: string,
+  toCurrency: string,
+  rates: Record<string, number>
+): number => {
+  if (fromCurrency === toCurrency) return amount;
+  const toHNL = convertToHNL(amount, fromCurrency, rates);
+  const targetRate = rates[toCurrency] || 1;
+  return toHNL / targetRate;
+};
+
 export const ScheduledPaymentsScreen = ({ navigation }: any) => {
   const {
     recurringPayments,
@@ -39,7 +59,9 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
     preferredCurrency,
   } = useAppStore();
   const { colors } = useTheme();
+  const { rates: exchangeRates } = useExchangeRates();
   const styles = useMemo(() => createStyles(colors, borderRadius), [colors]);
+  const insets = useSafeAreaInsets();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
@@ -58,6 +80,8 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
   const [reminderEnabled, setReminderEnabled] = useState(true);
   const [reminderDaysBefore, setReminderDaysBefore] = useState('0');
   const [isActive, setIsActive] = useState(true);
+  const [currency, setCurrency] = useState(preferredCurrency);
+  const [paid, setPaid] = useState(false);
 
   const formatCurrency = (amount: number, curr: string = preferredCurrency) => {
     const symbol = CURRENCY_SYMBOLS[curr] || curr;
@@ -71,7 +95,9 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
   // Agrupar pagos por mes
   const paymentsByMonth = useMemo(() => {
     const grouped: Record<string, RecurringPayment[]> = {};
-    recurringPayments.forEach((payment) => {
+    // Sort by nextDate ascending (soonest first)
+    const sorted = [...recurringPayments].sort((a, b) => new Date(a.nextDate).getTime() - new Date(b.nextDate).getTime());
+    sorted.forEach((payment) => {
       const date = new Date(payment.nextDate);
       const key = date.toLocaleDateString('es-HN', { year: 'numeric', month: 'long' });
       if (!grouped[key]) grouped[key] = [];
@@ -97,6 +123,8 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
         isActive,
         reminderEnabled,
         reminderDaysBefore: parseInt(reminderDaysBefore) || 0,
+        currency,
+        paid,
       });
     } else {
       addRecurringPayment({
@@ -109,6 +137,7 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
         isActive,
         reminderEnabled,
         reminderDaysBefore: parseInt(reminderDaysBefore) || 0,
+        currency,
       });
     }
 
@@ -128,6 +157,8 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
     setReminderEnabled(payment.reminderEnabled);
     setReminderDaysBefore(payment.reminderDaysBefore.toString());
     setIsActive(payment.isActive);
+    setCurrency(payment.currency);
+    setPaid(!!payment.paid);
     setModalVisible(true);
   };
 
@@ -164,6 +195,7 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
     setReminderEnabled(true);
     setReminderDaysBefore('0');
     setIsActive(true);
+    setCurrency(preferredCurrency);
     setEditingPayment(null);
   };
 
@@ -172,67 +204,40 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
     setDetailModalVisible(true);
   };
 
-  // Calcular próximos pagos
-  const upcomingPayments = useMemo(() => {
-    const now = new Date();
-    return recurringPayments
-      .filter((p) => new Date(p.nextDate) >= now && p.isActive)
-      .sort((a, b) => new Date(a.nextDate).getTime() - new Date(b.nextDate).getTime())
-      .slice(0, 5);
-  }, [recurringPayments]);
+  // (Removed upcomingPayments section — we will list all payments sorted by nextDate)
 
   const totalMonthly = useMemo(() => {
-    return recurringPayments
+    const total = recurringPayments
       .filter((p) => p.frequency === 'monthly' && p.isActive && p.type === 'expense')
-      .reduce((sum, p) => sum + p.amount, 0);
-  }, [recurringPayments]);
+      .reduce((sum, p) => sum + convertToHNL(p.amount, p.currency, exchangeRates), 0);
+    return convertCurrency(total, 'HNL', preferredCurrency, exchangeRates);
+  }, [recurringPayments, exchangeRates, preferredCurrency]);
+
+  // Total de todos los pagos programados convertidos a moneda preferida
+  const totalAllPayments = useMemo(() => {
+    const total = recurringPayments
+      .filter((p) => p.isActive)
+      .reduce((sum, p) => {
+        const amountInHNL = convertToHNL(p.amount, p.currency, exchangeRates);
+        return p.type === 'income' ? sum + amountInHNL : sum - amountInHNL;
+      }, 0);
+    return convertCurrency(total, 'HNL', preferredCurrency, exchangeRates);
+  }, [recurringPayments, exchangeRates, preferredCurrency]);
 
   return (
     <View style={styles.container}>
       {/* Header con resumen */}
       <View style={styles.header}>
         <Card style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Gastos Mensuales Programados</Text>
-          <Text style={styles.summaryAmount}>{formatCurrency(totalMonthly)}</Text>
+          <Text style={styles.summaryLabel}>Total Pagos Programados</Text>
+          <Text style={styles.summaryAmount}>{formatCurrency(Math.abs(totalAllPayments), preferredCurrency)}</Text>
           <Text style={styles.summarySubtext}>
             {recurringPayments.filter((p) => p.isActive).length} pagos activos
           </Text>
         </Card>
       </View>
 
-      {/* Próximos pagos */}
-      {upcomingPayments.length > 0 && (
-        <View style={styles.upcomingSection}>
-          <Text style={styles.sectionTitle}>Próximos Pagos</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.upcomingScroll}>
-            {upcomingPayments.map((payment) => {
-              const cat = categories.find((c) => c.id === payment.categoryId);
-              const daysUntil = Math.ceil(
-                (new Date(payment.nextDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-              );
-              const upcomingCardStyle = payment.type === 'income' 
-                ? [styles.upcomingCard, styles.upcomingCardIncome]
-                : styles.upcomingCard;
-              return (
-                <Card
-                  key={payment.id}
-                  style={upcomingCardStyle as any}
-                >
-                  {cat && (
-                    <CategoryIcon icon={cat.icon} color={cat.color} size={24} />
-                  )}
-                  <View style={styles.upcomingInfo}>
-                    <Text style={styles.upcomingAmount}>{formatCurrency(payment.amount)}</Text>
-                    <Text style={styles.upcomingDays}>
-                      {daysUntil === 0 ? 'Hoy' : daysUntil === 1 ? 'Mañana' : `En ${daysUntil} días`}
-                    </Text>
-                  </View>
-                </Card>
-              );
-            })}
-          </ScrollView>
-        </View>
-      )}
+      {/* 'Próximos Pagos' section removed — showing full list below sorted by soonest date */}
 
       {/* Lista de pagos */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -275,16 +280,16 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
                               <Text style={styles.paymentFrequency}>
                                 {frequencyLabels[payment.frequency]}
                               </Text>
-                              {payment.isActive ? (
+                              {payment.paid ? (
                                 <View style={[styles.activeBadge, { backgroundColor: colors.success + '20' }]}>
                                   <Text style={[styles.activeBadgeText, { color: colors.success }]}>
-                                    Activo
+                                    Pagado
                                   </Text>
                                 </View>
                               ) : (
                                 <View style={[styles.activeBadge, { backgroundColor: colors.textTertiary + '30' }]}>
                                   <Text style={[styles.activeBadgeText, { color: colors.textTertiary }]}>
-                                    Inactivo
+                                    No pagado
                                   </Text>
                                 </View>
                               )}
@@ -295,15 +300,16 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
                           <Text
                             style={[
                               styles.amountText,
-                              payment.type === 'income' ? styles.income : styles.expense,
+                              payment.type === 'income' ? styles.income : styles.amountWhite,
                             ]}
                           >
-                            {payment.type === 'income' ? '+' : '-'}
-                            {formatCurrency(payment.amount)}
+                            {formatCurrency(payment.amount, payment.currency)}
                           </Text>
-                          <Text style={styles.dateText}>
-                            {new Date(payment.nextDate).toLocaleDateString('es-HN')}
-                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                            <Text style={styles.dateText}>
+                              {new Date(payment.nextDate).toLocaleDateString('es-HN')}
+                            </Text>
+                          </View>
                         </View>
                       </View>
                       {payment.reminderEnabled && (
@@ -327,7 +333,7 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
 
       {/* Botón flotante */}
       <TouchableOpacity
-        style={[styles.fab, { backgroundColor: colors.primary }]}
+        style={[styles.fab, { backgroundColor: colors.primary, bottom: 16 + (insets.bottom || 0) }]}
         onPress={() => {
           resetForm();
           setModalVisible(true);
@@ -404,6 +410,16 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
                   keyboardType="decimal-pad"
                   placeholder="0.00"
                   placeholderTextColor={colors.textTertiary}
+                />
+              </View>
+
+              {/* Moneda */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Moneda</Text>
+                <CurrencySelector
+                  selectedCurrency={currency}
+                  onCurrencyChange={setCurrency}
+                  label="Seleccionar moneda"
                 />
               </View>
 
@@ -560,15 +576,38 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
                 </Text>
               </View>
 
+              {/* Pagado */}
+              <View style={styles.inputGroup}>
+                <View style={styles.reminderToggle}>
+                  <Text style={styles.label}>Pagado</Text>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleButton,
+                      { backgroundColor: paid ? colors.primary : colors.surface },
+                    ]}
+                    onPress={() => setPaid(!paid)}
+                  >
+                    <Ionicons
+                      name={paid ? 'checkmark' : 'close'}
+                      size={16}
+                      color={paid ? '#fff' : colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.stateText}>
+                  {paid ? 'Marcado como pagado' : 'No pagado'}
+                </Text>
+              </View>
+
               <View style={{ height: 20 }} />
             </ScrollView>
 
-            <View style={styles.modalFooter}>
+            <View style={[styles.modalFooter, { paddingBottom: spacing.xl + (insets.bottom || 0) }]}>
               <Button
                 title={editingPayment ? 'Actualizar' : 'Crear Pago'}
                 onPress={handleAddPayment}
                 variant="solidPrimary"
-                style={styles.button}
+                style={[styles.button, { width: '100%' }]}
               />
             </View>
           </View>
@@ -638,6 +677,23 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
                     </View>
 
                     <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Pagado:</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                        <Text style={styles.detailValue}>{selectedPayment.paid ? 'Sí' : 'No'}</Text>
+                        <TouchableOpacity
+                          onPress={() => {
+                            updateRecurringPayment(selectedPayment.id, { paid: !selectedPayment.paid });
+                            // refresh selectedPayment in modal
+                            setSelectedPayment({ ...selectedPayment, paid: !selectedPayment.paid });
+                          }}
+                          style={[styles.toggleButton, { backgroundColor: selectedPayment.paid ? colors.primary : colors.surface }]}
+                        >
+                          <Ionicons name={selectedPayment.paid ? 'checkmark' : 'close'} size={16} color={selectedPayment.paid ? '#fff' : colors.textSecondary} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    <View style={styles.detailRow}>
                       <Text style={styles.detailLabel}>Estado:</Text>
                       <View
                         style={[
@@ -664,7 +720,7 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
                   </Card>
                 </ScrollView>
 
-                <View style={styles.modalFooter}>
+                <View style={[styles.modalFooter, { flexDirection: 'column', paddingBottom: spacing.xl + (insets.bottom || 0) }]}>
                   <Button
                     title={selectedPayment.isActive ? 'Desactivar' : 'Activar'}
                     onPress={() => {
@@ -672,7 +728,7 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
                       setDetailModalVisible(false);
                     }}
                     variant="solidPrimary"
-                    style={[styles.button, { flex: 1, marginRight: spacing.sm }]}
+                    style={[styles.button, { width: '100%', marginBottom: spacing.sm }]}
                   />
                   <Button
                     title="Editar"
@@ -681,13 +737,13 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
                       handleEditPayment(selectedPayment);
                     }}
                     variant="solidPrimary"
-                    style={[styles.button, { flex: 1, marginRight: spacing.sm }]}
+                    style={[styles.button, { width: '100%', marginBottom: spacing.sm }]}
                   />
                   <Button
                     title="Eliminar"
                     onPress={() => handleDeletePayment(selectedPayment.id)}
                     variant="solidPrimary"
-                    style={[styles.button, { flex: 1 }, styles.deleteButton]}
+                    style={[styles.button, { width: '100%' }, styles.deleteButton]}
                   />
                 </View>
               </>
@@ -720,7 +776,7 @@ const createStyles = (colors: any, br: any) => StyleSheet.create({
   summaryAmount: {
     fontSize: typography.sizes['4xl'],
     fontWeight: typography.weights.bold,
-    color: colors.error,
+    color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
   summarySubtext: {
@@ -845,11 +901,14 @@ const createStyles = (colors: any, br: any) => StyleSheet.create({
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
   },
+  amountWhite: {
+    color: '#fff',
+  },
   income: {
     color: colors.success,
   },
   expense: {
-    color: colors.error,
+    color: colors.textPrimary,
   },
   dateText: {
     fontSize: typography.sizes.xs,
@@ -1059,5 +1118,12 @@ const createStyles = (colors: any, br: any) => StyleSheet.create({
   stateBadgeText: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
 });

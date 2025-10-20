@@ -7,17 +7,19 @@ import {
   TouchableOpacity,
   FlatList,
   Animated,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../store/useAppStore';
 import { Transaction } from '../types';
-import { spacing, typography, useTheme } from '../theme';
+import { spacing, typography, useTheme, borderRadius } from '../theme';
 import { Card, ProgressBar } from '../components/common';
 
 export const StatsScreen = () => {
   const { transactions, categories } = useAppStore();
   const { colors } = useTheme();
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showDetailedView, setShowDetailedView] = useState(false);
   
   // Animaciones
@@ -156,31 +158,29 @@ export const StatsScreen = () => {
     }
   }, [selectedMonthData]);
 
-  const handlePreviousMonth = () => {
-    const newDate = new Date(selectedMonth);
-    newDate.setMonth(newDate.getMonth() - 1);
-    setSelectedMonth(newDate);
-  };
-
-  const isPrevMonthDisabled = () => {
-    if (!earliestMonthDate) return false;
-    const prev = new Date(selectedMonth);
-    prev.setMonth(prev.getMonth() - 1);
-    // comparar al primer día del mes
-    const prevMonthStart = new Date(prev.getFullYear(), prev.getMonth(), 1);
-    return prevMonthStart < earliestMonthDate;
-  };
-
-  const handleNextMonth = () => {
-    const today = new Date();
-    const newDate = new Date(selectedMonth);
-    newDate.setMonth(newDate.getMonth() + 1);
+  // Obtener todos los meses/años con transacciones
+  const availableMonths = useMemo(() => {
+    const months = new Set<string>();
+    transactions.forEach((t) => {
+      const date = new Date(t.date);
+      const monthYear = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}`;
+      months.add(monthYear);
+    });
     
-    // Solo avanzar si no hemos llegado al mes actual
-    if (newDate <= today) {
-      setSelectedMonth(newDate);
-    }
-  };
+    // Convertir a array y ordenar descendentemente
+    return Array.from(months)
+      .sort()
+      .reverse()
+      .map((monthYear) => {
+        const [year, month] = monthYear.split('-');
+        const date = new Date(parseInt(year), parseInt(month));
+        return {
+          monthYear,
+          label: date.toLocaleDateString('es-HN', { month: 'long', year: 'numeric' }),
+          date,
+        };
+      });
+  }, [transactions]);
 
   const getCategoryName = (categoryId: string) => {
     return categories.find((c) => c.id === categoryId)?.name || 'Sin categoría';
@@ -190,12 +190,10 @@ export const StatsScreen = () => {
     return categories.find((c) => c.id === categoryId)?.color || colors.textTertiary;
   };
 
-  const isNextMonthDisabled = () => {
-    const today = new Date();
-    const nextMonth = new Date(selectedMonth);
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
-    return nextMonth > today;
-  };
+  const currentMonthLabel = selectedMonth.toLocaleDateString('es-HN', {
+    month: 'long',
+    year: 'numeric',
+  });
 
   // Verificar si el mes actual tiene datos
   const hasMonthData = selectedMonthData && (selectedMonthData.income > 0 || selectedMonthData.expense > 0);
@@ -230,29 +228,17 @@ export const StatsScreen = () => {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Month Selector */}
-      <View style={styles.monthSelector}>
-        <TouchableOpacity onPress={handlePreviousMonth} style={styles.monthButton} disabled={isPrevMonthDisabled()}>
-          <Ionicons name="chevron-back" size={24} color={isPrevMonthDisabled() ? colors.textTertiary : colors.primary} />
-        </TouchableOpacity>
-
-        <View style={styles.monthDisplay}>
-          <Text style={styles.monthDisplayText}>
-            {selectedMonthData?.month} {selectedMonth.getFullYear()}
-          </Text>
-        </View>
-
-        <TouchableOpacity 
-          onPress={handleNextMonth} 
-          style={styles.monthButton}
-          disabled={isNextMonthDisabled()}
+    <View style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+      {/* Month Selector Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.monthSelectorButton}
+          onPress={() => setShowMonthPicker(true)}
         >
-          <Ionicons 
-            name="chevron-forward" 
-            size={24} 
-            color={isNextMonthDisabled() ? colors.textTertiary : colors.primary} 
-          />
+          <Ionicons name="calendar" size={20} color={colors.primary} />
+          <Text style={styles.monthSelectorText}>{currentMonthLabel}</Text>
+          <Ionicons name="chevron-down" size={20} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -393,6 +379,63 @@ export const StatsScreen = () => {
 
       {/* Monthly Comparison removed per user request */}
     </ScrollView>
+
+    {/* Month Picker Modal */}
+    <Modal
+      visible={showMonthPicker}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setShowMonthPicker(false)}
+    >
+      <View style={styles.monthPickerOverlay}>
+        <View style={styles.monthPickerContent}>
+          <View style={styles.monthPickerHeader}>
+            <Text style={styles.monthPickerTitle}>Seleccionar Mes</Text>
+            <TouchableOpacity onPress={() => setShowMonthPicker(false)}>
+              <Ionicons name="close" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.monthList} showsVerticalScrollIndicator={false}>
+            {availableMonths.length === 0 ? (
+              <View style={styles.emptyMonthList}>
+                <Text style={styles.emptyMonthText}>
+                  No hay transacciones registradas
+                </Text>
+              </View>
+            ) : (
+              availableMonths.map((month) => (
+                <TouchableOpacity
+                  key={month.monthYear}
+                  style={[
+                    styles.monthOption,
+                    selectedMonth.getFullYear() === month.date.getFullYear() &&
+                    selectedMonth.getMonth() === month.date.getMonth() &&
+                      styles.monthOptionActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedMonth(month.date);
+                    setShowMonthPicker(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.monthOptionText,
+                      selectedMonth.getFullYear() === month.date.getFullYear() &&
+                      selectedMonth.getMonth() === month.date.getMonth() &&
+                        styles.monthOptionTextActive,
+                    ]}
+                  >
+                    {month.label}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            )}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+    </View>
   );
 };
 
@@ -402,27 +445,30 @@ const createStyles = (colors: any) =>
       flex: 1,
       backgroundColor: colors.background,
     },
-    monthSelector: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingVertical: spacing.md,
+    header: {
       paddingHorizontal: spacing.lg,
-      backgroundColor: colors.surface,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.backgroundSecondary,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    monthButton: {
-      padding: spacing.sm,
-      borderRadius: 8,
+    monthSelectorButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
-    monthDisplay: {
-      paddingHorizontal: spacing.lg,
-    },
-    monthDisplayText: {
-      fontSize: typography.sizes.lg,
-      fontWeight: typography.weights.bold,
+    monthSelectorText: {
+      fontSize: typography.sizes.base,
+      fontWeight: typography.weights.semibold,
       color: colors.textPrimary,
+      textTransform: 'capitalize',
     },
     section: {
       padding: spacing.lg,
@@ -650,5 +696,63 @@ const createStyles = (colors: any) =>
       fontSize: typography.sizes.base,
       color: colors.textSecondary,
       marginTop: spacing.md,
+    },
+    // Month Picker Modal Styles
+    monthPickerOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'flex-end',
+    },
+    monthPickerContent: {
+      backgroundColor: colors.background,
+      borderTopLeftRadius: borderRadius.lg,
+      borderTopRightRadius: borderRadius.lg,
+      maxHeight: '70%',
+    },
+    monthPickerHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    monthPickerTitle: {
+      fontSize: typography.sizes.xl,
+      fontWeight: typography.weights.bold,
+      color: colors.textPrimary,
+    },
+    monthList: {
+      paddingVertical: spacing.md,
+    },
+    monthOption: {
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    monthOptionActive: {
+      backgroundColor: colors.primary + '15',
+      borderLeftWidth: 4,
+      borderLeftColor: colors.primary,
+    },
+    monthOptionText: {
+      fontSize: typography.sizes.base,
+      color: colors.textSecondary,
+      textTransform: 'capitalize',
+    },
+    monthOptionTextActive: {
+      color: colors.primary,
+      fontWeight: typography.weights.bold,
+    },
+    emptyMonthList: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.xl,
+    },
+    emptyMonthText: {
+      fontSize: typography.sizes.base,
+      color: colors.textSecondary,
     },
   });

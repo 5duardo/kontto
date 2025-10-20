@@ -10,19 +10,28 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../store/useAppStore';
+import { CURRENCIES } from '../components/CurrencySelector';
 import { spacing, typography, borderRadius, useTheme } from '../theme';
 import { Card } from '../components/common';
 
 export const TransactionsScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
-  const { transactions, categories } = useAppStore();
+  const { transactions, categories, accounts, preferredCurrency } = useAppStore();
   const styles = useMemo(() => createStyles(colors, borderRadius), [colors]);
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showMonthPicker, setShowMonthPicker] = useState(false);
 
-  const formatCurrency = (amount: number) => {
-    return `L ${amount.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatCurrency = (amount: number, accountId?: string) => {
+    const account = accountId ? accounts.find(a => a.id === accountId) : undefined;
+    const currencyCode = account?.currency || preferredCurrency || 'HNL';
+    const currency = CURRENCIES.find(c => c.code === currencyCode);
+    const symbol = currency ? currency.symbol : currencyCode;
+
+    // Use locale from currency code when possible, fallback to 'es-HN' for HNL
+    const locale = currencyCode === 'HNL' ? 'es-HN' : undefined;
+    const formatted = amount.toLocaleString(locale || undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return `${symbol} ${formatted}`;
   };
 
   // Obtener todos los meses/años con transacciones
@@ -153,7 +162,7 @@ export const TransactionsScreen = ({ navigation }: any) => {
                             ]}
                           >
                             {transaction.type === 'income' ? '+' : '-'}
-                            {formatCurrency(transaction.amount)}
+                            {formatCurrency(transaction.amount, transaction.accountId)}
                           </Text>
                         </View>
                       </View>

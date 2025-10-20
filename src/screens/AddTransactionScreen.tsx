@@ -15,15 +15,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../store/useAppStore';
 import { spacing, typography, borderRadius, useTheme } from '../theme';
 import { Card, Button, Input } from '../components/common';
+import { CURRENCIES } from '../components/CurrencySelector';
 import { TransactionType } from '../types';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 export const AddTransactionScreen = ({ navigation, route }: any) => {
   const { colors } = useTheme();
   const { type: initialType, accountId: initialAccountId, transactionId } = route.params || {};
-  const { addTransaction, categories, accounts, updateTransaction, deleteTransaction, transactions } = useAppStore();
+  const { addTransaction, categories, accounts, updateTransaction, deleteTransaction, transactions, preferredCurrency } = useAppStore();
   const insets = useSafeAreaInsets();
-  const styles = useMemo(() => createStyles(colors, borderRadius), [colors]);
+  const styles = useMemo(() => createStyles(colors, borderRadius, insets), [colors, insets]);
 
   const [type, setType] = useState<TransactionType>(initialType || 'expense');
   const [amount, setAmount] = useState('');
@@ -67,6 +68,15 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
   const selectedAccount = useMemo(() => {
     return accounts.find((a) => a.id === selectedAccountId);
   }, [accounts, selectedAccountId]);
+
+  const accountCurrencyCode = useMemo(() => {
+    return selectedAccount?.currency || preferredCurrency || 'HNL';
+  }, [selectedAccount, preferredCurrency]);
+
+  const currencySymbol = useMemo(() => {
+    const item = CURRENCIES.find((c) => c.code === accountCurrencyCode);
+    return item ? item.symbol : accountCurrencyCode;
+  }, [accountCurrencyCode]);
 
   const handleSubmit = () => {
     if (!amount || !selectedCategoryId || !selectedAccountId) {
@@ -124,10 +134,17 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
   }, [isEditMode, navigation]);
 
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* header title handled by navigation options */}
-        {/* Type Selector */}
+    <View style={[styles.container, { 
+      paddingBottom: insets.bottom, 
+      paddingLeft: insets.left,
+      paddingRight: insets.right,
+    }]}> 
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{ paddingBottom: spacing.lg }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Type Selector Card */}
         <Card style={styles.typeCard}>
           <View style={styles.typeButtons}>
             <TouchableOpacity
@@ -184,7 +201,7 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
 
         {/* Amount Input */}
         <View style={styles.amountContainer}>
-          <Text style={styles.currency}>L</Text>
+          <Text style={styles.currency}>{currencySymbol}</Text>
           <TextInput
             style={styles.amountInput}
             placeholder="0.00"
@@ -310,51 +327,24 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
             maximumDate={new Date(2100, 12, 31)}
           />
         )}
-        {/* Submit Button (moved inside content so it's not sticky) */}
-        <View style={styles.contentButtonContainer}>
-          {isEditMode ? (
-            <>
-              <Button
-                title="Guardar Transacción"
-                onPress={handleSubmit}
-                fullWidth
-                variant="solidPrimary"
-              />
-
-              <View style={{ height: spacing.md }} />
-
-              <TouchableOpacity
-                onPress={() => {
-                  Alert.alert('Eliminar', '¿Deseas eliminar esta transacción?', [
-                    { text: 'Cancelar', style: 'cancel' },
-                    {
-                      text: 'Eliminar',
-                      style: 'destructive',
-                      onPress: () => {
-                        if (transactionId) {
-                          deleteTransaction(transactionId);
-                        }
-                        navigation.goBack();
-                      },
-                    },
-                  ]);
-                }}
-              >
-                <View style={{ backgroundColor: colors.error + '15', paddingVertical: spacing.md, borderRadius: borderRadius.md, alignItems: 'center' }}>
-                  <Text style={{ color: colors.error, fontWeight: typography.weights.semibold }}>Eliminar</Text>
-                </View>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <Button
-              title="Guardar Transacción"
-              onPress={handleSubmit}
-              fullWidth
-              variant="solidPrimary"
-            />
-          )}
+        {/* Footer actions (Cancelar / Crear-Actualizar) */}
+        <View style={styles.modalFooter}>
+          <TouchableOpacity
+            style={[styles.button, styles.saveButton]}
+            onPress={handleSubmit}
+          >
+            <Text style={styles.saveButtonText}>{isEditMode ? 'Actualizar' : 'Crear'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, styles.cancelButton]}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.cancelButtonText}>Cancelar</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* No FAB on Add/Edit Transaction screen (button is on TransactionsScreen) */}
 
       {/* Category Modal */}
       <Modal
@@ -463,7 +453,7 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
   );
 };
 
-const createStyles = (colors: any, br: any) => StyleSheet.create({
+const createStyles = (colors: any, br: any, insets: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -474,6 +464,7 @@ const createStyles = (colors: any, br: any) => StyleSheet.create({
   },
   typeCard: {
     marginBottom: spacing.xl,
+    paddingVertical: spacing.md,
   },
   typeButtons: {
     flexDirection: 'row',
@@ -606,6 +597,58 @@ const createStyles = (colors: any, br: any) => StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  // Modal-like header/footer and buttons (copied/adapted from CategoriesScreen)
+  modalHeaderTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalTitleTop: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.textPrimary,
+  },
+  modalFooter: {
+    flexDirection: 'column',
+    gap: spacing.sm,
+    paddingHorizontal: 0, // use the ScrollView content padding for horizontal spacing
+    paddingVertical: spacing.lg,
+    paddingBottom: Math.max(insets.bottom, spacing.lg),
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.background,
+    alignItems: 'stretch',
+  },
+  button: {
+    width: '100%',
+    paddingVertical: spacing.lg,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    marginBottom: spacing.xs,
+  },
+  cancelButtonText: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold,
+    color: colors.textPrimary,
+  },
+  saveButton: {
+    backgroundColor: colors.primary,
+  },
+  saveButtonText: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold,
+    color: '#FFFFFF',
+  },
   modalTitle: {
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
@@ -633,5 +676,19 @@ const createStyles = (colors: any, br: any) => StyleSheet.create({
     fontSize: typography.sizes.base,
     fontWeight: typography.weights.medium,
     color: colors.textPrimary,
+  },
+  fab: {
+    position: 'absolute',
+    right: spacing.lg,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
 });

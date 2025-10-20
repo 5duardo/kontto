@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../store/useAppStore';
 import { spacing, typography, borderRadius, useTheme } from '../theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card, Button } from '../components/common';
 
 type TabType = 'login' | 'register';
@@ -23,6 +24,7 @@ export const ProfileScreen = ({ navigation }: any) => {
   const { user, isLoggedIn, login, logout, register, updateUserProfile } = useAppStore();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors, borderRadius), [colors]);
+  const insets = useSafeAreaInsets();
 
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authTab, setAuthTab] = useState<TabType>('login');
@@ -198,8 +200,8 @@ export const ProfileScreen = ({ navigation }: any) => {
           <View style={{ height: 40 }} />
         </ScrollView>
 
-        {/* Footer Buttons */}
-        <View style={styles.footer}>
+        {/* Footer Buttons (stacked vertically on not-logged-in view) */}
+        <View style={[styles.footer, { paddingBottom: spacing.xl + (insets.bottom || 0), flexDirection: 'column' }]}>
           <Button
             title="Iniciar Sesión"
             variant="solidPrimary"
@@ -207,7 +209,7 @@ export const ProfileScreen = ({ navigation }: any) => {
               setAuthTab('login');
               setShowAuthModal(true);
             }}
-            style={{ marginBottom: spacing.sm }}
+            style={{ marginBottom: spacing.sm, width: '100%' }}
           />
           <Button
             title="Crear Cuenta"
@@ -216,6 +218,7 @@ export const ProfileScreen = ({ navigation }: any) => {
               setAuthTab('register');
               setShowAuthModal(true);
             }}
+            style={{ width: '100%' }}
           />
         </View>
 
@@ -512,7 +515,7 @@ export const ProfileScreen = ({ navigation }: any) => {
               </View>
             </Card>
 
-            <View style={styles.footer}>
+            <View style={[styles.footer, { paddingBottom: spacing.xl + (insets.bottom || 0) }]}>
               <Button
                 title="Guardar"
                 variant="solidPrimary"
@@ -591,7 +594,7 @@ export const ProfileScreen = ({ navigation }: any) => {
               </View>
             </Card>
 
-            <View style={styles.footer}>
+            <View style={[styles.footer, { paddingBottom: spacing.xl + (insets.bottom || 0) }]}>
               <Button
                 title="Editar Perfil"
                 variant="solidPrimary"

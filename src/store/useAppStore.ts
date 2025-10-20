@@ -483,6 +483,7 @@ export const useAppStore = create<AppState>()(
         const now = new Date().toISOString();
         const newPayment: RecurringPayment = {
           ...payment,
+          paid: false,
           id: generateId(),
           createdAt: now,
           updatedAt: now,
