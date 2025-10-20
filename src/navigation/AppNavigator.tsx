@@ -39,6 +39,7 @@ const TabNavigator = () => {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
+        tabBarShowLabel: false,
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: keyof typeof Ionicons.glyphMap = 'home';
 
@@ -51,7 +52,8 @@ const TabNavigator = () => {
           } else if (route.name === 'Stats') {
             iconName = focused ? 'bar-chart' : 'bar-chart-outline';
           } else if (route.name === 'More') {
-            iconName = focused ? 'menu' : 'menu-outline';
+            // Use ellipsis to differentiate from 'list' used by Transactions
+            iconName = focused ? 'ellipsis-horizontal' : 'ellipsis-horizontal-outline';
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;

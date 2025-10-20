@@ -534,7 +534,7 @@ export const DashboardScreen = ({ navigation }: any) => {
               const dateFormatted = paymentDate.toLocaleDateString('es-HN', { month: 'short', day: 'numeric' });
 
               return (
-                <View key={payment.id} style={styles.upcomingPaymentCard}>
+                <View key={payment.id} style={[styles.upcomingPaymentCard, { borderLeftColor: category?.color || colors.primary }]}>
                   <View style={styles.upcomingPaymentLeft}>
                     <View style={[styles.accountIcon, { backgroundColor: `${category?.color || colors.primary}33` }]}>
                       <Ionicons name={category?.icon as any || 'cash'} size={24} color={category?.color || colors.primary} />

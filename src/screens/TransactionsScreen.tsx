@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Modal,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../store/useAppStore';
@@ -14,7 +15,7 @@ import { Card } from '../components/common';
 
 export const TransactionsScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
-  const { transactions, categories, deleteTransaction } = useAppStore();
+  const { transactions, categories } = useAppStore();
   const styles = useMemo(() => createStyles(colors, borderRadius), [colors]);
 
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -107,58 +108,57 @@ export const TransactionsScreen = ({ navigation }: any) => {
               {dayTransactions.map((transaction) => {
                 const category = categories.find((c) => c.id === transaction.categoryId);
                 return (
-                  <Card key={transaction.id} style={styles.transactionCard}>
-                    <View style={styles.transactionRow}>
-                      <View style={styles.transactionLeft}>
-                        <View
-                          style={[
-                            styles.transactionIcon,
-                            { backgroundColor: `${category?.color || colors.primary}20` },
-                          ]}
-                        >
-                          <Ionicons
-                            name={(category?.icon as any) || 'wallet'}
-                            size={24}
-                            color={category?.color || colors.primary}
-                          />
+                  <TouchableOpacity
+                    key={transaction.id}
+                    onPress={() => navigation.navigate('AddTransaction', { transactionId: transaction.id })}
+                  >
+                    <Card style={styles.transactionCard}>
+                      <View style={styles.transactionRow}>
+                        <View style={styles.transactionLeft}>
+                          <View
+                            style={[
+                              styles.transactionIcon,
+                              { backgroundColor: `${category?.color || colors.primary}20` },
+                            ]}
+                          >
+                            <Ionicons
+                              name={(category?.icon as any) || 'wallet'}
+                              size={24}
+                              color={category?.color || colors.primary}
+                            />
+                          </View>
+                          <View style={styles.transactionInfo}>
+                            <Text style={styles.transactionTitle}>
+                              {category?.name || 'Sin categoría'}
+                            </Text>
+                            <Text style={styles.transactionDescription}>
+                              {transaction.description}
+                            </Text>
+                            <Text style={styles.transactionTime}>
+                              {new Date(transaction.date).toLocaleTimeString('es-HN', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </Text>
+                          </View>
                         </View>
-                        <View style={styles.transactionInfo}>
-                          <Text style={styles.transactionTitle}>
-                            {category?.name || 'Sin categoría'}
-                          </Text>
-                          <Text style={styles.transactionDescription}>
-                            {transaction.description}
-                          </Text>
-                          <Text style={styles.transactionTime}>
-                            {new Date(transaction.date).toLocaleTimeString('es-HN', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
+                        <View style={styles.transactionRight}>
+                          <Text
+                            style={[
+                              styles.transactionAmount,
+                              {
+                                color:
+                                  transaction.type === 'income' ? colors.success : colors.error,
+                              },
+                            ]}
+                          >
+                            {transaction.type === 'income' ? '+' : '-'}
+                            {formatCurrency(transaction.amount)}
                           </Text>
                         </View>
                       </View>
-                      <View style={styles.transactionRight}>
-                        <Text
-                          style={[
-                            styles.transactionAmount,
-                            {
-                              color:
-                                transaction.type === 'income' ? colors.success : colors.error,
-                            },
-                          ]}
-                        >
-                          {transaction.type === 'income' ? '+' : '-'}
-                          {formatCurrency(transaction.amount)}
-                        </Text>
-                        <TouchableOpacity
-                          onPress={() => deleteTransaction(transaction.id)}
-                          style={styles.deleteButton}
-                        >
-                          <Ionicons name="trash-outline" size={20} color={colors.error} />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </Card>
+                    </Card>
+                  </TouchableOpacity>
                 );
               })}
             </View>
@@ -173,10 +173,10 @@ export const TransactionsScreen = ({ navigation }: any) => {
         transparent={true}
         onRequestClose={() => setShowMonthPicker(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Seleccionar Mes</Text>
+        <View style={styles.monthPickerOverlay}>
+          <View style={styles.monthPickerContent}>
+            <View style={styles.monthPickerHeader}>
+              <Text style={styles.monthPickerTitle}>Seleccionar Mes</Text>
               <TouchableOpacity onPress={() => setShowMonthPicker(false)}>
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
@@ -229,6 +229,8 @@ export const TransactionsScreen = ({ navigation }: any) => {
       >
         <Ionicons name="add" size={32} color="#fff" />
       </TouchableOpacity>
+
+      {/* NOTE: editing now handled in full-screen AddTransaction screen. */}
     </View>
   );
 };
@@ -342,9 +344,6 @@ const createStyles = (colors: any, br: any) => StyleSheet.create({
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
   },
-  deleteButton: {
-    padding: spacing.xs,
-  },
   fab: {
     position: 'absolute',
     right: spacing.lg,
@@ -361,19 +360,19 @@ const createStyles = (colors: any, br: any) => StyleSheet.create({
     shadowRadius: 8,
   },
 
-  // Modal Styles
-  modalOverlay: {
+  // Month Picker Modal Styles
+  monthPickerOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
-  modalContent: {
+  monthPickerContent: {
     backgroundColor: colors.background,
     borderTopLeftRadius: br.lg,
     borderTopRightRadius: br.lg,
     maxHeight: '70%',
   },
-  modalHeader: {
+  monthPickerHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -382,7 +381,7 @@ const createStyles = (colors: any, br: any) => StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  modalTitle: {
+  monthPickerTitle: {
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
     color: colors.textPrimary,
@@ -418,5 +417,183 @@ const createStyles = (colors: any, br: any) => StyleSheet.create({
   emptyMonthText: {
     fontSize: typography.sizes.base,
     color: colors.textSecondary,
+  },
+
+  // Edit Modal Styles (using AddTransactionScreen styles)
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay,
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.backgroundSecondary,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalTitle: {
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.textPrimary,
+  },
+  editModalBody: {
+    padding: spacing.lg,
+    flex: 1,
+  },
+  editModalFooter: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: spacing.md,
+  },
+  typeCard: {
+    marginBottom: spacing.xl,
+  },
+  typeButtons: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  typeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.backgroundTertiary,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  typeButtonActiveIncome: {
+    backgroundColor: colors.income,
+    borderColor: colors.income,
+  },
+  typeButtonActiveExpense: {
+    backgroundColor: colors.expense,
+    borderColor: colors.expense,
+  },
+  typeButtonText: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold,
+    color: colors.textPrimary,
+  },
+  typeButtonTextActive: {
+    color: '#fff',
+  },
+  amountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xl,
+    paddingVertical: spacing.lg,
+  },
+  currency: {
+    fontSize: typography.sizes['4xl'],
+    fontWeight: typography.weights.bold,
+    color: colors.textSecondary,
+    marginRight: spacing.sm,
+  },
+  amountDisplay: {
+    fontSize: typography.sizes['3xl'],
+    fontWeight: typography.weights.bold,
+    color: colors.textPrimary,
+  },
+  categorySelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.md,
+  },
+  selectedCategory: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  categoryIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.backgroundTertiary,
+  },
+  categoryName: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.medium,
+    color: colors.textPrimary,
+  },
+  dateInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.md,
+  },
+  dateInfoText: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.medium,
+    color: colors.textPrimary,
+    textTransform: 'capitalize',
+  },
+  descriptionContainer: {
+    marginBottom: spacing.lg,
+  },
+  label: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  descriptionInput: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    fontSize: typography.sizes.base,
+    textAlignVertical: 'top',
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    gap: spacing.sm,
+    backgroundColor: colors.error + '15',
+  },
+  saveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    gap: spacing.sm,
+    backgroundColor: colors.primary,
+  },
+  footerButtonText: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold,
   },
 });

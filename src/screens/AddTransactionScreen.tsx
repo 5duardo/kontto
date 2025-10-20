@@ -9,6 +9,7 @@ import {
   TextInput,
   Platform,
 } from 'react-native';
+import { Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../store/useAppStore';
@@ -19,8 +20,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 export const AddTransactionScreen = ({ navigation, route }: any) => {
   const { colors } = useTheme();
-  const { type: initialType, accountId: initialAccountId } = route.params || {};
-  const { addTransaction, categories, accounts } = useAppStore();
+  const { type: initialType, accountId: initialAccountId, transactionId } = route.params || {};
+  const { addTransaction, categories, accounts, updateTransaction, deleteTransaction, transactions } = useAppStore();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, borderRadius), [colors]);
 
@@ -29,6 +30,7 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
   const [description, setDescription] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [selectedAccountId, setSelectedAccountId] = useState(initialAccountId || '');
+  const [isEditMode, setIsEditMode] = useState(false);
   
   // Store the full Date object with time
   const [transactionDate, setTransactionDate] = useState<Date>(new Date());
@@ -72,6 +74,19 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
       return;
     }
 
+    if (isEditMode && transactionId) {
+      updateTransaction(transactionId, {
+        type,
+        amount: parseFloat(amount),
+        categoryId: selectedCategoryId,
+        accountId: selectedAccountId,
+        description: description || selectedCategory?.name || '',
+        date: transactionDate.toISOString(),
+      });
+      navigation.goBack();
+      return;
+    }
+
     addTransaction({
       type,
       amount: parseFloat(amount),
@@ -84,9 +99,34 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
     navigation.goBack();
   };
 
+  React.useEffect(() => {
+    if (transactionId) {
+      const tx = transactions.find((t: any) => t.id === transactionId);
+      if (tx) {
+        setIsEditMode(true);
+        setType(tx.type);
+        setAmount(String(tx.amount));
+        setDescription(tx.description || '');
+        setSelectedCategoryId(tx.categoryId || '');
+        setSelectedAccountId(tx.accountId || '');
+        const d = new Date(tx.date);
+        setTransactionDate(d);
+        setDisplayDate(formatDateDisplay(d));
+      }
+    }
+  }, [transactionId, transactions]);
+
+  // Set navigation title based on edit mode
+  React.useEffect(() => {
+    navigation.setOptions({
+      title: isEditMode ? 'Editar Transacción' : 'Nueva Transacción',
+    });
+  }, [isEditMode, navigation]);
+
   return (
     <View style={styles.container}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* header title handled by navigation options */}
         {/* Type Selector */}
         <Card style={styles.typeCard}>
           <View style={styles.typeButtons}>
@@ -272,12 +312,47 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
         )}
         {/* Submit Button (moved inside content so it's not sticky) */}
         <View style={styles.contentButtonContainer}>
-          <Button
-            title="Guardar Transacción"
-            onPress={handleSubmit}
-            fullWidth
-            variant="solidPrimary"
-          />
+          {isEditMode ? (
+            <>
+              <Button
+                title="Guardar Transacción"
+                onPress={handleSubmit}
+                fullWidth
+                variant="solidPrimary"
+              />
+
+              <View style={{ height: spacing.md }} />
+
+              <TouchableOpacity
+                onPress={() => {
+                  Alert.alert('Eliminar', '¿Deseas eliminar esta transacción?', [
+                    { text: 'Cancelar', style: 'cancel' },
+                    {
+                      text: 'Eliminar',
+                      style: 'destructive',
+                      onPress: () => {
+                        if (transactionId) {
+                          deleteTransaction(transactionId);
+                        }
+                        navigation.goBack();
+                      },
+                    },
+                  ]);
+                }}
+              >
+                <View style={{ backgroundColor: colors.error + '15', paddingVertical: spacing.md, borderRadius: borderRadius.md, alignItems: 'center' }}>
+                  <Text style={{ color: colors.error, fontWeight: typography.weights.semibold }}>Eliminar</Text>
+                </View>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <Button
+              title="Guardar Transacción"
+              onPress={handleSubmit}
+              fullWidth
+              variant="solidPrimary"
+            />
+          )}
         </View>
       </ScrollView>
 
