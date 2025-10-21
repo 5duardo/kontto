@@ -61,6 +61,10 @@ interface AppState {
   theme: 'dark' | 'light';
   setTheme: (theme: 'dark' | 'light') => void;
   
+  // Onboarding
+  hasCompletedOnboarding: boolean;
+  completeOnboarding: () => void;
+  
   // User Authentication
   user: User | null;
   isLoggedIn: boolean;
@@ -118,6 +122,7 @@ export const useAppStore = create<AppState>()(
       favoriteExchangeRate: 'USD',
       theme: 'dark',
       isInitialized: false,
+      hasCompletedOnboarding: false,
       user: null,
       isLoggedIn: false,
       biometricEnabled: false,
@@ -612,6 +617,10 @@ export const useAppStore = create<AppState>()(
 
       setTheme: (theme) => {
         set({ theme });
+      },
+
+      completeOnboarding: () => {
+        set({ hasCompletedOnboarding: true });
       },
 
       // Authentication

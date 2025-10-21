@@ -18,3 +18,4 @@ export { AddPaymentScreen } from './AddPaymentScreen';
 export { EditPaymentScreen } from './EditPaymentScreen';
 export { SettingsScreen } from './SettingsScreen';
 export { AboutScreen } from './AboutScreen';
+export { OnboardingScreen } from './OnboardingScreen';
