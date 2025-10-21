@@ -9,6 +9,7 @@ import {
   Switch,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, typography, borderRadius, useTheme } from '../theme';
 import { useAppStore } from '../store/useAppStore';
@@ -132,7 +133,7 @@ export const EditGoalScreen = ({ navigation, route }: any) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Nombre */}
         <View style={styles.section}>
@@ -334,7 +335,7 @@ export const EditGoalScreen = ({ navigation, route }: any) => {
           <Text style={styles.updateButtonText}>Guardar Cambios</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 

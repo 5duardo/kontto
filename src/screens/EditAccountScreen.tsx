@@ -10,6 +10,7 @@ import {
   Alert,
   Modal,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, typography, useTheme } from '../theme';
 import { useAppStore } from '../store/useAppStore';
@@ -202,7 +203,7 @@ export const EditAccountScreen = ({ navigation, route }: any) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Título */}
         <View style={styles.section}>
@@ -389,7 +390,7 @@ export const EditAccountScreen = ({ navigation, route }: any) => {
           <Text style={styles.updateButtonText}>Actualizar</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
