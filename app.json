@@ -1,12 +1,12 @@
 {
   "expo": {
     "name": "Kontto",
-    "slug": "kontto-app-react-native",
+    "slug": "kontto",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/kontto.jpg",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/kontto.jpg",
       "resizeMode": "contain",
@@ -14,7 +14,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.kontto.app"
+      "bundleIdentifier": "com.kontto.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -27,6 +30,12 @@
     },
     "web": {
       "favicon": "./assets/kontto.jpg"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "988edac4-2aae-4db0-9ccb-e8e1a07f0992"
+      }
+    },
+    "owner": "5duardo"
   }
 }
