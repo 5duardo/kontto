@@ -3,14 +3,15 @@ import {
   View,
   StyleSheet,
   ViewStyle,
+  ViewProps,
   TouchableOpacity,
   TouchableOpacityProps,
 } from 'react-native';
 import { borderRadius, spacing, useTheme } from '../../theme';
 import { LinearGradient } from 'expo-linear-gradient';
 
-interface CardProps extends TouchableOpacityProps {
-  children: React.ReactNode;
+interface CardProps extends Partial<TouchableOpacityProps> {
+  children?: React.ReactNode;
   style?: ViewStyle;
   gradient?: boolean;
   gradientColors?: [string, string, ...string[]];

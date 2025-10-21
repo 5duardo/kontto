@@ -1,12 +1,10 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  FlatList,
-  Animated,
   Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,9 +20,6 @@ export const StatsScreen = () => {
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showDetailedView, setShowDetailedView] = useState(false);
   
-  // Animaciones
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
 
   const formatCurrency = (amount: number) => {
     return `L ${amount.toLocaleString('es-HN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -128,35 +123,6 @@ export const StatsScreen = () => {
     };
   }, [selectedMonthData]);
 
-  // Trigger animation cuando hay datos
-  useEffect(() => {
-    if (selectedMonthData && (selectedMonthData.income > 0 || selectedMonthData.expense > 0)) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 0.8,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [selectedMonthData]);
 
   // Obtener todos los meses/años con transacciones
   const availableMonths = useMemo(() => {
@@ -205,7 +171,7 @@ export const StatsScreen = () => {
     const categoryName = categories.find((c) => c.id === transaction.categoryId)?.name || 'Sin categoría';
 
     return (
-      <View key={transaction.id} style={styles.transactionItem}>
+      <View style={styles.transactionItem}>
         <View style={styles.transactionLeft}>
           <View style={[styles.transactionDot, { backgroundColor: categoryColor }]} />
           <View style={styles.transactionInfo}>
@@ -296,34 +262,26 @@ export const StatsScreen = () => {
 
           {/* Income Transactions */}
           {transactionsByType.income.length > 0 && (
-            <Animated.View 
-              style={[
-                { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
-              ]}
-            >
+            <View>
               <View style={styles.transactionSection}>
                 <Text style={styles.transactionSectionTitle}>
                   <Ionicons name="arrow-down" size={16} color={colors.income} /> Ingresos
                 </Text>
                 {transactionsByType.income.map((transaction: Transaction) => renderTransactionItem(transaction))}
               </View>
-            </Animated.View>
+            </View>
           )}
 
           {/* Expense Transactions */}
           {transactionsByType.expense.length > 0 && (
-            <Animated.View 
-              style={[
-                { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
-              ]}
-            >
+            <View>
               <View style={styles.transactionSection}>
                 <Text style={styles.transactionSectionTitle}>
                   <Ionicons name="arrow-up" size={16} color={colors.expense} /> Gastos
                 </Text>
                 {transactionsByType.expense.map((transaction: Transaction) => renderTransactionItem(transaction))}
               </View>
-            </Animated.View>
+            </View>
           )}
 
           {transactionsByType.income.length === 0 && transactionsByType.expense.length === 0 && (
@@ -346,22 +304,19 @@ export const StatsScreen = () => {
           <Text style={styles.sectionTitle}>Gastos por Categoría</Text>
         {expensesByCategory.length > 0 ? (
           <>
-            {expensesByCategory.map((item, index) => {
-              const percentage = (item.amount / totalExpense) * 100;
-              return (
-                <Card key={index} style={styles.categoryCard}>
-                  <View style={styles.categoryRow}>
-                    <View style={styles.categoryLeft}>
-                      <View style={[styles.categoryDot, { backgroundColor: item.color }]} />
-                      <Text style={styles.categoryName}>{item.name}</Text>
-                    </View>
-                    <Text style={styles.categoryAmount}>{formatCurrency(item.amount)}</Text>
+            {expensesByCategory.map((item, index) => (
+              <Card style={styles.categoryCard}>
+                <View style={styles.categoryRow}>
+                  <View style={styles.categoryLeft}>
+                    <View style={[styles.categoryDot, { backgroundColor: item.color }]} />
+                    <Text style={styles.categoryName}>{item.name}</Text>
                   </View>
-                  <ProgressBar progress={item.amount / totalExpense} color={item.color} />
-                  <Text style={styles.categoryPercentage}>{percentage.toFixed(1)}%</Text>
-                </Card>
-              );
-            })}
+                  <Text style={styles.categoryAmount}>{formatCurrency(item.amount)}</Text>
+                </View>
+                <ProgressBar progress={item.amount / totalExpense} color={item.color} />
+                <Text style={styles.categoryPercentage}>{((item.amount / totalExpense) * 100).toFixed(1)}%</Text>
+              </Card>
+            ))}
             
             <Card style={styles.totalCard}>
               <Text style={styles.totalLabel}>Total Gastado</Text>
@@ -370,8 +325,10 @@ export const StatsScreen = () => {
           </>
         ) : (
           <Card style={styles.emptyCard}>
-            <Ionicons name="pie-chart-outline" size={48} color={colors.textTertiary} />
-            <Text style={styles.emptyText}>No hay datos de gastos</Text>
+            <View>
+              <Ionicons name="pie-chart-outline" size={48} color={colors.textTertiary} />
+              <Text style={styles.emptyText}>No hay datos de gastos</Text>
+            </View>
           </Card>
         )}
         </View>
