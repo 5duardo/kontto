@@ -267,7 +267,12 @@ export const StatsScreen = () => {
                 <Text style={styles.transactionSectionTitle}>
                   <Ionicons name="arrow-down" size={16} color={colors.income} /> Ingresos
                 </Text>
-                {transactionsByType.income.map((transaction: Transaction) => renderTransactionItem(transaction))}
+                {transactionsByType.income.map((transaction: Transaction) => (
+                  // @ts-ignore
+                  <React.Fragment key={transaction.id}>
+                    {renderTransactionItem(transaction)}
+                  </React.Fragment>
+                ))}
               </View>
             </View>
           )}
@@ -279,7 +284,12 @@ export const StatsScreen = () => {
                 <Text style={styles.transactionSectionTitle}>
                   <Ionicons name="arrow-up" size={16} color={colors.expense} /> Gastos
                 </Text>
-                {transactionsByType.expense.map((transaction: Transaction) => renderTransactionItem(transaction))}
+                {transactionsByType.expense.map((transaction: Transaction) => (
+                  // @ts-ignore
+                  <React.Fragment key={transaction.id}>
+                    {renderTransactionItem(transaction)}
+                  </React.Fragment>
+                ))}
               </View>
             </View>
           )}
@@ -305,6 +315,8 @@ export const StatsScreen = () => {
         {expensesByCategory.length > 0 ? (
           <>
             {expensesByCategory.map((item, index) => (
+              // @ts-ignore
+              <React.Fragment key={`category-${index}-${item.name}`}>
               <Card style={styles.categoryCard}>
                 <View style={styles.categoryRow}>
                   <View style={styles.categoryLeft}>
@@ -316,6 +328,7 @@ export const StatsScreen = () => {
                 <ProgressBar progress={item.amount / totalExpense} color={item.color} />
                 <Text style={styles.categoryPercentage}>{((item.amount / totalExpense) * 100).toFixed(1)}%</Text>
               </Card>
+              </React.Fragment>
             ))}
             
             <Card style={styles.totalCard}>

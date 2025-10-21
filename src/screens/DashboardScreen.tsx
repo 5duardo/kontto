@@ -248,6 +248,7 @@ export const DashboardScreen = ({ navigation }: any) => {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View>
         {activeTab === 'total' ? (
           // Vista Total - Desglose por moneda
           <View style={styles.totalViewContent}>
@@ -390,7 +391,7 @@ export const DashboardScreen = ({ navigation }: any) => {
           </View>
         ) : (
           // Vista Cuentas - Original
-          <>
+          <View>
             {/* Presupuesto - movido arriba de Cuentas */}
             {stats.monthlyBudget > 0 && (
               <View style={styles.section}>
@@ -483,7 +484,7 @@ export const DashboardScreen = ({ navigation }: any) => {
                       <Text style={styles.accountName}>{account.title}</Text>
                       <View style={styles.accountBalanceContainer}>
                         {!getDisplayInfo().isHidden ? (
-                          <>
+                          <View>
                             <Text style={styles.accountBalance}>
                               {formatAccountBalance(account.balance, account.currency)}
                             </Text>
@@ -492,7 +493,7 @@ export const DashboardScreen = ({ navigation }: any) => {
                                 ≈ {getConvertedBalance(account)}
                               </Text>
                             )}
-                          </>
+                          </View>
                         ) : (
                           <Text style={styles.accountBalance}>••••••</Text>
                         )}
@@ -523,10 +524,10 @@ export const DashboardScreen = ({ navigation }: any) => {
           >
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Pagos Próximos</Text>
-              <Text style={styles.sectionBalance}>{getDisplayInfo().isHidden ? '••••••' : formatCurrency(getUpcomingPayments.reduce((sum, p) => sum + p.amount, 0))}</Text>
+              <Text style={styles.sectionBalance}>{getDisplayInfo().isHidden ? '••••••' : formatCurrency(getUpcomingPayments.reduce((sum, p) => sum + convertToHNL(p.amount, p.currency, exchangeRates), 0))}</Text>
             </View>
 
-            {getUpcomingPayments.map((payment) => {
+            {getUpcomingPayments.map((payment, index) => {
               const category = categories.find((c) => c.id === payment.categoryId);
               const paymentDate = new Date(payment.nextDate);
               const today = new Date();
@@ -534,19 +535,33 @@ export const DashboardScreen = ({ navigation }: any) => {
               const dateFormatted = paymentDate.toLocaleDateString('es-HN', { month: 'short', day: 'numeric' });
 
               return (
-                <View key={payment.id} style={[styles.upcomingPaymentCard, { borderLeftColor: category?.color || colors.primary }]}>
+                // @ts-ignore
+                <React.Fragment key={payment.id}>
+                <View style={[styles.upcomingPaymentCard, { borderLeftColor: category?.color || colors.primary }]}>
                   <View style={styles.upcomingPaymentLeft}>
                     <View style={[styles.accountIcon, { backgroundColor: `${category?.color || colors.primary}33` }]}>
                       <Ionicons name={category?.icon as any || 'cash'} size={24} color={category?.color || colors.primary} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.upcomingPaymentDescription}>{payment.description}</Text>
-                      <Text style={styles.upcomingPaymentCategory}>{category?.name || 'Sin categoría'}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                        <Text style={styles.upcomingPaymentCategory}>{category?.name || 'Sin categoría'}</Text>
+                        {payment.paid && (
+                          <View style={[styles.upcomingPaymentBadge, { backgroundColor: colors.success + '20' }]}>
+                            <Text style={[styles.upcomingPaymentBadgeText, { color: colors.success }]}>✓ Pagado</Text>
+                          </View>
+                        )}
+                        {!payment.paid && (
+                          <View style={[styles.upcomingPaymentBadge, { backgroundColor: colors.textTertiary + '30' }]}>
+                            <Text style={[styles.upcomingPaymentBadgeText, { color: colors.textTertiary }]}>Pendiente</Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
                   </View>
 
                   <View style={styles.upcomingPaymentRight}>
-                    <Text style={styles.upcomingPaymentAmount}>{getDisplayInfo().isHidden ? '••••••' : formatCurrency(payment.amount)}</Text>
+                    <Text style={styles.upcomingPaymentAmount}>{getDisplayInfo().isHidden ? '••••••' : formatAccountBalance(payment.amount, payment.currency)}</Text>
                     {!getDisplayInfo().isHidden && (
                       <View style={[styles.upcomingPaymentDaysTag, { backgroundColor: daysUntil <= 1 ? '#EF4444' : daysUntil <= 3 ? '#F59E0B' : colors.primary }]}>
                         <Text style={styles.upcomingPaymentDaysText}>
@@ -556,6 +571,7 @@ export const DashboardScreen = ({ navigation }: any) => {
                     )}
                   </View>
                 </View>
+                </React.Fragment>
               );
             })}
           </TouchableOpacity>
@@ -679,7 +695,7 @@ export const DashboardScreen = ({ navigation }: any) => {
                           <Text style={[styles.accountName, { opacity: 0.6 }]}>{account.title}</Text>
                           <View style={styles.accountBalanceContainer}>
                             {!getDisplayInfo().isHidden ? (
-                              <>
+                              <View>
                                 <Text style={[styles.accountBalance, { opacity: 0.6 }]}>
                                   {formatAccountBalance(account.balance, account.currency)}
                                 </Text>
@@ -688,7 +704,7 @@ export const DashboardScreen = ({ navigation }: any) => {
                                     ≈ {getConvertedBalance(account)}
                                   </Text>
                                 )}
-                              </>
+                              </View>
                             ) : (
                               <Text style={[styles.accountBalance, { opacity: 0.6 }]}>••••••</Text>
                             )}
@@ -703,8 +719,9 @@ export const DashboardScreen = ({ navigation }: any) => {
         )}
 
         <View style={{ height: 100 }} />
-          </>
+          </View>
         )}
+        </View>
       </ScrollView>
 
       {/* Account Detail Modal */}
@@ -1153,5 +1170,14 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: typography.sizes.xs,
     fontWeight: typography.weights.semibold as any,
     color: '#FFFFFF',
+  },
+  upcomingPaymentBadge: {
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  upcomingPaymentBadgeText: {
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold as any,
   },
 });

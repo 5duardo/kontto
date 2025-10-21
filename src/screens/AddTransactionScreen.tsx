@@ -327,7 +327,7 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
             maximumDate={new Date(2100, 12, 31)}
           />
         )}
-        {/* Footer actions (Cancelar / Crear-Actualizar) */}
+        {/* Footer actions (Crear/Actualizar, Cancelar, Eliminar en edición) */}
         <View style={styles.modalFooter}>
           <TouchableOpacity
             style={[styles.button, styles.saveButton]}
@@ -335,12 +335,38 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
           >
             <Text style={styles.saveButtonText}>{isEditMode ? 'Actualizar' : 'Crear'}</Text>
           </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.button, styles.cancelButton]}
             onPress={() => navigation.goBack()}
           >
             <Text style={styles.cancelButtonText}>Cancelar</Text>
           </TouchableOpacity>
+
+          {isEditMode && transactionId && (
+            <TouchableOpacity
+              style={[styles.button, styles.deleteButton]}
+              onPress={() => {
+                Alert.alert(
+                  'Eliminar transacción',
+                  '¿Estás seguro de que deseas eliminar esta transacción? Esta acción no se puede deshacer.',
+                  [
+                    { text: 'Cancelar', style: 'cancel' },
+                    {
+                      text: 'Eliminar',
+                      style: 'destructive',
+                      onPress: () => {
+                        deleteTransaction(transactionId);
+                        navigation.goBack();
+                      },
+                    },
+                  ]
+                );
+              }}
+            >
+              <Text style={styles.deleteButtonText}>Eliminar</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
 
@@ -645,6 +671,15 @@ const createStyles = (colors: any, br: any, insets: any) => StyleSheet.create({
     backgroundColor: colors.primary,
   },
   saveButtonText: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold,
+    color: '#FFFFFF',
+  },
+  deleteButton: {
+    backgroundColor: '#EF4444',
+    marginBottom: spacing.xs,
+  },
+  deleteButtonText: {
     fontSize: typography.sizes.base,
     fontWeight: typography.weights.semibold,
     color: '#FFFFFF',

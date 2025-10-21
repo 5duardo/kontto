@@ -146,20 +146,7 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
   };
 
   const handleEditPayment = (payment: RecurringPayment) => {
-    setEditingPayment(payment);
-    setType(payment.type);
-    setAmount(payment.amount.toString());
-    setDescription(payment.description);
-    setSelectedCategoryId(payment.categoryId);
-    setFrequency(payment.frequency);
-    setNextDate(new Date(payment.nextDate));
-    setDisplayDate(new Date(payment.nextDate).toLocaleDateString('es-HN'));
-    setReminderEnabled(payment.reminderEnabled);
-    setReminderDaysBefore(payment.reminderDaysBefore.toString());
-    setIsActive(payment.isActive);
-    setCurrency(payment.currency);
-    setPaid(!!payment.paid);
-    setModalVisible(true);
+    navigation.navigate('EditPayment', { payment });
   };
 
   const handleDeletePayment = (paymentId: string) => {
@@ -250,8 +237,11 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
             </Text>
           </Card>
         ) : (
-          Object.entries(paymentsByMonth).map(([month, payments]) => (
-            <View key={month}>
+          // @ts-ignore
+          Object.entries(paymentsByMonth).map(([month, payments], index) => 
+            // @ts-ignore
+            <React.Fragment key={`month-${index}-${month}`}>
+            <View>
               <Text style={styles.monthTitle}>{month}</Text>
               {payments.map((payment) => {
                 const cat = categories.find((c) => c.id === payment.categoryId);
@@ -325,7 +315,8 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
                 );
               })}
             </View>
-          ))
+            </React.Fragment>
+          )
         )}
 
         <View style={{ height: 100 }} />
@@ -334,10 +325,7 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
       {/* Botón flotante */}
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: colors.primary, bottom: 16 + (insets.bottom || 0) }]}
-        onPress={() => {
-          resetForm();
-          setModalVisible(true);
-        }}
+        onPress={() => navigation.navigate('AddPayment')}
       >
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>

@@ -14,5 +14,7 @@ export { MoreScreen } from './MoreScreen';
 export { ProfileScreen } from './ProfileScreen';
 export { GetProScreen } from './GetProScreen';
 export { ScheduledPaymentsScreen } from './ScheduledPaymentsScreen';
+export { AddPaymentScreen } from './AddPaymentScreen';
+export { EditPaymentScreen } from './EditPaymentScreen';
 export { SettingsScreen } from './SettingsScreen';
 export { AboutScreen } from './AboutScreen';
