@@ -1,0 +1,12 @@
+node_modules
+android
+ios
+.next
+build
+dist
+.expo
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.svg
+**/*.webp

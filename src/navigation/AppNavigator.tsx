@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -6,7 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TouchableOpacity } from 'react-native';
-import { typography, useTheme } from '../theme';
+import { typography, useTheme } from '@theme';
 
 // Screens
 import {
@@ -30,21 +29,48 @@ import {
   EditPaymentScreen,
   SettingsScreen,
   AboutScreen,
-} from '../screens';
+} from '@screens';
+import type { Account, Goal, RecurringPayment } from '@types';
 
-const Stack = createNativeStackNavigator();
-const Tab = createBottomTabNavigator();
+// Navigation types
+export type RootTabParamList = {
+  Accounts: undefined;
+  Categories: undefined;
+  Transactions: undefined;
+  Stats: undefined;
+  More: undefined;
+};
+
+export type RootStackParamList = {
+  Main: undefined;
+  AddTransaction: { transactionId?: string; type?: 'income' | 'expense'; accountId?: string } | undefined;
+  AddAccount: undefined;
+  EditAccount: { account: Account } | undefined;
+  Transfer: { accountId?: string } | undefined;
+  AddGoal: undefined;
+  EditGoal: { goal: Goal } | undefined;
+  Budgets: undefined;
+  Settings: undefined;
+  Profile: undefined;
+  GetPro: undefined;
+  ScheduledPayments: undefined;
+  AddPayment: undefined;
+  EditPayment: { payment: RecurringPayment } | undefined;
+  About: undefined;
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator<RootTabParamList>();
 
 const TabNavigator = () => {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  
+
   return (
-    // @ts-ignore
     <Tab.Navigator
-      screenOptions={({ route }: any) => ({
+      screenOptions={({ route }) => ({
         tabBarShowLabel: false,
-        tabBarIcon: ({ focused, color, size }: any) => {
+        tabBarIcon: ({ focused, color, size }) => {
           let iconName: keyof typeof Ionicons.glyphMap = 'home';
 
           if (route.name === 'Accounts') {
@@ -89,7 +115,7 @@ const TabNavigator = () => {
           fontSize: typography.sizes.xl,
         },
       })}
-    > 
+    >
       {/* @ts-ignore */}
       <Tab.Screen
         name="Accounts"
@@ -126,11 +152,9 @@ const TabNavigator = () => {
 
 export const AppNavigator = () => {
   const { colors } = useTheme();
-  
+
   return (
-    // @ts-ignore
     <NavigationContainer>
-      {/* @ts-ignore */}
       <Stack.Navigator
         screenOptions={{
           headerStyle: {
@@ -146,15 +170,13 @@ export const AppNavigator = () => {
             backgroundColor: colors.background,
           },
           headerBackTitle: '',
-        } as any}
+        }}
       >
-        {/* @ts-ignore */}
         <Stack.Screen
           name="Main"
           component={TabNavigator}
           options={{ headerShown: false }}
         />
-        {/* @ts-ignore */}
         <Stack.Screen
           name="AddTransaction"
           component={AddTransactionScreen}
@@ -163,7 +185,6 @@ export const AppNavigator = () => {
             presentation: 'modal',
           }}
         />
-        {/* @ts-ignore */}
         <Stack.Screen
           name="AddAccount"
           component={AddAccountScreen}
@@ -172,7 +193,6 @@ export const AppNavigator = () => {
             presentation: 'modal',
           }}
         />
-        {/* @ts-ignore */}
         <Stack.Screen
           name="Transfer"
           component={TransferScreen}
@@ -181,7 +201,6 @@ export const AppNavigator = () => {
             presentation: 'modal',
           }}
         />
-        {/* @ts-ignore */}
         <Stack.Screen
           name="AddGoal"
           component={AddGoalScreen}
@@ -190,7 +209,6 @@ export const AppNavigator = () => {
             presentation: 'modal',
           }}
         />
-        {/* @ts-ignore */}
         <Stack.Screen
           name="EditGoal"
           component={EditGoalScreen}
@@ -203,7 +221,6 @@ export const AppNavigator = () => {
             ),
           })}
         />
-        {/* @ts-ignore */}
         <Stack.Screen
           name="EditAccount"
           component={EditAccountScreen}
@@ -216,7 +233,6 @@ export const AppNavigator = () => {
             ),
           })}
         />
-        {/* @ts-ignore */}
         <Stack.Screen
           name="Budgets"
           component={BudgetsScreen}
@@ -229,7 +245,6 @@ export const AppNavigator = () => {
             ),
           })}
         />
-        {/* @ts-ignore */}
         <Stack.Screen
           name="Settings"
           component={SettingsScreen}
@@ -242,7 +257,6 @@ export const AppNavigator = () => {
             ),
           })}
         />
-        {/* @ts-ignore */}
         <Stack.Screen
           name="Profile"
           component={ProfileScreen}
@@ -255,7 +269,6 @@ export const AppNavigator = () => {
             ),
           })}
         />
-        {/* @ts-ignore */}
         <Stack.Screen
           name="GetPro"
           component={GetProScreen}
@@ -268,7 +281,6 @@ export const AppNavigator = () => {
             ),
           })}
         />
-        {/* @ts-ignore */}
         <Stack.Screen
           name="ScheduledPayments"
           component={ScheduledPaymentsScreen}
@@ -281,7 +293,6 @@ export const AppNavigator = () => {
             ),
           })}
         />
-        {/* @ts-ignore */}
         <Stack.Screen
           name="AddPayment"
           component={AddPaymentScreen}
@@ -294,7 +305,6 @@ export const AppNavigator = () => {
             ),
           })}
         />
-        {/* @ts-ignore */}
         <Stack.Screen
           name="EditPayment"
           component={EditPaymentScreen}
@@ -307,7 +317,6 @@ export const AppNavigator = () => {
             ),
           })}
         />
-        {/* @ts-ignore */}
         <Stack.Screen
           name="About"
           component={AboutScreen}

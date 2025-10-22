@@ -4,11 +4,9 @@
     "slug": "kontto",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/kontto.jpg",
     "userInterfaceStyle": "dark",
     "newArchEnabled": false,
     "splash": {
-      "image": "./assets/kontto.jpg",
       "resizeMode": "contain",
       "backgroundColor": "#0D1117"
     },
@@ -21,21 +19,23 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/kontto.jpg",
         "backgroundColor": "#0D1117"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.kontto.app"
+      "package": "com.kontto.app",
+      "permissions": []
     },
-    "web": {
-      "favicon": "./assets/kontto.jpg"
-    },
+    "web": {},
     "extra": {
       "eas": {
         "projectId": "988edac4-2aae-4db0-9ccb-e8e1a07f0992"
       }
     },
-    "owner": "5duardo"
+    "owner": "5duardo",
+    "plugins": [
+      "expo-system-ui",
+      "expo-font"
+    ]
   }
 }

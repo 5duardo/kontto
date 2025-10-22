@@ -1,12 +1,12 @@
+import 'react-native-gesture-handler';
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AppNavigator } from './src/navigation/AppNavigator';
-import { ThemeProvider, useTheme } from './src/theme';
-import { LoadingScreen } from './src/components';
-import { OnboardingScreen } from './src/screens';
-import { useAppLoading, useOnboarding } from './src/hooks';
-import 'react-native-gesture-handler';
+import { AppNavigator } from '@navigation/AppNavigator';
+import { ThemeProvider, useTheme } from '@theme';
+import { LoadingScreen } from '@components';
+import { OnboardingScreen } from '@screens';
+import { useAppLoading, useOnboarding } from '@hooks';
 
 function AppContent() {
   const { theme } = useTheme();
@@ -43,7 +43,9 @@ function AppContent() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <ThemeProvider children={<AppContent />} />
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
