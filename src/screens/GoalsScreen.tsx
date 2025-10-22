@@ -1,3 +1,4 @@
+// Goal creation screen with full currency support
 import React, { useState, useMemo } from 'react';
 import {
   View,
@@ -12,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../store/useAppStore';
 import { spacing, typography, borderRadius, useTheme } from '../theme';
 import { Card, Button, ProgressBar } from '../components/common';
+import { CurrencySelector } from '../components/CurrencySelector';
 
 const goalIcons = [
   'airplane',
@@ -30,7 +32,7 @@ export const GoalsScreen = () => {
   const { goals, addGoal, updateGoal, deleteGoal, addToGoal, preferredCurrency } = useAppStore();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors, borderRadius), [colors]);
-  
+
   const [modalVisible, setModalVisible] = useState(false);
   const [addMoneyModalVisible, setAddMoneyModalVisible] = useState(false);
   const [selectedGoalId, setSelectedGoalId] = useState('');
@@ -41,6 +43,7 @@ export const GoalsScreen = () => {
   const [selectedColor, setSelectedColor] = useState(colors.categoryColors[0]);
   const [targetDate, setTargetDate] = useState('');
   const [addAmount, setAddAmount] = useState('');
+  const [selectedCurrency, setSelectedCurrency] = useState(preferredCurrency);
 
   const formatCurrency = (amount: number) => {
     return `L ${amount.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -63,7 +66,7 @@ export const GoalsScreen = () => {
       icon: selectedIcon,
       color: selectedColor,
       description,
-      currency: preferredCurrency,
+      currency: selectedCurrency,
       includeInTotal: true,
     });
 
@@ -86,6 +89,7 @@ export const GoalsScreen = () => {
     setSelectedIcon(goalIcons[0]);
     setSelectedColor(colors.categoryColors[0]);
     setTargetDate('');
+    setSelectedCurrency(preferredCurrency);
   };
 
   return (
@@ -273,6 +277,14 @@ export const GoalsScreen = () => {
                   </TouchableOpacity>
                 ))}
               </ScrollView>
+
+              <CurrencySelector
+                selectedCurrency={selectedCurrency}
+                onCurrencyChange={setSelectedCurrency}
+                modalTitle="Seleccionar moneda para tu meta"
+                label="Moneda de la meta"
+                showFullName={true}
+              />
 
               <Button title="Crear Meta" onPress={handleAddGoal} fullWidth variant="solidPrimary" />
             </ScrollView>

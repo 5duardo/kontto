@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, typography, useTheme } from '../theme';
 import { useAppStore } from '../store/useAppStore';
+import { CurrencySelector, CURRENCIES } from '../components/CurrencySelector';
 
 const GOAL_ICONS = [
   'star',
@@ -52,21 +53,18 @@ const ICON_COLORS = [
   '#14B8A6', // Teal
 ];
 
-const CURRENCIES = [
-  { code: 'HNL', name: 'Lempira hondureño', symbol: 'L' },
-  { code: 'USD', name: 'Dólar estadounidense', symbol: '$' },
-  { code: 'EUR', name: 'Euro', symbol: '€' },
-];
+// CURRENCIES se importa desde el componente CurrencySelector para tener la lista completa
 
 export const AddGoalScreen = ({ navigation }: any) => {
   const addGoal = useAppStore((state) => state.addGoal);
+  const preferredCurrency = useAppStore((state) => state.preferredCurrency);
   const { colors } = useTheme();
-  
+
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [icon, setIcon] = useState('star');
   const [iconColor, setIconColor] = useState('#3B82F6');
-  const [currency, setCurrency] = useState('HNL');
+  const [currency, setCurrency] = useState(preferredCurrency);
   const [currentAmount, setCurrentAmount] = useState('0');
   const [targetAmount, setTargetAmount] = useState('0');
   const [targetDate, setTargetDate] = useState(new Date().toISOString().split('T')[0]);
@@ -196,31 +194,13 @@ export const AddGoalScreen = ({ navigation }: any) => {
 
         {/* Moneda */}
         <View style={styles.section}>
-          <Text style={styles.label}>Moneda</Text>
-          {CURRENCIES.map((curr) => (
-            <TouchableOpacity
-              key={curr.code}
-              style={styles.currencyOption}
-              onPress={() => setCurrency(curr.code)}
-            >
-              <View style={styles.currencyLeft}>
-                <View
-                  style={[
-                    styles.radioButton,
-                    currency === curr.code && styles.radioButtonSelected,
-                  ]}
-                >
-                  {currency === curr.code && (
-                    <View style={styles.radioButtonInner} />
-                  )}
-                </View>
-                <View>
-                  <Text style={styles.currencyText}>{curr.code}</Text>
-                  <Text style={styles.currencySubtext}>{curr.name}</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
+          <CurrencySelector
+            selectedCurrency={currency}
+            onCurrencyChange={setCurrency}
+            modalTitle="Seleccionar moneda para tu meta"
+            label="Moneda de la meta"
+            showFullName={true}
+          />
         </View>
 
         {/* Saldo Actual */}
@@ -395,49 +375,6 @@ const createStyles = (colors: any) => StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 3,
     elevation: 5,
-  },
-  currencyOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  currencyLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    flex: 1,
-  },
-  radioButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.textSecondary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  radioButtonSelected: {
-    borderColor: colors.primary,
-    borderWidth: 2,
-  },
-  radioButtonInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: colors.primary,
-  },
-  currencyText: {
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.semibold,
-    color: colors.textPrimary,
-  },
-  currencySubtext: {
-    fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
   },
   amountContainer: {
     flexDirection: 'row',

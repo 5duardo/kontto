@@ -168,6 +168,16 @@ export const DashboardScreen = ({ navigation }: any) => {
     };
   }, [transactions, accounts, budgets, exchangeRates, displayState, preferredCurrency, conversionCurrency]);
 
+  // Total de metas convertido a la moneda de visualización
+  const totalGoalsUSD = useMemo(
+    () => goals.reduce((sum, g) => sum + convertToUSD(g.currentAmount, g.currency, exchangeRates), 0),
+    [goals, exchangeRates]
+  );
+  const totalGoalsDisplay = useMemo(
+    () => convertCurrency(totalGoalsUSD, 'USD', getDisplayInfo().currency, exchangeRates),
+    [totalGoalsUSD, exchangeRates, displayState, preferredCurrency, conversionCurrency]
+  );
+
   const formatCurrency = (amount: number, currency: string = 'HNL') => {
     const symbol = CURRENCY_SYMBOLS[currency] || currency;
     const formattedAmount = amount.toLocaleString('es-HN', {
@@ -375,12 +385,13 @@ export const DashboardScreen = ({ navigation }: any) => {
                   <View style={styles.totalRowHighlight}>
                     <Text style={styles.totalConvertedLabel}>Total</Text>
                     <Text style={styles.totalConvertedAmount}>
-                      {formatCurrency(
-                        accounts
+                      {(() => {
+                        const totalUSD = accounts
                           .filter(a => a.includeInTotal && !a.isArchived)
-                          .reduce((sum, a) => sum + convertToUSD(a.balance, a.currency, exchangeRates), 0),
-                        'USD'
-                      )}
+                          .reduce((sum, a) => sum + convertToUSD(a.balance, a.currency, exchangeRates), 0);
+                        const totalDisplay = convertCurrency(totalUSD, 'USD', getDisplayInfo().currency, exchangeRates);
+                        return formatCurrency(totalDisplay, getDisplayInfo().currency);
+                      })()}
                     </Text>
                   </View>
                 </View>
@@ -396,9 +407,7 @@ export const DashboardScreen = ({ navigation }: any) => {
                     <Text style={styles.totalConvertedLabel}>Total</Text>
                     <Text style={styles.totalConvertedAmount}>
                       {!getDisplayInfo().isHidden ? (
-                        formatCurrency(
-                          goals.reduce((sum, g) => sum + g.currentAmount, 0)
-                        )
+                        formatCurrency(totalGoalsDisplay, getDisplayInfo().currency)
                       ) : (
                         '••••••'
                       )}
@@ -424,11 +433,11 @@ export const DashboardScreen = ({ navigation }: any) => {
                       <View style={styles.budgetHeader}>
                         <View style={styles.budgetLeftInfo}>
                           <Text style={styles.budgetLabel}>Gasto</Text>
-                          <Text style={styles.budgetAmountSpent}>{getDisplayInfo().isHidden ? '••••••' : formatCurrency(stats.monthlyExpense)}</Text>
+                          <Text style={styles.budgetAmountSpent}>{getDisplayInfo().isHidden ? '••••••' : formatCurrency(stats.monthlyExpense, getDisplayInfo().currency)}</Text>
                         </View>
                         <View style={styles.budgetRightInfo}>
                           <Text style={styles.budgetLabel}>Presupuesto</Text>
-                          <Text style={styles.budgetAmountTotal}>{getDisplayInfo().isHidden ? '••••••' : formatCurrency(stats.monthlyBudget)}</Text>
+                          <Text style={styles.budgetAmountTotal}>{getDisplayInfo().isHidden ? '••••••' : formatCurrency(stats.monthlyBudget, getDisplayInfo().currency)}</Text>
                         </View>
                       </View>
 
@@ -455,8 +464,8 @@ export const DashboardScreen = ({ navigation }: any) => {
                           { color: stats.monthlyExpense > stats.monthlyBudget ? '#EF4444' : colors.textSecondary }
                         ]}>
                           {getDisplayInfo().isHidden ? '••••••' : (stats.monthlyExpense > stats.monthlyBudget
-                            ? `Excedido: ${formatCurrency(stats.monthlyExpense - stats.monthlyBudget)}`
-                            : `Disponible: ${formatCurrency(Math.max(0, stats.monthlyBudget - stats.monthlyExpense))}`)}
+                            ? `Excedido: ${formatCurrency(stats.monthlyExpense - stats.monthlyBudget, getDisplayInfo().currency)}`
+                            : `Disponible: ${formatCurrency(Math.max(0, stats.monthlyBudget - stats.monthlyExpense), getDisplayInfo().currency)}`)}
                         </Text>
                       </View>
                     </View>
@@ -470,12 +479,13 @@ export const DashboardScreen = ({ navigation }: any) => {
                   <Text style={styles.sectionTitle}>Cuentas</Text>
                   {!getDisplayInfo().isHidden ? (
                     <Text style={styles.sectionBalance}>
-                      {formatCurrency(
-                        accounts
+                      {(() => {
+                        const totalUSD = accounts
                           .filter(a => a.includeInTotal && !a.isArchived)
-                          .reduce((sum, a) => sum + convertToUSD(a.balance, a.currency, exchangeRates), 0),
-                        'USD'
-                      )}
+                          .reduce((sum, a) => sum + convertToUSD(a.balance, a.currency, exchangeRates), 0);
+                        const totalDisplay = convertCurrency(totalUSD, 'USD', getDisplayInfo().currency, exchangeRates);
+                        return formatCurrency(totalDisplay, getDisplayInfo().currency);
+                      })()}
                     </Text>
                   ) : (
                     <Text style={styles.sectionBalance}>••••••</Text>
@@ -545,7 +555,11 @@ export const DashboardScreen = ({ navigation }: any) => {
                 >
                   <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Pagos Próximos</Text>
-                    <Text style={styles.sectionBalance}>{getDisplayInfo().isHidden ? '••••••' : formatCurrency(getUpcomingPayments.reduce((sum, p) => sum + convertToUSD(p.amount, p.currency, exchangeRates), 0), 'USD')}</Text>
+                    <Text style={styles.sectionBalance}>{getDisplayInfo().isHidden ? '••••••' : (() => {
+                      const totalUSD = getUpcomingPayments.reduce((sum, p) => sum + convertToUSD(p.amount, p.currency, exchangeRates), 0);
+                      const totalDisplay = convertCurrency(totalUSD, 'USD', getDisplayInfo().currency, exchangeRates);
+                      return formatCurrency(totalDisplay, getDisplayInfo().currency);
+                    })()}</Text>
                   </View>
 
                   {getUpcomingPayments.map((payment, index) => {
@@ -604,9 +618,7 @@ export const DashboardScreen = ({ navigation }: any) => {
                   <Text style={styles.sectionTitle}>Metas</Text>
                   {!getDisplayInfo().isHidden ? (
                     <Text style={styles.sectionBalance}>
-                      {formatCurrency(
-                        goals.reduce((sum, g) => sum + g.currentAmount, 0)
-                      )}
+                      {formatCurrency(totalGoalsDisplay, getDisplayInfo().currency)}
                     </Text>
                   ) : (
                     <Text style={styles.sectionBalance}>••••••</Text>

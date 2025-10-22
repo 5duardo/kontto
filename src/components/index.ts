@@ -1,4 +1,4 @@
 export { LoadingScreen } from './LoadingScreen';
 export { AccountDetailModal } from './AccountDetailModal';
-export { CurrencySelector } from './CurrencySelector';
+export { CurrencySelector, CURRENCIES } from './CurrencySelector';
 export { OnboardingSlide } from './OnboardingSlide';

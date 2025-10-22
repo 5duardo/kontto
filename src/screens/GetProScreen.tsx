@@ -70,9 +70,17 @@ const PRO_FEATURES: ProFeature[] = [
 
 const PRICING_PLANS = [
   {
+    id: 'weekly',
+    name: 'Semanal',
+    price: '$0.99',
+    period: '/semana',
+    savings: null,
+    badge: null,
+  },
+  {
     id: 'monthly',
     name: 'Mensual',
-    price: '$4.99',
+    price: '$2.99',
     period: '/mes',
     savings: null,
     badge: null,
@@ -80,15 +88,15 @@ const PRICING_PLANS = [
   {
     id: 'annual',
     name: 'Anual',
-    price: '$39.99',
+    price: '$19.99',
     period: '/año',
-    savings: 'Ahorra 33%',
+    savings: null,
     badge: 'popular',
   },
   {
     id: 'lifetime',
-    name: 'De por vida',
-    price: '$99.99',
+    name: 'Para siempre',
+    price: '$39.99',
     period: 'pago único',
     savings: 'Mejor valor',
     badge: 'best',
@@ -152,12 +160,15 @@ export const GetProScreen = ({ navigation }: any) => {
         style={[
           styles.purchaseButton,
           {
+            // Planes con badge mantienen su color; planes sin badge usan un fondo sutil con primary
             backgroundColor:
               plan.badge === 'popular'
                 ? colors.primary
                 : plan.badge === 'best'
                   ? '#10B981'
-                  : colors.backgroundSecondary,
+                  : `${colors.primary}22`,
+            borderWidth: plan.badge ? 0 : 1,
+            borderColor: plan.badge ? 'transparent' : colors.primary,
           },
         ]}
         onPress={() => handlePurchase(plan.id)}
@@ -166,10 +177,8 @@ export const GetProScreen = ({ navigation }: any) => {
           style={[
             styles.purchaseButtonText,
             {
-              color:
-                plan.badge === 'popular' || plan.badge === 'best'
-                  ? '#FFF'
-                  : colors.textPrimary,
+              // Texto blanco para mejor contraste en todos los botones
+              color: '#FFFFFF',
             },
           ]}
         >
