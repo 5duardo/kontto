@@ -2,11 +2,15 @@
   "name": "kontto-app-react-native",
   "version": "1.0.0",
   "main": "index.ts",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "clean": "powershell -NoProfile -Command \"if (Test-Path node_modules) { rmdir node_modules -Recurse -Force }; if (Test-Path package-lock.json) { del package-lock.json }; npm cache clean --force\"",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "format": "prettier --write .",
@@ -52,6 +56,9 @@
     "prettier": "^3.3.3",
     "babel-preset-expo": "^54.0.4",
     "typescript": "~5.9.2"
+  },
+  "overrides": {
+    "react-refresh": "0.14.2"
   },
   "private": true
 }
