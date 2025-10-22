@@ -10,33 +10,33 @@ interface AppState {
   updateTransaction: (id: string, transaction: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
   getTransactionsByDateRange: (startDate: string, endDate: string) => Transaction[];
-  
+
   // Categories
   categories: Category[];
   addCategory: (category: Omit<Category, 'id' | 'createdAt'>) => void;
   updateCategory: (id: string, category: Partial<Category>) => void;
   deleteCategory: (id: string) => void;
-  
+
   // Budgets
   budgets: Budget[];
   addBudget: (budget: Omit<Budget, 'id' | 'createdAt' | 'updatedAt' | 'spent'>) => void;
   updateBudget: (id: string, budget: Partial<Budget>) => void;
   deleteBudget: (id: string) => void;
   recalculateBudgetsSpent: () => void;
-  
+
   // Goals
   goals: Goal[];
   addGoal: (goal: Omit<Goal, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateGoal: (id: string, goal: Partial<Goal>) => void;
   deleteGoal: (id: string) => void;
   addToGoal: (id: string, amount: number) => void;
-  
+
   // Recurring Payments
   recurringPayments: RecurringPayment[];
   addRecurringPayment: (payment: Omit<RecurringPayment, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateRecurringPayment: (id: string, payment: Partial<RecurringPayment>) => void;
   deleteRecurringPayment: (id: string) => void;
-  
+
   // Accounts
   accounts: Account[];
   addAccount: (account: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>) => void;
@@ -48,23 +48,33 @@ interface AppState {
     amount: number;
     description: string;
   }) => void;
-  
+
   // Settings
   preferredCurrency: string;
   setPreferredCurrency: (currency: string) => void;
-  
+  conversionCurrency: string; // Secondary currency for conversions/comparisons
+  setConversionCurrency: (currency: string) => void;
+  decimalPlaces: number;
+  setDecimalPlaces: (places: number) => void;
+  dateFormat: string; // 'dd/mm/yyyy' | 'mm/dd/yyyy' | 'yyyy/mm/dd'
+  setDateFormat: (format: string) => void;
+  monthStart: number; // 1-28 (day of month when budget period starts)
+  setMonthStart: (day: number) => void;
+
   // Favorite exchange rate (for quick display)
   favoriteExchangeRate: string; // 'HNL' | 'USD' | 'EUR'
   setFavoriteExchangeRate: (rate: string) => void;
-  
+
   // Theme
   theme: 'dark' | 'light';
   setTheme: (theme: 'dark' | 'light') => void;
-  
+  accentColor: string; // 'blue' | 'purple' | 'pink' | 'green' | 'orange' | 'red'
+  setAccentColor: (color: string) => void;
+
   // Onboarding
   hasCompletedOnboarding: boolean;
   completeOnboarding: () => void;
-  
+
   // User Authentication
   user: User | null;
   isLoggedIn: boolean;
@@ -72,7 +82,7 @@ interface AppState {
   logout: () => void;
   register: (fullName: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   updateUserProfile: (user: Partial<User>) => void;
-  
+
   // Security
   biometricEnabled: boolean;
   pinEnabled: boolean;
@@ -81,7 +91,7 @@ interface AppState {
   setPinEnabled: (enabled: boolean) => void;
   setPin: (pin: string) => void;
   validatePin: (pin: string) => boolean;
-  
+
   // Initialization
   initializeDefaultData: () => void;
   isInitialized: boolean;
@@ -95,7 +105,7 @@ const defaultCategories: Omit<Category, 'id' | 'createdAt'>[] = [
   { name: 'Freelance', icon: 'laptop', color: '#3B82F6', type: 'income', isDefault: true },
   { name: 'Inversiones', icon: 'trending-up', color: '#8B5CF6', type: 'income', isDefault: true },
   { name: 'Otros Ingresos', icon: 'cash', color: '#06B6D4', type: 'income', isDefault: true },
-  
+
   // Expense categories
   { name: 'Alimentación', icon: 'restaurant', color: '#EF4444', type: 'expense', isDefault: true },
   { name: 'Transporte', icon: 'car', color: '#F59E0B', type: 'expense', isDefault: true },
@@ -119,8 +129,13 @@ export const useAppStore = create<AppState>()(
       recurringPayments: [],
       accounts: [],
       preferredCurrency: 'HNL',
+      conversionCurrency: 'USD',
+      decimalPlaces: 2,
+      dateFormat: 'dd/mm/yyyy',
+      monthStart: 1,
       favoriteExchangeRate: 'USD',
       theme: 'dark',
+      accentColor: 'blue',
       isInitialized: false,
       hasCompletedOnboarding: false,
       user: null,
@@ -138,7 +153,7 @@ export const useAppStore = create<AppState>()(
           createdAt: now,
           updatedAt: now,
         };
-        
+
         // Calculate updates needed
         let accountUpdates: any = null;
         let budgetUpdates: Array<{ id: string; spent: number }> = [];
@@ -147,10 +162,10 @@ export const useAppStore = create<AppState>()(
         if (transaction.accountId) {
           const account = get().accounts.find(a => a.id === transaction.accountId);
           if (account) {
-            const newBalance = transaction.type === 'income' 
-              ? account.balance + transaction.amount 
+            const newBalance = transaction.type === 'income'
+              ? account.balance + transaction.amount
               : account.balance - transaction.amount;
-            
+
             accountUpdates = {
               id: account.id,
               balance: newBalance,
@@ -201,13 +216,13 @@ export const useAppStore = create<AppState>()(
 
       updateTransaction: (id, transaction) => {
         const oldTransaction = get().transactions.find(t => t.id === id);
-        
+
         // Handle account balance adjustments if amount or type changed
         if (oldTransaction && (transaction.amount !== undefined || transaction.type !== undefined)) {
           const amount = transaction.amount ?? oldTransaction.amount;
           const type = transaction.type ?? oldTransaction.type;
           const accountId = transaction.accountId ?? oldTransaction.accountId;
-          
+
           // If account changed or amount/type changed, we need to update account balances
           if (oldTransaction.accountId && oldTransaction.accountId !== accountId) {
             // Reverse effect on old account
@@ -226,16 +241,16 @@ export const useAppStore = create<AppState>()(
               let newBalance = oldTransaction.type === 'income'
                 ? account.balance - oldTransaction.amount
                 : account.balance + oldTransaction.amount;
-              
+
               // Then apply the new transaction
               newBalance = type === 'income'
                 ? newBalance + amount
                 : newBalance - amount;
-              
+
               get().updateAccount(account.id, { balance: newBalance });
             }
           }
-          
+
           // Apply new transaction if account is being set
           if (accountId && !oldTransaction.accountId) {
             const account = get().accounts.find(a => a.id === accountId);
@@ -246,12 +261,12 @@ export const useAppStore = create<AppState>()(
               get().updateAccount(account.id, { balance: newBalance });
             }
           }
-          
+
           // Handle budget spent adjustments if amount, type, or category changed
           const categoryId = transaction.categoryId ?? oldTransaction.categoryId;
           const newType = transaction.type ?? oldTransaction.type;
           const newAmount = transaction.amount ?? oldTransaction.amount;
-          
+
           // If category or amount or type changed
           if (oldTransaction.categoryId !== categoryId || oldTransaction.amount !== newAmount || oldTransaction.type !== newType) {
             // If it was an expense before, reverse the old amount from old category budgets
@@ -264,7 +279,7 @@ export const useAppStore = create<AppState>()(
                   });
                 });
             }
-            
+
             // If it's an expense now, add the new amount to new category budgets
             if (newType === 'expense') {
               get().budgets
@@ -277,7 +292,7 @@ export const useAppStore = create<AppState>()(
             }
           }
         }
-        
+
         set((state) => ({
           transactions: state.transactions.map((t) =>
             t.id === id
@@ -289,21 +304,21 @@ export const useAppStore = create<AppState>()(
 
       deleteTransaction: (id) => {
         const transaction = get().transactions.find(t => t.id === id);
-        
+
         if (transaction && transaction.accountId) {
           // Reverse the transaction effect on the account
           const account = get().accounts.find(a => a.id === transaction.accountId);
           if (account) {
-            const newBalance = transaction.type === 'income' 
-              ? account.balance - transaction.amount 
+            const newBalance = transaction.type === 'income'
+              ? account.balance - transaction.amount
               : account.balance + transaction.amount;
-            
+
             get().updateAccount(account.id, {
               balance: newBalance,
             });
           }
         }
-        
+
         // Reverse budget spent if applicable
         if (transaction?.categoryId && transaction.type === 'expense') {
           get().budgets
@@ -314,7 +329,7 @@ export const useAppStore = create<AppState>()(
               });
             });
         }
-        
+
         set((state) => ({
           transactions: state.transactions.filter((t) => t.id !== id),
         }));
@@ -349,7 +364,7 @@ export const useAppStore = create<AppState>()(
       deleteCategory: (id) => {
         const category = get().categories.find(c => c.id === id);
         if (category?.isDefault) return; // No permitir eliminar categorías por defecto
-        
+
         set((state) => ({
           categories: state.categories.filter((c) => c.id !== id),
         }));
@@ -375,13 +390,13 @@ export const useAppStore = create<AppState>()(
           const budgets = state.budgets.map((b) => {
             if (b.id === id) {
               const updatedBudget = { ...b, ...budget, updatedAt: new Date().toISOString() };
-              
+
               // Si se actualizan las fechas o categorías, recalcular el spent
               if (budget.startDate || budget.endDate || budget.categoryIds) {
                 const startDate = new Date(budget.startDate || b.startDate);
                 const endDate = new Date(budget.endDate || b.endDate);
                 const categoryIds = budget.categoryIds || b.categoryIds;
-                
+
                 // Recalcular spent basado en transacciones en el nuevo período
                 const spent = state.transactions
                   .filter(t => {
@@ -394,15 +409,15 @@ export const useAppStore = create<AppState>()(
                     );
                   })
                   .reduce((sum, t) => sum + t.amount, 0);
-                
+
                 updatedBudget.spent = spent;
               }
-              
+
               return updatedBudget;
             }
             return b;
           });
-          
+
           return { budgets };
         });
       },
@@ -418,7 +433,7 @@ export const useAppStore = create<AppState>()(
           const budgets = state.budgets.map((budget) => {
             const startDate = new Date(budget.startDate);
             const endDate = new Date(budget.endDate);
-            
+
             // Recalcular spent basado en transacciones en el período
             const spent = state.transactions
               .filter(t => {
@@ -431,10 +446,10 @@ export const useAppStore = create<AppState>()(
                 );
               })
               .reduce((sum, t) => sum + t.amount, 0);
-            
+
             return { ...budget, spent };
           });
-          
+
           return { budgets };
         });
       },
@@ -474,10 +489,10 @@ export const useAppStore = create<AppState>()(
           goals: state.goals.map((g) =>
             g.id === id
               ? {
-                  ...g,
-                  currentAmount: g.currentAmount + amount,
-                  updatedAt: new Date().toISOString(),
-                }
+                ...g,
+                currentAmount: g.currentAmount + amount,
+                updatedAt: new Date().toISOString(),
+              }
               : g
           ),
         }));
@@ -611,12 +626,32 @@ export const useAppStore = create<AppState>()(
         set({ preferredCurrency: currency });
       },
 
+      setConversionCurrency: (currency) => {
+        set({ conversionCurrency: currency });
+      },
+
+      setDecimalPlaces: (places) => {
+        set({ decimalPlaces: places });
+      },
+
+      setDateFormat: (format) => {
+        set({ dateFormat: format });
+      },
+
+      setMonthStart: (day) => {
+        set({ monthStart: day });
+      },
+
       setFavoriteExchangeRate: (rate) => {
         set({ favoriteExchangeRate: rate });
       },
 
       setTheme: (theme) => {
         set({ theme });
+      },
+
+      setAccentColor: (color) => {
+        set({ accentColor: color });
       },
 
       completeOnboarding: () => {
@@ -629,7 +664,7 @@ export const useAppStore = create<AppState>()(
         if (!email || !password) {
           return { success: false, error: 'Por favor completa todos los campos' };
         }
-        
+
         if (password.length < 6) {
           return { success: false, error: 'La contraseña debe tener al menos 6 caracteres' };
         }
@@ -712,7 +747,7 @@ export const useAppStore = create<AppState>()(
       // Initialize default data
       initializeDefaultData: () => {
         if (get().isInitialized) return;
-        
+
         const categories = defaultCategories.map((cat) => ({
           ...cat,
           id: generateId(),

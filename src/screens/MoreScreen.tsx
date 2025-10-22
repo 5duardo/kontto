@@ -79,18 +79,7 @@ const MENU_SECTIONS: MenuSection[] = [
         title: 'Datos',
         icon: 'cloud-download',
         color: '#10B981',
-        action: () => {
-          Alert.alert('Datos', 'Gestiona tus datos: Exportar, importar, etc.');
-        },
-      },
-      {
-        id: 'video',
-        title: 'Video con instrucciones',
-        icon: 'play-circle',
-        color: '#EF4444',
-        action: () => {
-          Alert.alert('Video', 'Abre tutorial en video (próximamente)');
-        },
+        screen: 'Data',
       },
       {
         id: 'support',
@@ -98,7 +87,12 @@ const MENU_SECTIONS: MenuSection[] = [
         icon: 'help-circle',
         color: '#F97316',
         action: () => {
-          Alert.alert('Asistencia', 'Contacta con nuestro equipo de soporte');
+          const email = 'info@hyped.center';
+          const subject = encodeURIComponent('Asistencia - Kontto');
+          const mailto = `mailto:${email}?subject=${subject}`;
+          Linking.openURL(mailto).catch(() => {
+            Alert.alert('Error', 'No se pudo abrir la aplicación de correo');
+          });
         },
       },
       {
@@ -106,9 +100,7 @@ const MENU_SECTIONS: MenuSection[] = [
         title: 'Acerca de nuestro equipo',
         icon: 'people',
         color: '#EC4899',
-        action: () => {
-          Alert.alert('Equipo', 'Conoce al equipo detrás de Kontto');
-        },
+        screen: 'About',
       },
       {
         id: 'privacy',

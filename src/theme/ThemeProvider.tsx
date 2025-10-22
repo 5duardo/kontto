@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { useAppStore } from '../store/useAppStore';
-import { colorSchemes } from './colorSchemes';
+import { colorSchemes, accentColorMap } from './colorSchemes';
 
 interface ThemeContextType {
   colors: typeof colorSchemes.dark;
@@ -11,7 +11,17 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const theme = useAppStore((state) => state.theme);
-  const colors = useMemo(() => colorSchemes[theme], [theme]);
+  const accentColor = useAppStore((state) => state.accentColor);
+
+  const colors = useMemo(() => {
+    const baseColors = colorSchemes[theme];
+    const accentHexColor = accentColorMap[accentColor] || accentColorMap.blue;
+
+    return {
+      ...baseColors,
+      primary: accentHexColor,
+    };
+  }, [theme, accentColor]);
 
   return (
     <ThemeContext.Provider value={{ colors, theme }}>

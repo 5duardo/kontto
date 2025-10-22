@@ -29,6 +29,13 @@ import {
   EditPaymentScreen,
   SettingsScreen,
   AboutScreen,
+  DataScreen,
+  FormatSettingsScreen,
+  StylesSettingsScreen,
+  SyncSettingsScreen,
+  NotificationsSettingsScreen,
+  SecuritySettingsScreen,
+  ExchangeRatesSettingsScreen,
 } from '@screens';
 import type { Account, Goal, RecurringPayment } from '@types';
 
@@ -57,6 +64,13 @@ export type RootStackParamList = {
   AddPayment: undefined;
   EditPayment: { payment: RecurringPayment } | undefined;
   About: undefined;
+  Data: undefined;
+  FormatSettings: undefined;
+  StylesSettings: undefined;
+  SyncSettings: undefined;
+  NotificationsSettings: undefined;
+  SecuritySettings: undefined;
+  ExchangeRatesSettings: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -322,6 +336,90 @@ export const AppNavigator = () => {
           component={AboutScreen}
           options={({ navigation }) => ({
             title: 'Acerca de',
+            headerLeft: () => (
+              <TouchableOpacity onPress={() => navigation.goBack()}>
+                <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+              </TouchableOpacity>
+            ),
+          })}
+        />
+        <Stack.Screen
+          name="Data"
+          component={DataScreen}
+          options={({ navigation }) => ({
+            title: 'Datos',
+            headerLeft: () => (
+              <TouchableOpacity onPress={() => navigation.goBack()}>
+                <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+              </TouchableOpacity>
+            ),
+          })}
+        />
+        <Stack.Screen
+          name="FormatSettings"
+          component={FormatSettingsScreen}
+          options={({ navigation }) => ({
+            title: 'Formato',
+            headerLeft: () => (
+              <TouchableOpacity onPress={() => navigation.goBack()}>
+                <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+              </TouchableOpacity>
+            ),
+          })}
+        />
+        <Stack.Screen
+          name="StylesSettings"
+          component={StylesSettingsScreen}
+          options={({ navigation }) => ({
+            title: 'Estilos y elementos',
+            headerLeft: () => (
+              <TouchableOpacity onPress={() => navigation.goBack()}>
+                <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+              </TouchableOpacity>
+            ),
+          })}
+        />
+        <Stack.Screen
+          name="SyncSettings"
+          component={SyncSettingsScreen}
+          options={({ navigation }) => ({
+            title: 'Sincronización',
+            headerLeft: () => (
+              <TouchableOpacity onPress={() => navigation.goBack()}>
+                <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+              </TouchableOpacity>
+            ),
+          })}
+        />
+        <Stack.Screen
+          name="NotificationsSettings"
+          component={NotificationsSettingsScreen}
+          options={({ navigation }) => ({
+            title: 'Notificaciones',
+            headerLeft: () => (
+              <TouchableOpacity onPress={() => navigation.goBack()}>
+                <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+              </TouchableOpacity>
+            ),
+          })}
+        />
+        <Stack.Screen
+          name="SecuritySettings"
+          component={SecuritySettingsScreen}
+          options={({ navigation }) => ({
+            title: 'Seguridad',
+            headerLeft: () => (
+              <TouchableOpacity onPress={() => navigation.goBack()}>
+                <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+              </TouchableOpacity>
+            ),
+          })}
+        />
+        <Stack.Screen
+          name="ExchangeRatesSettings"
+          component={ExchangeRatesSettingsScreen}
+          options={({ navigation }) => ({
+            title: 'Tipos de cambio',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
                 <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
