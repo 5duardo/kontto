@@ -33,7 +33,7 @@ export const EditPaymentScreen = ({ navigation, route }: any) => {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, br, insets), [colors, insets]);
-  
+
   const {
     categories,
     updateRecurringPayment,

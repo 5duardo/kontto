@@ -61,7 +61,7 @@ export const AddAccountScreen = ({ navigation, route }: any) => {
   const { addAccount, addTransaction, categories, addCategory } = useAppStore();
   const { colors } = useTheme();
   const params = route?.params || {};
-  
+
   const [title, setTitle] = useState('');
   const [icon, setIcon] = useState(params.accountType === 'savings' ? 'star' : 'wallet');
   const [iconColor, setIconColor] = useState('#3B82F6');
@@ -102,7 +102,7 @@ export const AddAccountScreen = ({ navigation, route }: any) => {
     // Si hay balance inicial mayor a 0, crear transacción de ingreso (sin accountId para no duplicar)
     if (numBalance > 0) {
       let otrosIngresosCategory = categories.find((c: any) => c.name === 'Otros Ingresos' && c.type === 'income');
-      
+
       // Si la categoría no existe, crearla
       if (!otrosIngresosCategory) {
         addCategory({

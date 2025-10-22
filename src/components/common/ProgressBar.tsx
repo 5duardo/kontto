@@ -21,13 +21,13 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const finalColor = color || colors.primary;
   const finalBackgroundColor = backgroundColor || colors.backgroundTertiary;
-  
+
   // Normalize progress: if > 1.5, assume it's a percentage (0-100), otherwise assume 0-1
   let normalizedProgress = progress;
   if (progress > 1.5) {
     normalizedProgress = progress / 100;
   }
-  
+
   // Clamp to 0-1 range for display, but allow visualization up to 100%
   const displayProgress = Math.min(1, Math.max(0, normalizedProgress));
   const percentage = Math.round(normalizedProgress * 100);

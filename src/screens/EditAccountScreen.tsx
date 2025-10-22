@@ -61,7 +61,7 @@ export const EditAccountScreen = ({ navigation, route }: any) => {
   const { account } = route.params || {};
   const { updateAccount, deleteAccount, addTransaction, categories, addCategory } = useAppStore();
   const { colors } = useTheme();
-  
+
   const [title, setTitle] = useState(account?.title || '');
   const [icon, setIcon] = useState(account?.icon || 'wallet');
   const [iconColor, setIconColor] = useState(account?.color || '#3B82F6');
@@ -100,7 +100,7 @@ export const EditAccountScreen = ({ navigation, route }: any) => {
     // Si hay aumento de balance, crear transacción de ingreso (sin accountId para no duplicar)
     if (balanceDifference > 0) {
       let otrosIngresosCategory = categories.find((c: any) => c.name === 'Otros Ingresos' && c.type === 'income');
-      
+
       // Si la categoría no existe, crearla
       if (!otrosIngresosCategory) {
         addCategory({
@@ -138,7 +138,7 @@ export const EditAccountScreen = ({ navigation, route }: any) => {
     // Si hay disminución de balance, crear transacción de gasto (sin accountId para no duplicar)
     if (balanceDifference < 0) {
       let otrosGastosCategory = categories.find((c: any) => c.name === 'Otros Gastos' && c.type === 'expense');
-      
+
       // Si la categoría no existe, crearla
       if (!otrosGastosCategory) {
         addCategory({
@@ -185,7 +185,7 @@ export const EditAccountScreen = ({ navigation, route }: any) => {
       [
         {
           text: 'Cancelar',
-          onPress: () => {},
+          onPress: () => { },
           style: 'cancel',
         },
         {

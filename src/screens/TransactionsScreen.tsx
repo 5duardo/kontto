@@ -42,7 +42,7 @@ export const TransactionsScreen = ({ navigation }: any) => {
       const monthYear = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}`;
       months.add(monthYear);
     });
-    
+
     // Convertir a array y ordenar descendentemente
     return Array.from(months)
       .sort()
@@ -206,7 +206,7 @@ export const TransactionsScreen = ({ navigation }: any) => {
                       styles.monthOption,
                       selectedDate.getFullYear() === month.date.getFullYear() &&
                       selectedDate.getMonth() === month.date.getMonth() &&
-                        styles.monthOptionActive,
+                      styles.monthOptionActive,
                     ]}
                     onPress={() => {
                       setSelectedDate(month.date);
@@ -218,7 +218,7 @@ export const TransactionsScreen = ({ navigation }: any) => {
                         styles.monthOptionText,
                         selectedDate.getFullYear() === month.date.getFullYear() &&
                         selectedDate.getMonth() === month.date.getMonth() &&
-                          styles.monthOptionTextActive,
+                        styles.monthOptionTextActive,
                       ]}
                     >
                       {month.label}

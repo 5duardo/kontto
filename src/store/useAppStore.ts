@@ -170,7 +170,7 @@ export const useAppStore = create<AppState>()(
 
         // Apply all updates in a single state update
         set((state) => {
-          let newState: any = {
+          const newState: any = {
             transactions: [newTransaction, ...state.transactions],
             accounts: state.accounts,
             budgets: state.budgets,

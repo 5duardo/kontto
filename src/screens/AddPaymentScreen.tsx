@@ -31,7 +31,7 @@ export const AddPaymentScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, br, insets), [colors, insets]);
-  
+
   const {
     categories,
     addRecurringPayment,

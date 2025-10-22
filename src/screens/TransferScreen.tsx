@@ -18,19 +18,19 @@ export const TransferScreen = ({ navigation, route }: any) => {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  
+
   const { accounts, transferMoney } = useAppStore();
   const sourceAccountId: string = route.params?.accountId;
   const sourceAccount = accounts.find(a => a.id === sourceAccountId);
-  
+
   const [destinationAccountId, setDestinationAccountId] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [description, setDescription] = useState<string>('');
-  
-  const destinationAccount = destinationAccountId 
+
+  const destinationAccount = destinationAccountId
     ? accounts.find(a => a.id === destinationAccountId)
     : null;
-  
+
   // Cuentas disponibles como destino (todas excepto la origen)
   const availableDestinations = accounts.filter(
     a => a.id !== sourceAccountId && !a.isArchived
@@ -184,7 +184,7 @@ export const TransferScreen = ({ navigation, route }: any) => {
 
         {/* Botones */}
         <View style={styles.section}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.button, styles.buttonPrimary]}
             onPress={handleTransfer}
             disabled={!destinationAccountId || !amount}
@@ -193,7 +193,7 @@ export const TransferScreen = ({ navigation, route }: any) => {
             <Text style={styles.buttonText}>Realizar Transferencia</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.button, styles.buttonSecondary]}
             onPress={() => navigation.goBack()}
           >

@@ -29,12 +29,12 @@ const periodLabels: Record<string, string> = {
 };
 
 export const BudgetsScreen = ({ navigation }: any) => {
-  const { 
-    budgets, 
-    categories, 
+  const {
+    budgets,
+    categories,
     transactions,
-    addBudget, 
-    updateBudget, 
+    addBudget,
+    updateBudget,
     deleteBudget,
     preferredCurrency,
     recalculateBudgetsSpent
@@ -42,12 +42,12 @@ export const BudgetsScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors, borderRadius), [colors]);
   const insets = useSafeAreaInsets();
-  
+
   const [modalVisible, setModalVisible] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null);
-  
+
   // Form states
   const [amount, setAmount] = useState('');
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('monthly');
@@ -71,8 +71,8 @@ export const BudgetsScreen = ({ navigation }: any) => {
 
   // Toggle selección de categoría
   const toggleCategory = (categoryId: string) => {
-    setSelectedCategoryIds(prev => 
-      prev.includes(categoryId) 
+    setSelectedCategoryIds(prev =>
+      prev.includes(categoryId)
         ? prev.filter(id => id !== categoryId)
         : [...prev, categoryId]
     );
@@ -85,8 +85,8 @@ export const BudgetsScreen = ({ navigation }: any) => {
     }
 
     const now = new Date();
-    let startDate = new Date(now);
-    let endDate = new Date(now);
+    const startDate = new Date(now);
+    const endDate = new Date(now);
 
     // Calcular fechas de inicio y fin según el período
     switch (period) {
@@ -183,7 +183,7 @@ export const BudgetsScreen = ({ navigation }: any) => {
         <Card style={styles.summaryCard}>
           <Text style={styles.summaryLabel}>Presupuesto Total</Text>
           <Text style={styles.summaryAmount}>{formatCurrency(totalBudgeted, preferredCurrency)}</Text>
-          
+
           <View style={styles.progressContainer}>
             <ProgressBar
               progress={overallProgress}
@@ -191,7 +191,7 @@ export const BudgetsScreen = ({ navigation }: any) => {
               height={8}
             />
           </View>
-          
+
           <View style={styles.summaryRow}>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryItemLabel}>Gastado</Text>
@@ -393,7 +393,7 @@ export const BudgetsScreen = ({ navigation }: any) => {
                         key={category.id}
                         style={[
                           styles.categoryItem,
-                          isSelected && { 
+                          isSelected && {
                             backgroundColor: category.color + '20',
                             borderColor: category.color,
                             borderWidth: 2,

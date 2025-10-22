@@ -135,7 +135,7 @@ const MENU_SECTIONS: MenuSection[] = [
 export const MoreScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
-  
+
   const handlePress = (item: MenuItem) => {
     if (item.screen) {
       navigation.navigate(item.screen);

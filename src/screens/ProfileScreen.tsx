@@ -64,7 +64,7 @@ export const ProfileScreen = ({ navigation }: any) => {
 
     try {
       const result = await login(loginEmail, loginPassword);
-      
+
       if (result.success) {
         setShowAuthModal(false);
         setLoginEmail('');
@@ -96,7 +96,7 @@ export const ProfileScreen = ({ navigation }: any) => {
 
     try {
       const result = await register(registerName, registerEmail, registerPassword);
-      
+
       if (result.success) {
         setShowAuthModal(false);
         setRegisterName('');

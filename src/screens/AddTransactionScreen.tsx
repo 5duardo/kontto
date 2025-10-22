@@ -32,10 +32,10 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [selectedAccountId, setSelectedAccountId] = useState(initialAccountId || '');
   const [isEditMode, setIsEditMode] = useState(false);
-  
+
   // Store the full Date object with time
   const [transactionDate, setTransactionDate] = useState<Date>(new Date());
-  
+
   // Format date using local timezone to avoid UTC offset issues (toISOString can shift date)
   const formatDateLocal = (d: Date) => {
     const y = d.getFullYear();
@@ -134,11 +134,11 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
   }, [isEditMode, navigation]);
 
   return (
-    <View style={[styles.container, { 
-      paddingBottom: insets.bottom, 
+    <View style={[styles.container, {
+      paddingBottom: insets.bottom,
       paddingLeft: insets.left,
       paddingRight: insets.right,
-    }]}> 
+    }]}>
       <ScrollView
         style={styles.content}
         contentContainerStyle={{ paddingBottom: spacing.lg }}
@@ -314,7 +314,7 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
                   currentTime.getSeconds(),
                   currentTime.getMilliseconds()
                 );
-                
+
                 // On Android the picker closes after selection; on iOS keep it open if needed
                 setShowDatePicker(Platform.OS === 'ios');
                 setTransactionDate(updatedDate);

@@ -156,8 +156,8 @@ export const GetProScreen = ({ navigation }: any) => {
               plan.badge === 'popular'
                 ? colors.primary
                 : plan.badge === 'best'
-                ? '#10B981'
-                : colors.backgroundSecondary,
+                  ? '#10B981'
+                  : colors.backgroundSecondary,
           },
         ]}
         onPress={() => handlePurchase(plan.id)}

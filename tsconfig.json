@@ -3,6 +3,13 @@
   "compilerOptions": {
     "strict": true,
     "baseUrl": ".",
+    // Ensure TS understands and emits JSX for React/React Native
+    "jsx": "react-jsx",
+    // Allow default imports from CommonJS modules like 'react'
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    // Speed up type checking and avoid library noise
+    "skipLibCheck": true,
     "paths": {
       "@/*": [
         "src/*"
@@ -59,5 +66,12 @@
         "src/types"
       ]
     }
-  }
+  },
+  // Explicitly include project files so the TS server picks up the correct settings
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.js",
+    "**/*.jsx"
+  ]
 }
