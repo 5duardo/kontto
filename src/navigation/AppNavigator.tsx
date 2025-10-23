@@ -36,6 +36,7 @@ import {
   NotificationsSettingsScreen,
   SecuritySettingsScreen,
   ExchangeRatesSettingsScreen,
+  LocalBackupsScreen,
 } from '@screens';
 import type { Account, Goal, RecurringPayment } from '@types';
 
@@ -65,6 +66,7 @@ export type RootStackParamList = {
   EditPayment: { payment: RecurringPayment } | undefined;
   About: undefined;
   Data: undefined;
+  LocalBackups: undefined;
   FormatSettings: undefined;
   StylesSettings: undefined;
   SyncSettings: undefined;
@@ -348,6 +350,18 @@ export const AppNavigator = () => {
           component={DataScreen}
           options={({ navigation }) => ({
             title: 'Datos',
+            headerLeft: () => (
+              <TouchableOpacity onPress={() => navigation.goBack()}>
+                <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+              </TouchableOpacity>
+            ),
+          })}
+        />
+        <Stack.Screen
+          name="LocalBackups"
+          component={LocalBackupsScreen}
+          options={({ navigation }) => ({
+            title: 'Copias de Seguridad',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
                 <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />

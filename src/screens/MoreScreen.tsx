@@ -75,13 +75,6 @@ const MENU_SECTIONS: MenuSection[] = [
         screen: 'Settings',
       },
       {
-        id: 'data',
-        title: 'Datos',
-        icon: 'cloud-download',
-        color: '#10B981',
-        screen: 'Data',
-      },
-      {
         id: 'support',
         title: 'Asistencia',
         icon: 'help-circle',

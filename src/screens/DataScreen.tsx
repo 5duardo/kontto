@@ -2,30 +2,58 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, typography, useTheme } from '../theme';
+import { useAppStore } from '../store/useAppStore';
+import { exportAccountsToFile, pickAndImportAccounts } from '../services/dataService';
 
 export const DataScreen = ({ navigation }: any) => {
     const { colors } = useTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     const onLocalBackups = () => {
-        Alert.alert('Copias locales de datos', 'Crear y restaurar datos a partir de una copia local de datos');
+        navigation.navigate('LocalBackups');
     };
 
-    const onImport = () => {
-        Alert.alert('Importar datos', 'Importar datos');
+    const onImport = async () => {
+        try {
+            const res = await pickAndImportAccounts();
+            if (!res) return; // cancelado
+
+            // Reemplazar cuentas actuales por las importadas
+            useAppStore.setState({ accounts: res.accounts });
+
+            Alert.alert('Importación completa', `Se importaron ${res.accounts.length} cuentas${res.fileName ? ` desde "${res.fileName}"` : ''}.`);
+        } catch (e: any) {
+            Alert.alert('Error al importar', e?.message || 'No se pudo importar el archivo.');
+        }
     };
 
-    const onExport = () => {
-        Alert.alert('Exportar datos', 'Exportar datos');
+    const onExport = async () => {
+        try {
+            const accounts = useAppStore.getState().accounts;
+            const { fileName } = await exportAccountsToFile(accounts);
+            Alert.alert('Exportación completa', `Se exportaron ${accounts.length} cuentas${fileName ? ` a "${fileName}"` : ''}.`);
+        } catch (e: any) {
+            Alert.alert('Error al exportar', e?.message || 'No se pudo exportar los datos.');
+        }
     };
 
     const onDelete = () => {
         Alert.alert(
             'Eliminar mis datos',
-            '¿Estás seguro que quieres eliminar permanentemente todos los datos?',
+            '¿Estás seguro que quieres eliminar permanentemente todos los datos? Esta acción no se puede deshacer.',
             [
                 { text: 'Cancelar', style: 'cancel' },
-                { text: 'Eliminar', style: 'destructive', onPress: () => Alert.alert('Eliminado', 'Tus datos han sido eliminados (simulación)') },
+                {
+                    text: 'Eliminar',
+                    style: 'destructive',
+                    onPress: () => {
+                        useAppStore.getState().clearAllData();
+                        Alert.alert(
+                            'Datos eliminados',
+                            'Todos tus datos han sido eliminados permanentemente.'
+                        );
+                    }
+                },
             ]
         );
     };
@@ -49,9 +77,9 @@ export const DataScreen = ({ navigation }: any) => {
                 <View style={styles.section}>
                     {renderRow('reader-outline', 'Copias locales de datos', 'Crear y restaurar datos a partir de una copia local de datos', onLocalBackups)}
                     <View style={styles.divider} />
-                    {renderRow('cloud-upload-outline', 'Importar datos', 'Importar datos', onImport)}
+                    {renderRow('cloud-upload-outline', 'Importar cuentas', 'Importa un archivo .json con tus cuentas', onImport)}
                     <View style={styles.divider} />
-                    {renderRow('download-outline', 'Exportar datos', 'Exportar datos', onExport)}
+                    {renderRow('download-outline', 'Exportar cuentas', 'Exporta tus cuentas a un archivo .json', onExport)}
                     <View style={styles.divider} />
                     {renderRow('trash-outline', 'Eliminar mis datos', 'Eliminar permanentemente todos los datos', onDelete)}
                 </View>

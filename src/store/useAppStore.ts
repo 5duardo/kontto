@@ -95,6 +95,9 @@ interface AppState {
   // Initialization
   initializeDefaultData: () => void;
   isInitialized: boolean;
+
+  // Data Management
+  clearAllData: () => void;
 }
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -758,6 +761,24 @@ export const useAppStore = create<AppState>()(
           categories,
           isInitialized: true,
         });
+      },
+
+      // Clear all data
+      clearAllData: () => {
+        set({
+          transactions: [],
+          categories: [],
+          budgets: [],
+          goals: [],
+          recurringPayments: [],
+          accounts: [],
+          user: null,
+          isLoggedIn: false,
+          isInitialized: false,
+          hasCompletedOnboarding: false,
+        });
+        // Reinitialize default categories
+        get().initializeDefaultData();
       },
     }),
     {

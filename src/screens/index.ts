@@ -20,6 +20,7 @@ export { SettingsScreen } from './SettingsScreen';
 export { AboutScreen } from './AboutScreen';
 export { OnboardingScreen } from './OnboardingScreen';
 export { DataScreen } from './DataScreen';
+export { LocalBackupsScreen } from './LocalBackupsScreen';
 export { FormatSettingsScreen } from './FormatSettingsScreen';
 export { StylesSettingsScreen } from './StylesSettingsScreen';
 export { SyncSettingsScreen } from './SyncSettingsScreen';

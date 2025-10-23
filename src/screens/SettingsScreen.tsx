@@ -29,17 +29,9 @@ export const SettingsScreen = ({ navigation }: any) => {
       id: 'styles',
       title: 'Estilos y elementos',
       subtitle: 'Color, decoraciones y temas',
-      icon: 'palette',
+      icon: 'color-palette',
       color: '#8B5CF6',
       onPress: () => navigation.navigate('StylesSettings'),
-    },
-    {
-      id: 'sync',
-      title: 'Sincronización de datos',
-      subtitle: 'Guardar y sincronizar datos',
-      icon: 'sync',
-      color: '#06B6D4',
-      onPress: () => navigation.navigate('SyncSettings'),
     },
     {
       id: 'notifications',
@@ -64,6 +56,14 @@ export const SettingsScreen = ({ navigation }: any) => {
       icon: 'swap-horizontal',
       color: '#F59E0B',
       onPress: () => navigation.navigate('ExchangeRatesSettings'),
+    },
+    {
+      id: 'data',
+      title: 'Datos',
+      subtitle: 'Importar, exportar y respaldar datos',
+      icon: 'cloud-download',
+      color: '#10B981',
+      onPress: () => navigation.navigate('Data'),
     },
   ];
 
