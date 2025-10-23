@@ -103,13 +103,13 @@ export const pickAndImportAccounts = async (): Promise<{ accounts: Account[]; fi
 const getBackupsDirectory = async () => {
     const baseDir = (FileSystem as any).documentDirectory || (FileSystem as any).cacheDirectory || '';
     const backupsDir = `${baseDir}${BACKUPS_DIR}`;
-    
+
     // Ensure directory exists
     const dirInfo = await FileSystem.getInfoAsync(backupsDir);
     if (!dirInfo.exists) {
         await FileSystem.makeDirectoryAsync(backupsDir, { intermediates: true });
     }
-    
+
     return backupsDir;
 };
 
@@ -148,21 +148,21 @@ export const createLocalBackup = async (data: {
 
 export const listLocalBackups = async (): Promise<BackupInfo[]> => {
     const backupsDir = await getBackupsDirectory();
-    
+
     try {
         const files = await FileSystem.readDirectoryAsync(backupsDir);
         const backupFiles = files.filter(f => f.startsWith(BACKUP_PREFIX) && f.endsWith('.json'));
-        
+
         const backups: BackupInfo[] = [];
         for (const fileName of backupFiles) {
             const fileUri = `${backupsDir}${fileName}`;
             const fileInfo = await FileSystem.getInfoAsync(fileUri);
-            
+
             if (fileInfo.exists) {
                 // Extract date from filename: kontto-backup-2025-10-22-14-30-45.json
                 const dateMatch = fileName.match(/(\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2})/);
                 const dateStr = dateMatch ? dateMatch[1].replace(/-/g, ':').replace(/(\d{2}):(\d{2}):(\d{2})$/, 'T$1:$2:$3') : '';
-                
+
                 backups.push({
                     fileName,
                     fileUri,
@@ -171,7 +171,7 @@ export const listLocalBackups = async (): Promise<BackupInfo[]> => {
                 });
             }
         }
-        
+
         // Sort by date descending (newest first)
         return backups.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     } catch (e) {
@@ -182,18 +182,18 @@ export const listLocalBackups = async (): Promise<BackupInfo[]> => {
 
 export const restoreLocalBackup = async (fileUri: string): Promise<FullBackupPayload['data']> => {
     const contents = await FileSystem.readAsStringAsync(fileUri);
-    
+
     let parsed: any;
     try {
         parsed = JSON.parse(contents);
     } catch {
         throw new Error('El archivo de respaldo no es un JSON válido.');
     }
-    
+
     if (!parsed || parsed.type !== 'full-backup' || !parsed.data) {
         throw new Error('El archivo no tiene el formato esperado de respaldo completo.');
     }
-    
+
     return parsed.data;
 };
 

@@ -68,7 +68,7 @@ export const LocalBackupsScreen = ({ navigation }: any) => {
                     onPress: async () => {
                         try {
                             const data = await restoreLocalBackup(backup.fileUri);
-                            
+
                             // Update store with restored data
                             useAppStore.setState({
                                 transactions: data.transactions,
@@ -150,7 +150,7 @@ export const LocalBackupsScreen = ({ navigation }: any) => {
                     <Text style={styles.backupSize}>{formatSize(backup.size)}</Text>
                 </View>
             </View>
-            
+
             <View style={styles.backupActions}>
                 <TouchableOpacity
                     style={styles.actionButton}
@@ -160,7 +160,7 @@ export const LocalBackupsScreen = ({ navigation }: any) => {
                     <Ionicons name="refresh" size={20} color={colors.primary} />
                     <Text style={styles.actionButtonText}>Restaurar</Text>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity
                     style={styles.actionButton}
                     onPress={() => handleShareBackup(backup)}
@@ -169,7 +169,7 @@ export const LocalBackupsScreen = ({ navigation }: any) => {
                     <Ionicons name="share-outline" size={20} color={colors.textSecondary} />
                     <Text style={styles.actionButtonText}>Compartir</Text>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity
                     style={styles.actionButton}
                     onPress={() => handleDeleteBackup(backup)}
