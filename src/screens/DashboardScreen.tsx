@@ -145,18 +145,47 @@ export const DashboardScreen = ({ navigation }: any) => {
     const displayInfo = getDisplayInfo();
     const displayBalance = convertCurrency(accountsBalanceUSD, 'USD', displayInfo.currency, exchangeRates);
 
-    // Calcular presupuesto total mensual
+    // Calcular presupuesto total incluyendo todos los períodos activos
     const currentMonth = new Date().toLocaleString('es-HN', { month: '2-digit', year: 'numeric' });
-    const currentMonthTransactions = transactions.filter((t) => {
-      const transactionMonth = new Date(t.date).toLocaleString('es-HN', { month: '2-digit', year: 'numeric' });
-      return transactionMonth === currentMonth && t.type === 'expense';
+    const today = new Date();
+
+    // Función para verificar si un presupuesto está activo hoy
+    const isBudgetActiveToday = (budget: typeof budgets[0]) => {
+      const startDate = new Date(budget.startDate);
+      const endDate = new Date(budget.endDate);
+      return today >= startDate && today <= endDate;
+    };
+
+    // Incluir presupuestos de todos los períodos que están activos
+    // - Diarios: si están activos hoy
+    // - Semanales: si están activos hoy
+    // - Mensuales: siempre (se aplican al mes actual)
+    // - Anuales: siempre (se aplican al año actual)
+    const activeBudgetsForDisplay = budgets.filter((b) => {
+      if (b.period === 'monthly' || b.period === 'yearly') {
+        return true; // Los mensuales y anuales siempre se incluyen
+      }
+      if (b.period === 'daily' || b.period === 'weekly') {
+        return isBudgetActiveToday(b); // Los diarios y semanales solo si están activos hoy
+      }
+      return false;
     });
 
-    const monthlyBudgetAmount = budgets
-      .filter((b) => b.period === 'monthly')
-      .reduce((sum, b) => sum + b.amount, 0);
+    const monthlyBudgetAmount = activeBudgetsForDisplay.reduce((sum, b) => sum + b.amount, 0);
 
-    const monthlyExpenseAmount = currentMonthTransactions.reduce((sum, t) => sum + t.amount, 0);
+    // Gastos que coinciden con las categorías de presupuestos activos
+    const activeCategories = new Set(
+      activeBudgetsForDisplay.flatMap((b) => b.categoryIds)
+    );
+
+    const monthlyExpenseAmount = transactions
+      .filter((t) => {
+        if (t.type !== 'expense') return false;
+        const transactionMonth = new Date(t.date).toLocaleString('es-HN', { month: '2-digit', year: 'numeric' });
+        // Incluir gastos del mes actual que coincidan con categorías de presupuestos activos
+        return transactionMonth === currentMonth && activeCategories.has(t.categoryId);
+      })
+      .reduce((sum, t) => sum + t.amount, 0);
 
     return {
       totalIncome,
@@ -248,12 +277,7 @@ export const DashboardScreen = ({ navigation }: any) => {
             )}
           </View>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={() => navigation.navigate('AddTransaction')}
-        >
-          <Ionicons name="add" size={32} color="#FFFFFF" style={{ fontWeight: '900' }} />
-        </TouchableOpacity>
+        <View style={styles.headerSpacer} />
       </View>
 
       {/* Tabs */}
@@ -690,6 +714,79 @@ export const DashboardScreen = ({ navigation }: any) => {
                   <Ionicons name="add-circle-outline" size={24} color={colors.primary} />
                   <Text style={styles.addAccountText}>Añadir meta</Text>
                 </TouchableOpacity>
+              </View>
+
+              {/* Sección Últimas Transacciones */}
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Últimas transacciones</Text>
+                  <TouchableOpacity onPress={() => navigation.navigate('Transactions')}>
+                    <Text style={styles.sectionLink}>Ver todas</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {transactions.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Ionicons name="swap-horizontal-outline" size={48} color={colors.textSecondary} />
+                    <Text style={styles.emptyText}>No tienes transacciones</Text>
+                    <Text style={styles.emptySubtext}>Agrega tu primera transacción</Text>
+                  </View>
+                ) : (
+                  transactions
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .slice(0, 3)
+                    .map((transaction) => {
+                      const account = accounts.find(a => a.id === transaction.accountId);
+                      const category = categories.find(c => c.id === transaction.categoryId);
+                      const isIncome = transaction.type === 'income';
+
+                      return (
+                        <TouchableOpacity
+                          key={transaction.id}
+                          style={styles.transactionCard}
+                          onPress={() => navigation.navigate('Transactions')}
+                        >
+                          <View style={styles.transactionLeft}>
+                            <View
+                              style={[
+                                styles.transactionIcon,
+                                { backgroundColor: `${category?.color || colors.primary}33` },
+                              ]}
+                            >
+                              <Ionicons
+                                name={category?.icon as any}
+                                size={24}
+                                color={category?.color || colors.primary}
+                              />
+                            </View>
+                            <View style={styles.transactionInfo}>
+                              <Text style={styles.transactionCategory}>{category?.name || 'Sin categoría'}</Text>
+                              <Text style={styles.transactionDescription}>{transaction.description}</Text>
+                            </View>
+                          </View>
+                          <View style={styles.transactionRight}>
+                            <Text
+                              style={[
+                                styles.transactionAmount,
+                                {
+                                  color: isIncome ? colors.success : colors.textPrimary,
+                                },
+                              ]}
+                            >
+                              {isIncome ? '+' : '-'}
+                              {formatCurrency(transaction.amount, transaction.accountId)}
+                            </Text>
+                            <Text style={styles.transactionDate}>
+                              {new Date(transaction.date).toLocaleDateString('es-HN', {
+                                month: 'short',
+                                day: 'numeric',
+                              })}
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })
+                )}
               </View>
 
               {/* Sección Cuentas Archivadas */}
@@ -1212,5 +1309,58 @@ const createStyles = (colors: any) => StyleSheet.create({
   upcomingPaymentBadgeText: {
     fontSize: typography.sizes.xs,
     fontWeight: typography.weights.semibold as any,
+  },
+  sectionLink: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium as any,
+    color: colors.primary,
+  },
+  transactionCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: 12,
+    marginBottom: spacing.sm,
+  },
+  transactionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    flex: 1,
+  },
+  transactionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  transactionInfo: {
+    flex: 1,
+  },
+  transactionCategory: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold as any,
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  transactionDescription: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+  },
+  transactionRight: {
+    alignItems: 'flex-end',
+    gap: spacing.xs,
+  },
+  transactionAmount: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold as any,
+  },
+  transactionDate: {
+    fontSize: typography.sizes.xs,
+    color: colors.textSecondary,
+    fontWeight: typography.weights.medium as any,
   },
 });

@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, RefreshControl, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, typography, useTheme } from '../theme';
 import { useAppStore } from '../store/useAppStore';
@@ -12,6 +12,8 @@ export const LocalBackupsScreen = ({ navigation }: any) => {
     const [backups, setBackups] = useState<BackupInfo[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [detailModalVisible, setDetailModalVisible] = useState(false);
+    const [selectedBackupDetails, setSelectedBackupDetails] = useState<any>(null);
 
     const loadBackups = async () => {
         try {
@@ -120,18 +122,48 @@ export const LocalBackupsScreen = ({ navigation }: any) => {
         }
     };
 
+    const handleViewBackupDetails = async (backup: BackupInfo) => {
+        try {
+            const data = await restoreLocalBackup(backup.fileUri);
+            setSelectedBackupDetails({
+                backup,
+                data,
+            });
+            setDetailModalVisible(true);
+        } catch (e: any) {
+            Alert.alert('Error', e?.message || 'No se pudo cargar los detalles del respaldo.');
+        }
+    };
+
     const formatDate = (dateStr: string) => {
         try {
-            const date = new Date(dateStr);
+            if (!dateStr) return 'Fecha no disponible';
+
+            let date: Date;
+
+            // Si es un timestamp en milisegundos
+            if (!isNaN(Number(dateStr)) && dateStr.length > 10) {
+                date = new Date(Number(dateStr));
+            } else {
+                // Si es ISO string o fecha normal
+                date = new Date(dateStr);
+            }
+
+            // Validar que la fecha sea correcta
+            if (isNaN(date.getTime())) {
+                return 'Fecha no disponible';
+            }
+
             return date.toLocaleString('es-ES', {
                 year: 'numeric',
-                month: 'short',
+                month: 'long',
                 day: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit',
+                second: '2-digit',
             });
-        } catch {
-            return dateStr;
+        } catch (error) {
+            return 'Fecha no disponible';
         }
     };
 
@@ -152,32 +184,47 @@ export const LocalBackupsScreen = ({ navigation }: any) => {
             </View>
 
             <View style={styles.backupActions}>
-                <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => handleRestoreBackup(backup)}
-                    activeOpacity={0.7}
-                >
-                    <Ionicons name="refresh" size={20} color={colors.primary} />
-                    <Text style={styles.actionButtonText}>Restaurar</Text>
-                </TouchableOpacity>
+                {/* Primera fila: Ver datos y Restaurar */}
+                <View style={styles.actionRow}>
+                    <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => handleViewBackupDetails(backup)}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons name="eye" size={20} color={colors.primary} />
+                        <Text style={styles.actionButtonText}>Ver datos</Text>
+                    </TouchableOpacity>
 
-                <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => handleShareBackup(backup)}
-                    activeOpacity={0.7}
-                >
-                    <Ionicons name="share-outline" size={20} color={colors.textSecondary} />
-                    <Text style={styles.actionButtonText}>Compartir</Text>
-                </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => handleRestoreBackup(backup)}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons name="refresh" size={20} color={colors.primary} />
+                        <Text style={styles.actionButtonText}>Restaurar</Text>
+                    </TouchableOpacity>
+                </View>
 
-                <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => handleDeleteBackup(backup)}
-                    activeOpacity={0.7}
-                >
-                    <Ionicons name="trash-outline" size={20} color={colors.error} />
-                    <Text style={[styles.actionButtonText, { color: colors.error }]}>Eliminar</Text>
-                </TouchableOpacity>
+                {/* Segunda fila: Compartir y Eliminar */}
+                <View style={styles.actionRow}>
+                    <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => handleShareBackup(backup)}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons name="share-outline" size={20} color={colors.textSecondary} />
+                        <Text style={styles.actionButtonText}>Compartir</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => handleDeleteBackup(backup)}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons name="trash-outline" size={20} color={colors.error} />
+                        <Text style={[styles.actionButtonText, { color: colors.error }]}>Eliminar</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
         </View>
     );
@@ -232,6 +279,156 @@ export const LocalBackupsScreen = ({ navigation }: any) => {
 
                 <View style={{ height: 60 }} />
             </ScrollView>
+
+            {/* Modal de detalles del respaldo */}
+            <Modal
+                visible={detailModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setDetailModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        {selectedBackupDetails && (
+                            <>
+                                <View style={styles.modalHeader}>
+                                    <Text style={styles.modalTitle}>Datos del Respaldo</Text>
+                                    <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+                                        <Ionicons name="close" size={24} color={colors.textPrimary} />
+                                    </TouchableOpacity>
+                                </View>
+
+                                <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+                                    <View style={styles.detailSection}>
+                                        <Text style={styles.detailDate}>
+                                            {formatDate(selectedBackupDetails.backup.date)}
+                                        </Text>
+                                        <Text style={styles.detailSize}>
+                                            Tamaño: {formatSize(selectedBackupDetails.backup.size)}
+                                        </Text>
+                                    </View>
+
+                                    {selectedBackupDetails.data.accounts && selectedBackupDetails.data.accounts.length > 0 && (
+                                        <View style={styles.dataCard}>
+                                            <View style={styles.dataCardHeader}>
+                                                <Ionicons name="wallet" size={20} color={colors.primary} />
+                                                <Text style={styles.dataCardTitle}>Cuentas</Text>
+                                                <Text style={styles.dataCardCount}>
+                                                    {selectedBackupDetails.data.accounts.length}
+                                                </Text>
+                                            </View>
+                                            {selectedBackupDetails.data.accounts.map((account: any) => (
+                                                <View key={account.id} style={styles.dataItem}>
+                                                    <Text style={styles.dataItemText}>{account.title}</Text>
+                                                    <Text style={styles.dataItemValue}>
+                                                        {account.currency} {account.balance.toFixed(2)}
+                                                    </Text>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    )}
+
+                                    {selectedBackupDetails.data.categories && selectedBackupDetails.data.categories.length > 0 && (
+                                        <View style={styles.dataCard}>
+                                            <View style={styles.dataCardHeader}>
+                                                <Ionicons name="pricetag" size={20} color={colors.primary} />
+                                                <Text style={styles.dataCardTitle}>Categorías</Text>
+                                                <Text style={styles.dataCardCount}>
+                                                    {selectedBackupDetails.data.categories.length}
+                                                </Text>
+                                            </View>
+                                            {selectedBackupDetails.data.categories.map((category: any) => (
+                                                <View key={category.id} style={styles.dataItem}>
+                                                    <Text style={styles.dataItemText}>{category.name}</Text>
+                                                    <Text style={styles.dataItemValue}>{category.type === 'income' ? 'Ingreso' : 'Gasto'}</Text>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    )}
+
+                                    {selectedBackupDetails.data.transactions && selectedBackupDetails.data.transactions.length > 0 && (
+                                        <View style={styles.dataCard}>
+                                            <View style={styles.dataCardHeader}>
+                                                <Ionicons name="swap-horizontal" size={20} color={colors.primary} />
+                                                <Text style={styles.dataCardTitle}>Transacciones</Text>
+                                                <Text style={styles.dataCardCount}>
+                                                    {selectedBackupDetails.data.transactions.length}
+                                                </Text>
+                                            </View>
+                                            <Text style={styles.dataItemText}>
+                                                {selectedBackupDetails.data.transactions.filter((t: any) => t.type === 'income').length} Ingresos
+                                            </Text>
+                                            <Text style={styles.dataItemText}>
+                                                {selectedBackupDetails.data.transactions.filter((t: any) => t.type === 'expense').length} Gastos
+                                            </Text>
+                                        </View>
+                                    )}
+
+                                    {selectedBackupDetails.data.budgets && selectedBackupDetails.data.budgets.length > 0 && (
+                                        <View style={styles.dataCard}>
+                                            <View style={styles.dataCardHeader}>
+                                                <Ionicons name="calculator" size={20} color={colors.primary} />
+                                                <Text style={styles.dataCardTitle}>Presupuestos</Text>
+                                                <Text style={styles.dataCardCount}>
+                                                    {selectedBackupDetails.data.budgets.length}
+                                                </Text>
+                                            </View>
+                                            {selectedBackupDetails.data.budgets.map((budget: any) => (
+                                                <View key={budget.id} style={styles.dataItem}>
+                                                    <Text style={styles.dataItemText}>
+                                                        {budget.amount} {budget.currency}
+                                                    </Text>
+                                                    <Text style={styles.dataItemValue}>{budget.period}</Text>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    )}
+
+                                    {selectedBackupDetails.data.goals && selectedBackupDetails.data.goals.length > 0 && (
+                                        <View style={styles.dataCard}>
+                                            <View style={styles.dataCardHeader}>
+                                                <Ionicons name="flag" size={20} color={colors.primary} />
+                                                <Text style={styles.dataCardTitle}>Metas</Text>
+                                                <Text style={styles.dataCardCount}>
+                                                    {selectedBackupDetails.data.goals.length}
+                                                </Text>
+                                            </View>
+                                            {selectedBackupDetails.data.goals.map((goal: any) => (
+                                                <View key={goal.id} style={styles.dataItem}>
+                                                    <Text style={styles.dataItemText}>{goal.title}</Text>
+                                                    <Text style={styles.dataItemValue}>
+                                                        {goal.currentAmount} / {goal.targetAmount} {goal.currency}
+                                                    </Text>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    )}
+
+                                    {selectedBackupDetails.data.recurringPayments && selectedBackupDetails.data.recurringPayments.length > 0 && (
+                                        <View style={styles.dataCard}>
+                                            <View style={styles.dataCardHeader}>
+                                                <Ionicons name="repeat" size={20} color={colors.primary} />
+                                                <Text style={styles.dataCardTitle}>Pagos Recurrentes</Text>
+                                                <Text style={styles.dataCardCount}>
+                                                    {selectedBackupDetails.data.recurringPayments.length}
+                                                </Text>
+                                            </View>
+                                            {selectedBackupDetails.data.recurringPayments.map((payment: any) => (
+                                                <View key={payment.id} style={styles.dataItem}>
+                                                    <Text style={styles.dataItemText}>{payment.description}</Text>
+                                                    <Text style={styles.dataItemValue}>{payment.frequency}</Text>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    )}
+
+                                    <View style={{ height: 40 }} />
+                                </ScrollView>
+                            </>
+                        )}
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
@@ -316,11 +513,14 @@ const createStyles = (colors: any) =>
             color: colors.textSecondary,
         },
         backupActions: {
-            flexDirection: 'row',
-            gap: spacing.sm,
             borderTopWidth: 1,
             borderTopColor: colors.border,
             paddingTop: spacing.md,
+        },
+        actionRow: {
+            flexDirection: 'row',
+            gap: spacing.md,
+            marginBottom: spacing.sm,
         },
         actionButton: {
             flex: 1,
@@ -328,7 +528,7 @@ const createStyles = (colors: any) =>
             alignItems: 'center',
             justifyContent: 'center',
             gap: spacing.xs,
-            paddingVertical: spacing.sm,
+            paddingVertical: spacing.md,
             borderRadius: 8,
             backgroundColor: colors.background,
         },
@@ -355,5 +555,96 @@ const createStyles = (colors: any) =>
             color: colors.textSecondary,
             textAlign: 'center',
             lineHeight: 20,
+        },
+        modalOverlay: {
+            flex: 1,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            justifyContent: 'flex-end',
+        },
+        modalContent: {
+            backgroundColor: colors.background,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            maxHeight: '90%',
+            paddingTop: spacing.md,
+        },
+        modalHeader: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingHorizontal: spacing.lg,
+            paddingBottom: spacing.md,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+        },
+        modalTitle: {
+            fontSize: typography.sizes.lg,
+            fontWeight: typography.weights.bold as any,
+            color: colors.textPrimary,
+        },
+        modalBody: {
+            paddingHorizontal: spacing.lg,
+            paddingVertical: spacing.md,
+        },
+        detailSection: {
+            marginBottom: spacing.lg,
+        },
+        detailDate: {
+            fontSize: typography.sizes.base,
+            fontWeight: typography.weights.semibold as any,
+            color: colors.textPrimary,
+            marginBottom: spacing.xs,
+        },
+        detailSize: {
+            fontSize: typography.sizes.sm,
+            color: colors.textSecondary,
+        },
+        dataCard: {
+            backgroundColor: colors.backgroundSecondary,
+            borderRadius: 12,
+            padding: spacing.md,
+            marginBottom: spacing.md,
+        },
+        dataCardHeader: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.sm,
+            marginBottom: spacing.md,
+            paddingBottom: spacing.md,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+        },
+        dataCardTitle: {
+            fontSize: typography.sizes.base,
+            fontWeight: typography.weights.semibold as any,
+            color: colors.textPrimary,
+            flex: 1,
+        },
+        dataCardCount: {
+            fontSize: typography.sizes.base,
+            fontWeight: typography.weights.bold as any,
+            color: colors.primary,
+            backgroundColor: colors.primary + '20',
+            paddingHorizontal: spacing.sm,
+            paddingVertical: spacing.xs,
+            borderRadius: 6,
+        },
+        dataItem: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingVertical: spacing.sm,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.backgroundTertiary,
+        },
+        dataItemText: {
+            fontSize: typography.sizes.sm,
+            color: colors.textPrimary,
+            flex: 1,
+        },
+        dataItemValue: {
+            fontSize: typography.sizes.sm,
+            color: colors.textSecondary,
+            fontWeight: typography.weights.medium as any,
         },
     });

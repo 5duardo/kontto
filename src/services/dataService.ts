@@ -159,14 +159,23 @@ export const listLocalBackups = async (): Promise<BackupInfo[]> => {
             const fileInfo = await FileSystem.getInfoAsync(fileUri);
 
             if (fileInfo.exists) {
-                // Extract date from filename: kontto-backup-2025-10-22-14-30-45.json
-                const dateMatch = fileName.match(/(\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2})/);
-                const dateStr = dateMatch ? dateMatch[1].replace(/-/g, ':').replace(/(\d{2}):(\d{2}):(\d{2})$/, 'T$1:$2:$3') : '';
+                // Extraer fecha del nombre: kontto-backup-2025-10-22-14-30-45.json
+                const dateMatch = fileName.match(/(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})/);
+                let dateStr = '';
+
+                if (dateMatch) {
+                    // Crear una fecha válida: YYYY-MM-DDTHH:MM:SSZ
+                    dateStr = `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}T${dateMatch[4]}:${dateMatch[5]}:${dateMatch[6]}Z`;
+                } else {
+                    // Si no puede extraer de nombre, usar modificationTime
+                    const modTime = (fileInfo as any).modificationTime;
+                    dateStr = modTime ? new Date(modTime * 1000).toISOString() : new Date().toISOString();
+                }
 
                 backups.push({
                     fileName,
                     fileUri,
-                    date: dateStr ? `${dateStr.slice(0, 10)}T${dateStr.slice(11)}Z` : (fileInfo as any).modificationTime?.toString() || new Date().toISOString(),
+                    date: dateStr,
                     size: (fileInfo as any).size || 0,
                 });
             }

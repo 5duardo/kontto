@@ -50,14 +50,6 @@ export const SettingsScreen = ({ navigation }: any) => {
       onPress: () => navigation.navigate('SecuritySettings'),
     },
     {
-      id: 'rates',
-      title: 'Tipos de cambio',
-      subtitle: 'Actualizar y editar',
-      icon: 'swap-horizontal',
-      color: '#F59E0B',
-      onPress: () => navigation.navigate('ExchangeRatesSettings'),
-    },
-    {
       id: 'data',
       title: 'Datos',
       subtitle: 'Importar, exportar y respaldar datos',

@@ -88,6 +88,34 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
     return `${symbol} ${amount.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
+  const getRelativeDate = (date: Date | string) => {
+    const nextDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    nextDate.setHours(0, 0, 0, 0);
+
+    const diffTime = nextDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    let timeText = '';
+    if (diffDays === 0) timeText = 'Hoy';
+    else if (diffDays === 1) timeText = 'Mañana';
+    else if (diffDays === 7) timeText = 'en 1 semana';
+    else if (diffDays > 1 && diffDays < 7) timeText = `en ${diffDays} días`;
+    else if (diffDays > 7 && diffDays < 30) {
+      const weeks = Math.floor(diffDays / 7);
+      timeText = `en ${weeks} semana${weeks > 1 ? 's' : ''}`;
+    } else if (diffDays >= 30) {
+      const months = Math.floor(diffDays / 30);
+      timeText = `en ${months} mes${months > 1 ? 'es' : ''}`;
+    } else {
+      timeText = 'Próximamente';
+    }
+
+    const dateFormatted = nextDate.toLocaleDateString('es-HN', { month: 'short', day: 'numeric' });
+    return `${timeText} (${dateFormatted})`;
+  };
+
   const filteredCategories = categories.filter((c) => c.type === type);
 
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
@@ -213,17 +241,6 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.container}>
-      {/* Header con resumen */}
-      <View style={styles.header}>
-        <Card style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Total Pagos Programados</Text>
-          <Text style={styles.summaryAmount}>{formatCurrency(Math.abs(totalAllPayments), preferredCurrency)}</Text>
-          <Text style={styles.summarySubtext}>
-            {recurringPayments.filter((p) => p.isActive).length} pagos activos
-          </Text>
-        </Card>
-      </View>
-
       {/* 'Próximos Pagos' section removed — showing full list below sorted by soonest date */}
 
       {/* Lista de pagos */}
@@ -238,83 +255,81 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
           </Card>
         ) : (
           // @ts-ignore
-          Object.entries(paymentsByMonth).map(([month, payments], index) => 
+          Object.entries(paymentsByMonth).map(([month, payments], index) =>
             // @ts-ignore
             <React.Fragment key={`month-${index}-${month}`}>
-            <View>
-              <Text style={styles.monthTitle}>{month}</Text>
-              {payments.map((payment) => {
-                const cat = categories.find((c) => c.id === payment.categoryId);
-                const paymentCardStyle = !payment.isActive
-                  ? [styles.paymentCard, styles.paymentCardInactive]
-                  : styles.paymentCard;
-                return (
-                  <TouchableOpacity
-                    key={payment.id}
-                    onPress={() => openDetailModal(payment)}
-                    activeOpacity={0.7}
-                  >
-                    <Card
-                      style={paymentCardStyle as any}
+              <View>
+                <Text style={styles.monthTitle}>{month}</Text>
+                {payments.map((payment) => {
+                  const cat = categories.find((c) => c.id === payment.categoryId);
+                  const paymentCardStyle = !payment.isActive
+                    ? [styles.paymentCard, styles.paymentCardInactive]
+                    : styles.paymentCard;
+                  return (
+                    <TouchableOpacity
+                      key={payment.id}
+                      onPress={() => openDetailModal(payment)}
+                      activeOpacity={0.7}
                     >
-                      <View style={styles.paymentHeader}>
-                        <View style={styles.paymentInfo}>
-                          {cat && (
-                            <CategoryIcon icon={cat.icon} color={cat.color} size={20} />
-                          )}
-                          <View style={styles.paymentTextInfo}>
-                            <Text style={styles.paymentDescription}>
-                              {payment.description}
-                            </Text>
-                            <View style={styles.paymentMeta}>
-                              <Text style={styles.paymentFrequency}>
-                                {frequencyLabels[payment.frequency]}
+                      <Card
+                        style={paymentCardStyle as any}
+                      >
+                        <View style={styles.paymentHeader}>
+                          <View style={styles.paymentInfo}>
+                            {cat && (
+                              <CategoryIcon icon={cat.icon} color={cat.color} size={20} />
+                            )}
+                            <View style={styles.paymentTextInfo}>
+                              <Text style={styles.paymentDescription}>
+                                {payment.description}
                               </Text>
-                              {payment.paid ? (
-                                <View style={[styles.activeBadge, { backgroundColor: colors.success + '20' }]}>
-                                  <Text style={[styles.activeBadgeText, { color: colors.success }]}>
-                                    Pagado
-                                  </Text>
-                                </View>
-                              ) : (
-                                <View style={[styles.activeBadge, { backgroundColor: colors.textTertiary + '30' }]}>
-                                  <Text style={[styles.activeBadgeText, { color: colors.textTertiary }]}>
-                                    No pagado
-                                  </Text>
-                                </View>
-                              )}
+                              <View style={styles.paymentMeta}>
+                                <Text style={styles.paymentFrequency}>
+                                  {frequencyLabels[payment.frequency]}
+                                </Text>
+                                {payment.paid ? (
+                                  <View style={[styles.activeBadge, { backgroundColor: colors.success + '20' }]}>
+                                    <Text style={[styles.activeBadgeText, { color: colors.success }]}>
+                                      Pagado
+                                    </Text>
+                                  </View>
+                                ) : (
+                                  <View style={[styles.activeBadge, { backgroundColor: colors.textTertiary + '30' }]}>
+                                    <Text style={[styles.activeBadgeText, { color: colors.textTertiary }]}>
+                                      No pagado
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
                             </View>
                           </View>
-                        </View>
-                        <View style={styles.paymentAmount}>
-                          <Text
-                            style={[
-                              styles.amountText,
-                              payment.type === 'income' ? styles.income : styles.amountWhite,
-                            ]}
-                          >
-                            {formatCurrency(payment.amount, payment.currency)}
-                          </Text>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                          <View style={styles.paymentAmount}>
+                            <Text
+                              style={[
+                                styles.amountText,
+                                payment.type === 'income' ? styles.income : styles.amountWhite,
+                              ]}
+                            >
+                              {formatCurrency(payment.amount, payment.currency)}
+                            </Text>
                             <Text style={styles.dateText}>
-                              {new Date(payment.nextDate).toLocaleDateString('es-HN')}
+                              {getRelativeDate(payment.nextDate)}
                             </Text>
                           </View>
                         </View>
-                      </View>
-                      {payment.reminderEnabled && (
-                        <View style={styles.reminderInfo}>
-                          <Ionicons name="notifications" size={14} color={colors.primary} />
-                          <Text style={styles.reminderText}>
-                            Recordatorio {payment.reminderDaysBefore} días antes
-                          </Text>
-                        </View>
-                      )}
-                    </Card>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+                        {payment.reminderEnabled && (
+                          <View style={styles.reminderInfo}>
+                            <Ionicons name="notifications" size={14} color={colors.primary} />
+                            <Text style={styles.reminderText}>
+                              Recordatorio {payment.reminderDaysBefore} días antes
+                            </Text>
+                          </View>
+                        )}
+                      </Card>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </React.Fragment>
           )
         )}

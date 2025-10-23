@@ -4,7 +4,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { TouchableOpacity } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { typography, useTheme } from '@theme';
 
 // Screens
@@ -35,7 +36,6 @@ import {
   SyncSettingsScreen,
   NotificationsSettingsScreen,
   SecuritySettingsScreen,
-  ExchangeRatesSettingsScreen,
   LocalBackupsScreen,
 } from '@screens';
 import type { Account, Goal, RecurringPayment } from '@types';
@@ -44,7 +44,7 @@ import type { Account, Goal, RecurringPayment } from '@types';
 export type RootTabParamList = {
   Accounts: undefined;
   Categories: undefined;
-  Transactions: undefined;
+  AddTransactionFAB: undefined;
   Stats: undefined;
   More: undefined;
 };
@@ -72,11 +72,39 @@ export type RootStackParamList = {
   SyncSettings: undefined;
   NotificationsSettings: undefined;
   SecuritySettings: undefined;
-  ExchangeRatesSettings: undefined;
+  Transactions: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<RootTabParamList>();
+
+// Componente para el botón FAB
+const FABButton = ({ size }: { size: number }) => {
+  const { colors } = useTheme();
+  const navigation = useNavigation<any>();
+
+  return (
+    <TouchableOpacity
+      onPress={() => navigation.navigate('AddTransaction')}
+      style={{
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: colors.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: -28,
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.35,
+        shadowRadius: 4.65,
+      }}
+    >
+      <Ionicons name="add" size={size} color="white" />
+    </TouchableOpacity>
+  );
+};
 
 const TabNavigator = () => {
   const { colors } = useTheme();
@@ -93,12 +121,11 @@ const TabNavigator = () => {
             iconName = focused ? 'wallet' : 'wallet-outline';
           } else if (route.name === 'Categories') {
             iconName = focused ? 'grid' : 'grid-outline';
-          } else if (route.name === 'Transactions') {
-            iconName = focused ? 'list' : 'list-outline';
+          } else if (route.name === 'AddTransactionFAB') {
+            return <FABButton size={size} />;
           } else if (route.name === 'Stats') {
             iconName = focused ? 'bar-chart' : 'bar-chart-outline';
           } else if (route.name === 'More') {
-            // Use ellipsis to differentiate from 'list' used by Transactions
             iconName = focused ? 'ellipsis-horizontal' : 'ellipsis-horizontal-outline';
           }
 
@@ -144,11 +171,20 @@ const TabNavigator = () => {
         component={CategoriesScreen}
         options={{ title: 'Categorías' }}
       />
+      {/* Central Floating Action Button */}
       {/* @ts-ignore */}
       <Tab.Screen
-        name="Transactions"
-        component={TransactionsScreen}
-        options={{ title: 'Transacciones' }}
+        name="AddTransactionFAB"
+        component={View}
+        listeners={({ navigation }) => ({
+          tabPress: (e: any) => {
+            e.preventDefault();
+          },
+        })}
+        options={{
+          title: '',
+          tabBarShowLabel: false,
+        }}
       />
       {/* @ts-ignore */}
       <Tab.Screen
@@ -430,10 +466,10 @@ export const AppNavigator = () => {
           })}
         />
         <Stack.Screen
-          name="ExchangeRatesSettings"
-          component={ExchangeRatesSettingsScreen}
+          name="Transactions"
+          component={TransactionsScreen}
           options={({ navigation }) => ({
-            title: 'Tipos de cambio',
+            title: 'Transacciones',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
                 <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />

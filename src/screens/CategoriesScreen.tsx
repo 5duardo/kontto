@@ -97,7 +97,7 @@ export const CategoriesScreen = ({ navigation }: any) => {
       [
         {
           text: 'Cancelar',
-          onPress: () => {},
+          onPress: () => { },
           style: 'cancel',
         },
         {
@@ -157,6 +157,14 @@ export const CategoriesScreen = ({ navigation }: any) => {
               <Text style={styles.emptyText}>No hay categorías de ingresos</Text>
             )}
           </View>
+          <TouchableOpacity
+            style={styles.addCategoryButton}
+            onPress={() => openAddModal('income')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="add-circle" size={24} color={colors.primary} />
+            <Text style={styles.addCategoryButtonText}>Agregar categoría de ingreso</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Gastos */}
@@ -172,6 +180,14 @@ export const CategoriesScreen = ({ navigation }: any) => {
               <Text style={styles.emptyText}>No hay categorías de gastos</Text>
             )}
           </View>
+          <TouchableOpacity
+            style={styles.addCategoryButton}
+            onPress={() => openAddModal('expense')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="add-circle" size={24} color={colors.primary} />
+            <Text style={styles.addCategoryButtonText}>Agregar categoría de gasto</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.bottomSpacing} />
@@ -221,9 +237,9 @@ export const CategoriesScreen = ({ navigation }: any) => {
                       ]}
                       onPress={() => setCategoryType('income')}
                     >
-                      <Ionicons 
-                        name="arrow-down-circle" 
-                        size={20} 
+                      <Ionicons
+                        name="arrow-down-circle"
+                        size={20}
                         color={categoryType === 'income' ? colors.success : colors.textSecondary}
                       />
                       <Text style={[
@@ -240,9 +256,9 @@ export const CategoriesScreen = ({ navigation }: any) => {
                       ]}
                       onPress={() => setCategoryType('expense')}
                     >
-                      <Ionicons 
-                        name="arrow-up-circle" 
-                        size={20} 
+                      <Ionicons
+                        name="arrow-up-circle"
+                        size={20}
                         color={categoryType === 'expense' ? colors.expense : colors.textSecondary}
                       />
                       <Text style={[
@@ -334,14 +350,6 @@ export const CategoriesScreen = ({ navigation }: any) => {
           </View>
         </View>
       </Modal>
-
-      {/* Botón flotante para agregar categoría */}
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => openAddModal('expense')}
-      >
-        <Ionicons name="add" size={32} color="#FFFFFF" />
-      </TouchableOpacity>
     </View>
   );
 };
@@ -424,27 +432,27 @@ const createStyles = (colors: any) => StyleSheet.create({
     textAlign: 'center',
     paddingVertical: spacing.lg,
   },
+  addCategoryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 12,
+    backgroundColor: `${colors.primary}10`,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+    marginTop: spacing.md,
+  },
+  addCategoryButtonText: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold as any,
+    color: colors.primary,
+  },
   bottomSpacing: {
     height: 100,
-  },
-  addButton: {
-    position: 'absolute',
-    right: spacing.md,
-    bottom: spacing.md,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: 8,
   },
   // Modal styles
   modalOverlay: {

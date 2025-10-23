@@ -4,8 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
-  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, typography, useTheme } from '../theme';
@@ -13,10 +11,6 @@ import { spacing, typography, useTheme } from '../theme';
 export const AboutScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-
-  const handleOpenLink = (url: string) => {
-    Linking.openURL(url).catch((err) => console.error('Error opening link:', err));
-  };
 
   return (
     <View style={styles.container}>
@@ -41,7 +35,7 @@ export const AboutScreen = ({ navigation }: any) => {
         {/* Características */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Características</Text>
-          
+
           <View style={styles.featureItem}>
             <Ionicons name="wallet-outline" size={24} color={colors.primary} />
             <View style={styles.featureText}>
@@ -87,43 +81,11 @@ export const AboutScreen = ({ navigation }: any) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Desarrollador</Text>
           <View style={styles.infoCard}>
-            <Text style={styles.infoLabel}>Desarrollado con ❤️</Text>
-            <Text style={styles.infoText}>
-              Kontto fue creada para simplificar la gestión de tus finanzas personales.
+            <Text style={styles.infoLabel}>Eduardo Barahona</Text>
+            <Text style={[styles.infoText, { marginTop: spacing.xs }]}>
+              Instagram: @5duardc
             </Text>
           </View>
-        </View>
-
-        {/* Enlaces útiles */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Enlaces</Text>
-          
-          <TouchableOpacity 
-            style={styles.linkButton}
-            onPress={() => handleOpenLink('https://www.example.com/privacy')}
-          >
-            <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
-            <Text style={styles.linkText}>Política de Privacidad</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.linkButton}
-            onPress={() => handleOpenLink('https://www.example.com/terms')}
-          >
-            <Ionicons name="document-text-outline" size={20} color={colors.primary} />
-            <Text style={styles.linkText}>Términos de Servicio</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.linkButton}
-            onPress={() => handleOpenLink('https://www.example.com/support')}
-          >
-            <Ionicons name="help-circle-outline" size={20} color={colors.primary} />
-            <Text style={styles.linkText}>Soporte</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
-          </TouchableOpacity>
         </View>
 
         {/* Créditos */}
@@ -131,9 +93,10 @@ export const AboutScreen = ({ navigation }: any) => {
           <Text style={styles.sectionTitle}>Créditos</Text>
           <View style={styles.creditsCard}>
             <Text style={styles.creditsText}>
-              • Iconos: Expo Icons{'\n'}
-              • Framework: React Native{'\n'}
-              • Tasas de Cambio: ExchangeRate API{'\n'}
+              <Text style={[styles.creditsText, { fontWeight: typography.weights.semibold }]}>Beta Testers:</Text>{'\n'}
+              • Nickolas Casam{'\n'}
+              • Christiam Espinal{'\n'}
+
             </Text>
           </View>
         </View>
