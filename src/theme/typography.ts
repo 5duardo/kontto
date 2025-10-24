@@ -21,4 +21,10 @@ export const typography = {
     normal: 1.5,
     relaxed: 1.75,
   },
+  fontFamily: {
+    regular: 'Neo Sans Std Regular',
+    medium: 'Neo Sans Std Regular',
+    semibold: 'Neo Sans Std Regular',
+    bold: 'Neo Sans Std Regular',
+  },
 };

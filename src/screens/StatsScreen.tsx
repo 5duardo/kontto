@@ -13,16 +13,37 @@ import { Transaction } from '../types';
 import { spacing, typography, useTheme, borderRadius } from '../theme';
 import { Card, ProgressBar } from '../components/common';
 
+// Mapeo de símbolos de moneda
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: '$', CAD: 'C$', MXN: '$', BRL: 'R$', ARS: '$', CLP: '$', COP: '$', PEN: 'S/',
+  HNL: 'L', GTQ: 'Q', CRC: '₡', PAB: 'B/.', NIO: 'C$', DOP: 'RD$', UYU: '$U',
+  BOB: 'Bs.', PYG: '₲', VES: 'Bs.', EUR: '€', GBP: '£', CHF: 'CHF', SEK: 'kr',
+  NOK: 'kr', DKK: 'kr', PLN: 'zł', CZK: 'Kč', HUF: 'Ft', RON: 'lei', RUB: '₽',
+  TRY: '₺', UAH: '₴', CNY: '¥', JPY: '¥', KRW: '₩', INR: '₹', IDR: 'Rp',
+  THB: '฿', MYR: 'RM', SGD: 'S$', PHP: '₱', VND: '₫', PKR: '₨', BDT: '৳',
+  LKR: 'Rs', MMK: 'K', KHR: '៛', LAK: '₭', HKD: 'HK$', TWD: 'NT$', AED: 'د.إ',
+  SAR: '﷼', QAR: 'QR', KWD: 'د.ك', BHD: 'BD', OMR: 'ر.ع.', JOD: 'د.ا', ILS: '₪',
+  IQD: 'د.ع', IRR: '﷼', LBP: 'ل.ل', ZAR: 'R', EGP: 'E£', NGN: '₦', KES: 'KSh',
+  GHS: '₵', TZS: 'TSh', UGX: 'USh', MAD: 'د.م.', TND: 'د.ت', DZD: 'د.ج',
+  AOA: 'Kz', ETB: 'Br', AUD: 'A$', NZD: 'NZ$', FJD: 'FJ$', BTC: '₿', ETH: 'Ξ',
+};
+
 export const StatsScreen = () => {
   const { transactions, categories } = useAppStore();
   const { colors } = useTheme();
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showDetailedView, setShowDetailedView] = useState(false);
-  
 
-  const formatCurrency = (amount: number) => {
-    return `L ${amount.toLocaleString('es-HN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+
+  const formatCurrency = (amount: number, currency: string = 'HNL') => {
+    const symbol = CURRENCY_SYMBOLS[currency] || currency;
+    const decimals = 2;
+    const formattedAmount = amount.toLocaleString('es-HN', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
+    return `${symbol} ${formattedAmount}`;
   };
 
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -77,10 +98,10 @@ export const StatsScreen = () => {
       const month = d.getMonth();
       const year = d.getFullYear();
 
-        const monthTransactions = transactions.filter((t: Transaction) => {
-          const tDate = new Date(t.date);
-          return tDate.getMonth() === month && tDate.getFullYear() === year;
-        });
+      const monthTransactions = transactions.filter((t: Transaction) => {
+        const tDate = new Date(t.date);
+        return tDate.getMonth() === month && tDate.getFullYear() === year;
+      });
 
       const income = monthTransactions
         .filter((t: Transaction) => t.type === 'income')
@@ -112,7 +133,7 @@ export const StatsScreen = () => {
 
   const transactionsByType = useMemo(() => {
     if (!selectedMonthData) return { income: [] as Transaction[], expense: [] as Transaction[] };
-    
+
     return {
       income: selectedMonthData.transactions
         .filter((t: Transaction) => t.type === 'income')
@@ -132,7 +153,7 @@ export const StatsScreen = () => {
       const monthYear = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}`;
       months.add(monthYear);
     });
-    
+
     // Convertir a array y ordenar descendentemente
     return Array.from(months)
       .sort()
@@ -196,215 +217,215 @@ export const StatsScreen = () => {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-      {/* Month Selector Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.monthSelectorButton}
-          onPress={() => setShowMonthPicker(true)}
-        >
-          <Ionicons name="calendar" size={20} color={colors.primary} />
-          <Text style={styles.monthSelectorText}>{currentMonthLabel}</Text>
-          <Ionicons name="chevron-down" size={20} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Month Summary Card */}
-      {hasMonthData && (
-        <View style={styles.section}>
-          <Card style={styles.summaryCard}>
-            <View style={styles.summaryRow}>
-              <View style={styles.summaryItem}>
-                <View style={styles.summaryIconContainer}>
-                  <Ionicons name="arrow-down" size={20} color={colors.income} />
-                </View>
-                <View>
-                  <Text style={styles.summaryLabel}>Ingresos</Text>
-                  <Text style={[styles.summaryValue, { color: colors.income }]}>
-                    {formatCurrency(selectedMonthData.income)}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.divider} />
-
-              <View style={styles.summaryItem}>
-                <View style={styles.summaryIconContainer}>
-                  <Ionicons name="arrow-up" size={20} color={colors.expense} />
-                </View>
-                <View>
-                  <Text style={styles.summaryLabel}>Gastos</Text>
-                  <Text style={[styles.summaryValue, { color: colors.expense }]}>
-                    {formatCurrency(selectedMonthData.expense)}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.balanceContainer}>
-              <Text style={styles.balanceLabel}>Balance</Text>
-              <Text
-                style={[
-                  styles.balanceValue,
-                  { color: selectedMonthData.balance >= 0 ? colors.income : colors.expense },
-                ]}
-              >
-                {formatCurrency(selectedMonthData.balance)}
-              </Text>
-            </View>
-          </Card>
+        {/* Month Selector Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.monthSelectorButton}
+            onPress={() => setShowMonthPicker(true)}
+          >
+            <Ionicons name="calendar" size={20} color={colors.primary} />
+            <Text style={styles.monthSelectorText}>{currentMonthLabel}</Text>
+            <Ionicons name="chevron-down" size={20} color={colors.primary} />
+          </TouchableOpacity>
         </View>
-      )}
 
-      {/* Transactions List */}
-      {selectedMonthData && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Transacciones del Mes</Text>
-
-          {/* Income Transactions */}
-          {transactionsByType.income.length > 0 && (
-            <View>
-              <View style={styles.transactionSection}>
-                <Text style={styles.transactionSectionTitle}>
-                  <Ionicons name="arrow-down" size={16} color={colors.income} /> Ingresos
-                </Text>
-                {transactionsByType.income.map((transaction: Transaction) => (
-                  // @ts-ignore
-                  <React.Fragment key={transaction.id}>
-                    {renderTransactionItem(transaction)}
-                  </React.Fragment>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {/* Expense Transactions */}
-          {transactionsByType.expense.length > 0 && (
-            <View>
-              <View style={styles.transactionSection}>
-                <Text style={styles.transactionSectionTitle}>
-                  <Ionicons name="arrow-up" size={16} color={colors.expense} /> Gastos
-                </Text>
-                {transactionsByType.expense.map((transaction: Transaction) => (
-                  // @ts-ignore
-                  <React.Fragment key={transaction.id}>
-                    {renderTransactionItem(transaction)}
-                  </React.Fragment>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {transactionsByType.income.length === 0 && transactionsByType.expense.length === 0 && (
-            <Card style={styles.emptyCard}>
-              <View style={styles.emptyContent}>
-                <Ionicons name="stats-chart" size={64} color={colors.textTertiary} />
-                <Text style={styles.emptyTitle}>Las estadísticas estarían aquí</Text>
-                <Text style={styles.emptySubtitle}>
-                  Comienza a añadir ingresos o gastos para ver tus datos
-                </Text>
-              </View>
-            </Card>
-          )}
-        </View>
-      )}
-
-      {/* Expenses by Category */}
-      {hasMonthData && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Gastos por Categoría</Text>
-        {expensesByCategory.length > 0 ? (
-          <>
-            {expensesByCategory.map((item, index) => (
-              // @ts-ignore
-              <React.Fragment key={`category-${index}-${item.name}`}>
-              <Card style={styles.categoryCard}>
-                <View style={styles.categoryRow}>
-                  <View style={styles.categoryLeft}>
-                    <View style={[styles.categoryDot, { backgroundColor: item.color }]} />
-                    <Text style={styles.categoryName}>{item.name}</Text>
+        {/* Month Summary Card */}
+        {hasMonthData && (
+          <View style={styles.section}>
+            <Card style={styles.summaryCard}>
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryItem}>
+                  <View style={styles.summaryIconContainer}>
+                    <Ionicons name="arrow-down" size={20} color={colors.income} />
                   </View>
-                  <Text style={styles.categoryAmount}>{formatCurrency(item.amount)}</Text>
+                  <View>
+                    <Text style={styles.summaryLabel}>Ingresos</Text>
+                    <Text style={[styles.summaryValue, { color: colors.income }]}>
+                      {formatCurrency(selectedMonthData.income)}
+                    </Text>
+                  </View>
                 </View>
-                <ProgressBar progress={item.amount / totalExpense} color={item.color} />
-                <Text style={styles.categoryPercentage}>{((item.amount / totalExpense) * 100).toFixed(1)}%</Text>
-              </Card>
-              </React.Fragment>
-            ))}
-            
-            <Card style={styles.totalCard}>
-              <Text style={styles.totalLabel}>Total Gastado</Text>
-              <Text style={styles.totalAmount}>{formatCurrency(totalExpense)}</Text>
-            </Card>
-          </>
-        ) : (
-          <Card style={styles.emptyCard}>
-            <View>
-              <Ionicons name="pie-chart-outline" size={48} color={colors.textTertiary} />
-              <Text style={styles.emptyText}>No hay datos de gastos</Text>
-            </View>
-          </Card>
-        )}
-        </View>
-      )}
 
-      {/* Monthly Comparison removed per user request */}
-    </ScrollView>
+                <View style={styles.divider} />
 
-    {/* Month Picker Modal */}
-    <Modal
-      visible={showMonthPicker}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={() => setShowMonthPicker(false)}
-    >
-      <View style={styles.monthPickerOverlay}>
-        <View style={styles.monthPickerContent}>
-          <View style={styles.monthPickerHeader}>
-            <Text style={styles.monthPickerTitle}>Seleccionar Mes</Text>
-            <TouchableOpacity onPress={() => setShowMonthPicker(false)}>
-              <Ionicons name="close" size={24} color={colors.textPrimary} />
-            </TouchableOpacity>
-          </View>
+                <View style={styles.summaryItem}>
+                  <View style={styles.summaryIconContainer}>
+                    <Ionicons name="arrow-up" size={20} color={colors.expense} />
+                  </View>
+                  <View>
+                    <Text style={styles.summaryLabel}>Gastos</Text>
+                    <Text style={[styles.summaryValue, { color: colors.expense }]}>
+                      {formatCurrency(selectedMonthData.expense)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
 
-          <ScrollView style={styles.monthList} showsVerticalScrollIndicator={false}>
-            {availableMonths.length === 0 ? (
-              <View style={styles.emptyMonthList}>
-                <Text style={styles.emptyMonthText}>
-                  No hay transacciones registradas
+              <View style={styles.balanceContainer}>
+                <Text style={styles.balanceLabel}>Balance</Text>
+                <Text
+                  style={[
+                    styles.balanceValue,
+                    { color: selectedMonthData.balance >= 0 ? colors.income : colors.expense },
+                  ]}
+                >
+                  {formatCurrency(selectedMonthData.balance)}
                 </Text>
               </View>
+            </Card>
+          </View>
+        )}
+
+        {/* Transactions List */}
+        {selectedMonthData && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Transacciones del Mes</Text>
+
+            {/* Income Transactions */}
+            {transactionsByType.income.length > 0 && (
+              <View>
+                <View style={styles.transactionSection}>
+                  <Text style={styles.transactionSectionTitle}>
+                    <Ionicons name="arrow-down" size={16} color={colors.income} /> Ingresos
+                  </Text>
+                  {transactionsByType.income.map((transaction: Transaction) => (
+                    // @ts-ignore
+                    <React.Fragment key={transaction.id}>
+                      {renderTransactionItem(transaction)}
+                    </React.Fragment>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Expense Transactions */}
+            {transactionsByType.expense.length > 0 && (
+              <View>
+                <View style={styles.transactionSection}>
+                  <Text style={styles.transactionSectionTitle}>
+                    <Ionicons name="arrow-up" size={16} color={colors.expense} /> Gastos
+                  </Text>
+                  {transactionsByType.expense.map((transaction: Transaction) => (
+                    // @ts-ignore
+                    <React.Fragment key={transaction.id}>
+                      {renderTransactionItem(transaction)}
+                    </React.Fragment>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {transactionsByType.income.length === 0 && transactionsByType.expense.length === 0 && (
+              <Card style={styles.emptyCard}>
+                <View style={styles.emptyContent}>
+                  <Ionicons name="stats-chart" size={64} color={colors.textTertiary} />
+                  <Text style={styles.emptyTitle}>Las estadísticas estarían aquí</Text>
+                  <Text style={styles.emptySubtitle}>
+                    Comienza a añadir ingresos o gastos para ver tus datos
+                  </Text>
+                </View>
+              </Card>
+            )}
+          </View>
+        )}
+
+        {/* Expenses by Category */}
+        {hasMonthData && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Gastos por Categoría</Text>
+            {expensesByCategory.length > 0 ? (
+              <>
+                {expensesByCategory.map((item, index) => (
+                  // @ts-ignore
+                  <React.Fragment key={`category-${index}-${item.name}`}>
+                    <Card style={styles.categoryCard}>
+                      <View style={styles.categoryRow}>
+                        <View style={styles.categoryLeft}>
+                          <View style={[styles.categoryDot, { backgroundColor: item.color }]} />
+                          <Text style={styles.categoryName}>{item.name}</Text>
+                        </View>
+                        <Text style={styles.categoryAmount}>{formatCurrency(item.amount)}</Text>
+                      </View>
+                      <ProgressBar progress={item.amount / totalExpense} color={item.color} />
+                      <Text style={styles.categoryPercentage}>{((item.amount / totalExpense) * 100).toFixed(1)}%</Text>
+                    </Card>
+                  </React.Fragment>
+                ))}
+
+                <Card style={styles.totalCard}>
+                  <Text style={styles.totalLabel}>Total Gastado</Text>
+                  <Text style={styles.totalAmount}>{formatCurrency(totalExpense)}</Text>
+                </Card>
+              </>
             ) : (
-              availableMonths.map((month) => (
-                <TouchableOpacity
-                  key={month.monthYear}
-                  style={[
-                    styles.monthOption,
-                    selectedMonth.getFullYear() === month.date.getFullYear() &&
-                    selectedMonth.getMonth() === month.date.getMonth() &&
-                      styles.monthOptionActive,
-                  ]}
-                  onPress={() => {
-                    setSelectedMonth(month.date);
-                    setShowMonthPicker(false);
-                  }}
-                >
-                  <Text
+              <Card style={styles.emptyCard}>
+                <View>
+                  <Ionicons name="pie-chart-outline" size={48} color={colors.textTertiary} />
+                  <Text style={styles.emptyText}>No hay datos de gastos</Text>
+                </View>
+              </Card>
+            )}
+          </View>
+        )}
+
+        {/* Monthly Comparison removed per user request */}
+      </ScrollView>
+
+      {/* Month Picker Modal */}
+      <Modal
+        visible={showMonthPicker}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowMonthPicker(false)}
+      >
+        <View style={styles.monthPickerOverlay}>
+          <View style={styles.monthPickerContent}>
+            <View style={styles.monthPickerHeader}>
+              <Text style={styles.monthPickerTitle}>Seleccionar Mes</Text>
+              <TouchableOpacity onPress={() => setShowMonthPicker(false)}>
+                <Ionicons name="close" size={24} color={colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.monthList} showsVerticalScrollIndicator={false}>
+              {availableMonths.length === 0 ? (
+                <View style={styles.emptyMonthList}>
+                  <Text style={styles.emptyMonthText}>
+                    No hay transacciones registradas
+                  </Text>
+                </View>
+              ) : (
+                availableMonths.map((month) => (
+                  <TouchableOpacity
+                    key={month.monthYear}
                     style={[
-                      styles.monthOptionText,
+                      styles.monthOption,
                       selectedMonth.getFullYear() === month.date.getFullYear() &&
                       selectedMonth.getMonth() === month.date.getMonth() &&
-                        styles.monthOptionTextActive,
+                      styles.monthOptionActive,
                     ]}
+                    onPress={() => {
+                      setSelectedMonth(month.date);
+                      setShowMonthPicker(false);
+                    }}
                   >
-                    {month.label}
-                  </Text>
-                </TouchableOpacity>
-              ))
-            )}
-          </ScrollView>
+                    <Text
+                      style={[
+                        styles.monthOptionText,
+                        selectedMonth.getFullYear() === month.date.getFullYear() &&
+                        selectedMonth.getMonth() === month.date.getMonth() &&
+                        styles.monthOptionTextActive,
+                      ]}
+                    >
+                      {month.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
     </View>
   );
 };

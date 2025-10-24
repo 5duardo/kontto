@@ -12,6 +12,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { spacing, typography, useTheme } from '../theme';
 import { Account } from '../types';
 
+// Mapeo de símbolos de moneda
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: '$', CAD: 'C$', MXN: '$', BRL: 'R$', ARS: '$', CLP: '$', COP: '$', PEN: 'S/',
+  HNL: 'L', GTQ: 'Q', CRC: '₡', PAB: 'B/.', NIO: 'C$', DOP: 'RD$', UYU: '$U',
+  BOB: 'Bs.', PYG: '₲', VES: 'Bs.', EUR: '€', GBP: '£', CHF: 'CHF', SEK: 'kr',
+  NOK: 'kr', DKK: 'kr', PLN: 'zł', CZK: 'Kč', HUF: 'Ft', RON: 'lei', RUB: '₽',
+  TRY: '₺', UAH: '₴', CNY: '¥', JPY: '¥', KRW: '₩', INR: '₹', IDR: 'Rp',
+  THB: '฿', MYR: 'RM', SGD: 'S$', PHP: '₱', VND: '₫', PKR: '₨', BDT: '৳',
+  LKR: 'Rs', MMK: 'K', KHR: '៛', LAK: '₭', HKD: 'HK$', TWD: 'NT$', AED: 'د.إ',
+  SAR: '﷼', QAR: 'QR', KWD: 'د.ك', BHD: 'BD', OMR: 'ر.ع.', JOD: 'د.ا', ILS: '₪',
+  IQD: 'د.ع', IRR: '﷼', LBP: 'ل.ل', ZAR: 'R', EGP: 'E£', NGN: '₦', KES: 'KSh',
+  GHS: '₵', TZS: 'TSh', UGX: 'USh', MAD: 'د.م.', TND: 'د.ت', DZD: 'د.ج',
+  AOA: 'Kz', ETB: 'Br', AUD: 'A$', NZD: 'NZ$', FJD: 'FJ$', BTC: '₿', ETH: 'Ξ',
+};
+
 interface AccountDetailModalProps {
   visible: boolean;
   account: Account | null;
@@ -38,26 +53,17 @@ export const AccountDetailModal: React.FC<AccountDetailModalProps> = ({
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  
+
   if (!account) return null;
 
   const formatCurrency = (amount: number, currency: string) => {
-    if (currency === 'HNL') {
-      return `${amount.toLocaleString('es-HN', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      })} HNL`;
-    } else if (currency === 'USD') {
-      return `$ ${amount.toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`;
-    } else {
-      return `€ ${amount.toLocaleString('es-ES', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`;
-    }
+    const symbol = CURRENCY_SYMBOLS[currency] || currency;
+    const decimals = 2;
+    const formattedAmount = amount.toLocaleString('es-HN', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
+    return `${symbol} ${formattedAmount}`;
   };
 
   return (
@@ -68,8 +74,8 @@ export const AccountDetailModal: React.FC<AccountDetailModalProps> = ({
       onRequestClose={onClose}
     >
       <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable 
-          style={[styles.modalContent, { paddingBottom: Math.max(spacing.xl, insets.bottom + spacing.md) }]} 
+        <Pressable
+          style={[styles.modalContent, { paddingBottom: Math.max(spacing.xl, insets.bottom + spacing.md) }]}
           onPress={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -99,10 +105,10 @@ export const AccountDetailModal: React.FC<AccountDetailModalProps> = ({
 
             <TouchableOpacity style={styles.actionButton} onPress={onArchive}>
               <View style={[styles.actionIcon, { backgroundColor: account.isArchived ? '#10B98120' : '#6B728020' }]}>
-                <Ionicons 
-                  name={account.isArchived ? "arrow-undo" : "download"} 
-                  size={24} 
-                  color={account.isArchived ? "#10B981" : "#6B7280"} 
+                <Ionicons
+                  name={account.isArchived ? "arrow-undo" : "download"}
+                  size={24}
+                  color={account.isArchived ? "#10B981" : "#6B7280"}
                 />
               </View>
               <Text style={styles.actionLabel}>{account.isArchived ? 'Restaurar' : 'Mover al archivo'}</Text>

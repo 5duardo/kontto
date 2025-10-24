@@ -102,8 +102,8 @@ export const TransferScreen = ({ navigation, route }: any) => {
               <Text style={styles.accountName}>{sourceAccount.title}</Text>
               <Text style={styles.accountBalance}>
                 {sourceAccount.balance.toLocaleString('es-HN', {
-                  minimumFractionDigits: sourceAccount.currency === 'HNL' ? 0 : 2,
-                  maximumFractionDigits: sourceAccount.currency === 'HNL' ? 0 : 2,
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
                 })} {sourceAccount.currency}
               </Text>
             </View>
@@ -135,8 +135,8 @@ export const TransferScreen = ({ navigation, route }: any) => {
                     <Text style={styles.accountName}>{account.title}</Text>
                     <Text style={styles.accountBalance}>
                       {account.balance.toLocaleString('es-HN', {
-                        minimumFractionDigits: account.currency === 'HNL' ? 0 : 2,
-                        maximumFractionDigits: account.currency === 'HNL' ? 0 : 2,
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
                       })} {account.currency}
                     </Text>
                   </View>
@@ -162,8 +162,8 @@ export const TransferScreen = ({ navigation, route }: any) => {
           />
           <Text style={styles.helperText}>
             Disponible: {sourceAccount.balance.toLocaleString('es-HN', {
-              minimumFractionDigits: sourceAccount.currency === 'HNL' ? 0 : 2,
-              maximumFractionDigits: sourceAccount.currency === 'HNL' ? 0 : 2,
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
             })} {sourceAccount.currency}
           </Text>
         </View>

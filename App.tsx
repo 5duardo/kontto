@@ -14,17 +14,13 @@ function AppContent() {
   const { hasCompletedOnboarding, completeOnboarding } = useOnboarding();
 
   useEffect(() => {
-    // Simular carga de datos iniciales
-    const timer = setTimeout(() => {
-      finishLoading();
-    }, 2500);
-
-    return () => clearTimeout(timer);
-  }, [finishLoading]);
+    // El loading ahora se controla desde useAppLoading cuando las fuentes están listas
+    // No necesitamos timeout fijo
+  }, []);
 
   // Mostrar loader mientras carga
   if (isLoading) {
-    return <LoadingScreen duration={2500} onComplete={finishLoading} />;
+    return <LoadingScreen duration={300} onComplete={finishLoading} />;
   }
 
   // Mostrar onboarding si no ha sido completado

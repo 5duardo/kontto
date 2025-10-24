@@ -13,25 +13,54 @@ import { useAppStore } from '../store/useAppStore';
 import { CURRENCIES } from '../components/CurrencySelector';
 import { spacing, typography, borderRadius, useTheme } from '../theme';
 import { Card } from '../components/common';
+import { useExchangeRates } from '../hooks/useExchangeRates';
+
+// Mapeo de símbolos de moneda
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: '$', CAD: 'C$', MXN: '$', BRL: 'R$', ARS: '$', CLP: '$', COP: '$', PEN: 'S/',
+  HNL: 'L', GTQ: 'Q', CRC: '₡', PAB: 'B/.', NIO: 'C$', DOP: 'RD$', UYU: '$U',
+  BOB: 'Bs.', PYG: '₲', VES: 'Bs.', EUR: '€', GBP: '£', CHF: 'CHF', SEK: 'kr',
+  NOK: 'kr', DKK: 'kr', PLN: 'zł', CZK: 'Kč', HUF: 'Ft', RON: 'lei', RUB: '₽',
+  TRY: '₺', UAH: '₴', CNY: '¥', JPY: '¥', KRW: '₩', INR: '₹', IDR: 'Rp',
+  THB: '฿', MYR: 'RM', SGD: 'S$', PHP: '₱', VND: '₫', PKR: '₨', BDT: '৳',
+  LKR: 'Rs', MMK: 'K', KHR: '៛', LAK: '₭', HKD: 'HK$', TWD: 'NT$', AED: 'د.إ',
+  SAR: '﷼', QAR: 'QR', KWD: 'د.ك', BHD: 'BD', OMR: 'ر.ع.', JOD: 'د.ا', ILS: '₪',
+  IQD: 'د.ع', IRR: '﷼', LBP: 'ل.ل', ZAR: 'R', EGP: 'E£', NGN: '₦', KES: 'KSh',
+  GHS: '₵', TZS: 'TSh', UGX: 'USh', MAD: 'د.م.', TND: 'د.ت', DZD: 'د.ج',
+  AOA: 'Kz', ETB: 'Br', AUD: 'A$', NZD: 'NZ$', FJD: 'FJ$', BTC: '₿', ETH: 'Ξ',
+};
 
 export const TransactionsScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
   const { transactions, categories, accounts, preferredCurrency } = useAppStore();
+  const { rates: exchangeRates } = useExchangeRates();
   const styles = useMemo(() => createStyles(colors, borderRadius), [colors]);
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showMonthPicker, setShowMonthPicker] = useState(false);
 
-  const formatCurrency = (amount: number, accountId?: string) => {
-    const account = accountId ? accounts.find(a => a.id === accountId) : undefined;
-    const currencyCode = account?.currency || preferredCurrency || 'HNL';
-    const currency = CURRENCIES.find(c => c.code === currencyCode);
-    const symbol = currency ? currency.symbol : currencyCode;
+  /**
+   * Convierte cualquier cantidad de una moneda a otra usando USD como base
+   */
+  const convertCurrency = (
+    amount: number,
+    fromCurrency: string,
+    toCurrency: string
+  ): number => {
+    if (fromCurrency === toCurrency) return amount;
+    const fromRate = exchangeRates[fromCurrency] || 1;
+    const toRate = exchangeRates[toCurrency] || 1;
+    return (amount / fromRate) * toRate;
+  };
 
-    // Use locale from currency code when possible, fallback to 'es-HN' for HNL
-    const locale = currencyCode === 'HNL' ? 'es-HN' : undefined;
-    const formatted = amount.toLocaleString(locale || undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    return `${symbol} ${formatted}`;
+  const formatCurrencySimple = (amount: number, currency: string) => {
+    const symbol = CURRENCY_SYMBOLS[currency] || currency;
+    const decimals = 2;
+    const formattedAmount = amount.toLocaleString('es-HN', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
+    return `${symbol} ${formattedAmount}`;
   };
 
   // Obtener todos los meses/años con transacciones
@@ -152,18 +181,36 @@ export const TransactionsScreen = ({ navigation }: any) => {
                           </View>
                         </View>
                         <View style={styles.transactionRight}>
-                          <Text
-                            style={[
-                              styles.transactionAmount,
-                              {
-                                color:
-                                  transaction.type === 'income' ? colors.success : colors.error,
-                              },
-                            ]}
-                          >
-                            {transaction.type === 'income' ? '+' : '-'}
-                            {formatCurrency(transaction.amount, transaction.accountId)}
-                          </Text>
+                          {(() => {
+                            const account = transaction.accountId ? accounts.find(a => a.id === transaction.accountId) : undefined;
+                            const accountCurrency = account?.currency || preferredCurrency || 'HNL';
+                            const displayCurrency = preferredCurrency || 'HNL';
+                            const converted = convertCurrency(transaction.amount, accountCurrency, displayCurrency);
+                            const showConversion = accountCurrency !== displayCurrency;
+
+                            return (
+                              <View>
+                                <Text
+                                  style={[
+                                    styles.transactionAmount,
+                                    {
+                                      color:
+                                        transaction.type === 'income' ? colors.success : colors.error,
+                                    },
+                                  ]}
+                                >
+                                  {transaction.type === 'income' ? '+' : '-'}
+                                  {formatCurrencySimple(transaction.amount, accountCurrency)}
+                                </Text>
+                                {showConversion && (
+                                  <Text style={styles.transactionAmountConverted}>
+                                    ≈ {transaction.type === 'income' ? '+' : '-'}
+                                    {formatCurrencySimple(converted, displayCurrency)}
+                                  </Text>
+                                )}
+                              </View>
+                            );
+                          })()}
                         </View>
                       </View>
                     </Card>
@@ -352,6 +399,12 @@ const createStyles = (colors: any, br: any) => StyleSheet.create({
   transactionAmount: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
+  },
+  transactionAmountConverted: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    fontWeight: typography.weights.medium as any,
+    marginTop: spacing.xs,
   },
   fab: {
     position: 'absolute',

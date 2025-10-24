@@ -9,7 +9,7 @@ interface LoadingScreenProps {
 }
 
 export const LoadingScreen: React.FC<LoadingScreenProps> = ({
-  duration = 2500,
+  duration = 300,
   onComplete,
 }) => {
   const { colors } = useTheme();

@@ -4,7 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity, View, Text } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { typography, useTheme } from '@theme';
 
@@ -113,7 +113,7 @@ const TabNavigator = () => {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarShowLabel: false,
+        tabBarShowLabel: true,
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: keyof typeof Ionicons.glyphMap = 'home';
 
@@ -131,19 +131,41 @@ const TabNavigator = () => {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
+        tabBarLabel: ({ focused, color }) => {
+          let label = '';
+
+          if (route.name === 'Accounts') {
+            label = 'Inicio';
+          } else if (route.name === 'Categories') {
+            label = 'Categorías';
+          } else if (route.name === 'AddTransactionFAB') {
+            return null;
+          } else if (route.name === 'Stats') {
+            label = 'Estadísticas';
+          } else if (route.name === 'More') {
+            label = 'Más';
+          }
+
+          return (
+            <Text style={{ fontSize: typography.sizes.xs, fontWeight: typography.weights.medium, color }}>
+              {label}
+            </Text>
+          );
+        },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
           backgroundColor: colors.backgroundSecondary,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          height: 60 + insets.bottom,
+          height: 70 + insets.bottom,
           paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
           paddingTop: 8,
         },
         tabBarLabelStyle: {
           fontSize: typography.sizes.xs,
           fontWeight: typography.weights.medium,
+          marginTop: 4,
         },
         headerStyle: {
           backgroundColor: colors.background,
@@ -163,13 +185,13 @@ const TabNavigator = () => {
       <Tab.Screen
         name="Accounts"
         component={DashboardScreen}
-        options={{ title: 'Cuentas', headerShown: false }}
+        options={{ title: 'Panel de Control', headerShown: false }}
       />
       {/* @ts-ignore */}
       <Tab.Screen
         name="Categories"
         component={CategoriesScreen}
-        options={{ title: 'Categorías' }}
+        options={{ title: 'Gestionar Categorías' }}
       />
       {/* Central Floating Action Button */}
       {/* @ts-ignore */}
@@ -190,13 +212,13 @@ const TabNavigator = () => {
       <Tab.Screen
         name="Stats"
         component={StatsScreen}
-        options={{ title: 'Estadísticas' }}
+        options={{ title: 'Análisis Financiero' }}
       />
       {/* @ts-ignore */}
       <Tab.Screen
         name="More"
         component={MoreScreen}
-        options={{ title: 'Más' }}
+        options={{ title: 'Más Opciones' }}
       />
     </Tab.Navigator>
   );

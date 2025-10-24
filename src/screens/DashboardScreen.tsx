@@ -92,6 +92,7 @@ export const DashboardScreen = ({ navigation }: any) => {
   };
 
   // Ciclo a través de los estados al hacer clic en el saldo
+  // Click: base → conversion → hidden → base
   const handleBalancePress = useCallback(() => {
     setDisplayState((currentState) => {
       switch (currentState) {
@@ -218,7 +219,7 @@ export const DashboardScreen = ({ navigation }: any) => {
 
   const formatAccountBalance = (amount: number, currency: string) => {
     const symbol = CURRENCY_SYMBOLS[currency] || currency;
-    const decimals = currency === 'HNL' ? 0 : 2;
+    const decimals = 2;
     const formattedAmount = amount.toLocaleString('es-HN', {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
@@ -413,8 +414,8 @@ export const DashboardScreen = ({ navigation }: any) => {
                         const totalUSD = accounts
                           .filter(a => a.includeInTotal && !a.isArchived)
                           .reduce((sum, a) => sum + convertToUSD(a.balance, a.currency, exchangeRates), 0);
-                        const totalDisplay = convertCurrency(totalUSD, 'USD', getDisplayInfo().currency, exchangeRates);
-                        return formatCurrency(totalDisplay, getDisplayInfo().currency);
+                        const totalDisplay = convertCurrency(totalUSD, 'USD', preferredCurrency, exchangeRates);
+                        return formatCurrency(totalDisplay, preferredCurrency);
                       })()}
                     </Text>
                   </View>
@@ -539,7 +540,7 @@ export const DashboardScreen = ({ navigation }: any) => {
                             <Text style={styles.accountName}>{account.title}</Text>
                             <View style={styles.accountBalanceContainer}>
                               {!getDisplayInfo().isHidden ? (
-                                <View>
+                                <>
                                   <Text style={styles.accountBalance}>
                                     {formatAccountBalance(account.balance, account.currency)}
                                   </Text>
@@ -548,7 +549,7 @@ export const DashboardScreen = ({ navigation }: any) => {
                                       ≈ {getConvertedBalance(account)}
                                     </Text>
                                   )}
-                                </View>
+                                </>
                               ) : (
                                 <Text style={styles.accountBalance}>••••••</Text>
                               )}
@@ -774,7 +775,7 @@ export const DashboardScreen = ({ navigation }: any) => {
                               ]}
                             >
                               {isIncome ? '+' : '-'}
-                              {formatCurrency(transaction.amount, transaction.accountId)}
+                              {formatAccountBalance(transaction.amount, account?.currency || preferredCurrency)}
                             </Text>
                             <Text style={styles.transactionDate}>
                               {new Date(transaction.date).toLocaleDateString('es-HN', {
@@ -825,7 +826,7 @@ export const DashboardScreen = ({ navigation }: any) => {
                                 <Text style={[styles.accountName, { opacity: 0.6 }]}>{account.title}</Text>
                                 <View style={styles.accountBalanceContainer}>
                                   {!getDisplayInfo().isHidden ? (
-                                    <View>
+                                    <>
                                       <Text style={[styles.accountBalance, { opacity: 0.6 }]}>
                                         {formatAccountBalance(account.balance, account.currency)}
                                       </Text>
@@ -834,7 +835,7 @@ export const DashboardScreen = ({ navigation }: any) => {
                                           ≈ {getConvertedBalance(account)}
                                         </Text>
                                       )}
-                                    </View>
+                                    </>
                                   ) : (
                                     <Text style={[styles.accountBalance, { opacity: 0.6 }]}>••••••</Text>
                                   )}
@@ -1039,10 +1040,11 @@ const createStyles = (colors: any) => StyleSheet.create({
   accountBalanceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.sm,
+    flexWrap: 'wrap',
   },
   accountBalanceConverted: {
-    fontSize: typography.sizes.xs,
+    fontSize: typography.sizes.sm,
     color: colors.textSecondary,
     fontWeight: typography.weights.medium as any,
   },
@@ -1357,6 +1359,12 @@ const createStyles = (colors: any) => StyleSheet.create({
   transactionAmount: {
     fontSize: typography.sizes.base,
     fontWeight: typography.weights.semibold as any,
+  },
+  transactionAmountConverted: {
+    fontSize: typography.sizes.xs,
+    color: colors.textSecondary,
+    fontWeight: typography.weights.medium as any,
+    marginTop: spacing.xs,
   },
   transactionDate: {
     fontSize: typography.sizes.xs,

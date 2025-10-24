@@ -34,7 +34,14 @@
     "owner": "5duardo",
     "plugins": [
       "expo-system-ui",
-      "expo-font"
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Neo Sans Std Regular.otf"
+          ]
+        }
+      ]
     ]
   }
 }

@@ -45,8 +45,24 @@ export const GoalsScreen = () => {
   const [addAmount, setAddAmount] = useState('');
   const [selectedCurrency, setSelectedCurrency] = useState(preferredCurrency);
 
-  const formatCurrency = (amount: number) => {
-    return `L ${amount.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  // Mapeo de símbolos de moneda
+  const CURRENCY_SYMBOLS: Record<string, string> = {
+    USD: '$', CAD: 'C$', MXN: '$', BRL: 'R$', ARS: '$', CLP: '$', COP: '$', PEN: 'S/',
+    HNL: 'L', GTQ: 'Q', CRC: '₡', PAB: 'B/.', NIO: 'C$', DOP: 'RD$', UYU: '$U',
+    BOB: 'Bs.', PYG: '₲', VES: 'Bs.', EUR: '€', GBP: '£', CHF: 'CHF', SEK: 'kr',
+    NOK: 'kr', DKK: 'kr', PLN: 'zł', CZK: 'Kč', HUF: 'Ft', RON: 'lei', RUB: '₽',
+    TRY: '₺', UAH: '₴', CNY: '¥', JPY: '¥', KRW: '₩', INR: '₹', IDR: 'Rp',
+    THB: '฿', MYR: 'RM', SGD: 'S$', PHP: '₱', VND: '₫', PKR: '₨', BDT: '৳',
+    LKR: 'Rs', MMK: 'K', KHR: '៛', LAK: '₭', HKD: 'HK$', TWD: 'NT$', AED: 'د.إ',
+    SAR: '﷼', QAR: 'QR', KWD: 'د.ك', BHD: 'BD', OMR: 'ر.ع.', JOD: 'د.ا', ILS: '₪',
+    IQD: 'د.ع', IRR: '﷼', LBP: 'ل.ل', ZAR: 'R', EGP: 'E£', NGN: '₦', KES: 'KSh',
+    GHS: '₵', TZS: 'TSh', UGX: 'USh', MAD: 'د.م.', TND: 'د.ت', DZD: 'د.ج',
+    AOA: 'Kz', ETB: 'Br', AUD: 'A$', NZD: 'NZ$', FJD: 'FJ$', BTC: '₿', ETH: 'Ξ',
+  };
+
+  const formatCurrency = (amount: number, currency: string = 'HNL') => {
+    const symbol = CURRENCY_SYMBOLS[currency] || currency;
+    return `${symbol} ${amount.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const handleAddGoal = () => {
@@ -139,18 +155,18 @@ export const GoalsScreen = () => {
                   <View>
                     <Text style={styles.goalAmountLabel}>Ahorrado</Text>
                     <Text style={[styles.goalAmountValue, { color: goal.color }]}>
-                      {formatCurrency(goal.currentAmount)}
+                      {formatCurrency(goal.currentAmount, goal.currency)}
                     </Text>
                   </View>
                   <View>
                     <Text style={styles.goalAmountLabel}>Meta</Text>
                     <Text style={styles.goalAmountValue}>
-                      {formatCurrency(goal.targetAmount)}
+                      {formatCurrency(goal.targetAmount, goal.currency)}
                     </Text>
                   </View>
                   <View>
                     <Text style={styles.goalAmountLabel}>Falta</Text>
-                    <Text style={styles.goalAmountValue}>{formatCurrency(remaining)}</Text>
+                    <Text style={styles.goalAmountValue}>{formatCurrency(remaining, goal.currency)}</Text>
                   </View>
                 </View>
 
