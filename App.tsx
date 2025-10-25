@@ -5,14 +5,14 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppNavigator } from '@navigation/AppNavigator';
 import { ThemeProvider, useTheme } from '@theme';
 import { LoadingScreen } from '@components';
-import { OnboardingScreen } from '@screens';
+import { OnboardingScreen, SetupOnboardingScreen } from '@screens';
 import { useAppLoading, useOnboarding } from '@hooks';
 import { useAppStore } from '@store/useAppStore';
 
 function AppContent() {
   const { theme } = useTheme();
   const { isLoading, finishLoading } = useAppLoading();
-  const { hasCompletedOnboarding, completeOnboarding } = useOnboarding();
+  const { hasCompletedOnboarding, completeOnboarding, hasCompletedSetupOnboarding, completeSetupOnboarding } = useOnboarding();
   const { migrateData } = useAppStore();
 
   useEffect(() => {
@@ -28,6 +28,11 @@ function AppContent() {
   // Mostrar onboarding si no ha sido completado
   if (!hasCompletedOnboarding) {
     return <OnboardingScreen onComplete={completeOnboarding} />;
+  }
+
+  // Mostrar setup onboarding si no ha sido completado
+  if (!hasCompletedSetupOnboarding) {
+    return <SetupOnboardingScreen onComplete={completeSetupOnboarding} />;
   }
 
   return (

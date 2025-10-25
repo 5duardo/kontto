@@ -19,6 +19,7 @@ export { EditPaymentScreen } from './EditPaymentScreen';
 export { SettingsScreen } from './SettingsScreen';
 export { AboutScreen } from './AboutScreen';
 export { OnboardingScreen } from './OnboardingScreen';
+export { SetupOnboardingScreen } from './SetupOnboardingScreen';
 export { DataScreen } from './DataScreen';
 export { LocalBackupsScreen } from './LocalBackupsScreen';
 export { FormatSettingsScreen } from './FormatSettingsScreen';

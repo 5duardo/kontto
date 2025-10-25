@@ -48,9 +48,11 @@ export const DataScreen = ({ navigation }: any) => {
                     style: 'destructive',
                     onPress: () => {
                         useAppStore.getState().clearAllData();
+                        // Reiniciar el onboarding de configuración
+                        useAppStore.setState({ hasCompletedSetupOnboarding: false });
                         Alert.alert(
                             'Datos eliminados',
-                            'Todos tus datos han sido eliminados permanentemente.'
+                            'Todos tus datos han sido eliminados permanentemente. Se reiniciará la aplicación.'
                         );
                     }
                 },

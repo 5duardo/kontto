@@ -306,6 +306,19 @@ export const StatsScreen = () => {
 
         {/* Transactions list removed per request */}
 
+        {/* No transactions message */}
+        {!hasMonthData && transactions.length === 0 && (
+          <View style={styles.section}>
+            <Card style={styles.emptyCard}>
+              <View style={styles.emptyContent}>
+                <Ionicons name="document-text-outline" size={64} color={colors.textTertiary} />
+                <Text style={styles.emptyTitle}>No hay transacciones</Text>
+                <Text style={styles.emptyDescription}>Comienza a registrar transacciones para ver estadísticas</Text>
+              </View>
+            </Card>
+          </View>
+        )}
+
         {/* Incomes by Category */}
         {hasMonthData && (
           <View style={styles.section}>
@@ -703,6 +716,12 @@ const createStyles = (colors: any) =>
       fontSize: typography.sizes.base,
       color: colors.textSecondary,
       marginTop: spacing.md,
+    },
+    emptyDescription: {
+      fontSize: typography.sizes.sm,
+      color: colors.textSecondary,
+      marginTop: spacing.sm,
+      textAlign: 'center',
     },
     // Month Picker Modal Styles
     monthPickerOverlay: {

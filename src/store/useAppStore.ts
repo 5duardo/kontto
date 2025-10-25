@@ -74,6 +74,8 @@ interface AppState {
   // Onboarding
   hasCompletedOnboarding: boolean;
   completeOnboarding: () => void;
+  hasCompletedSetupOnboarding: boolean;
+  completeSetupOnboarding: () => void;
 
   // User Authentication
   user: User | null;
@@ -160,6 +162,7 @@ export const useAppStore = create<AppState>()(
       accentColor: 'blue',
       isInitialized: false,
       hasCompletedOnboarding: false,
+      hasCompletedSetupOnboarding: false,
       user: null,
       isLoggedIn: false,
       biometricEnabled: false,
@@ -678,6 +681,10 @@ export const useAppStore = create<AppState>()(
 
       completeOnboarding: () => {
         set({ hasCompletedOnboarding: true });
+      },
+
+      completeSetupOnboarding: () => {
+        set({ hasCompletedSetupOnboarding: true });
       },
 
       // Authentication
