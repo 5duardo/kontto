@@ -389,37 +389,39 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.categoriesList}>
-              {filteredCategories.map((category) => (
-                <TouchableOpacity
-                  key={category.id}
-                  style={[
-                    styles.categoryItem,
-                    selectedCategoryId === category.id && styles.categoryItemActive,
-                  ]}
-                  onPress={() => {
-                    setSelectedCategoryId(category.id);
-                    setShowCategoryModal(false);
-                  }}
-                >
-                  <View
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.categoriesList}>
+                {filteredCategories.map((category) => (
+                  <TouchableOpacity
+                    key={category.id}
                     style={[
-                      styles.categoryIconContainer,
-                      { backgroundColor: `${category.color}20` },
+                      styles.categoryItem,
+                      selectedCategoryId === category.id && styles.categoryItemActive,
                     ]}
+                    onPress={() => {
+                      setSelectedCategoryId(category.id);
+                      setShowCategoryModal(false);
+                    }}
                   >
-                    <Ionicons
-                      name={category.icon as any}
-                      size={24}
-                      color={category.color}
-                    />
-                  </View>
-                  <Text style={styles.categoryItemText}>{category.name}</Text>
-                  {selectedCategoryId === category.id && (
-                    <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
-                  )}
-                </TouchableOpacity>
-              ))}
+                    <View
+                      style={[
+                        styles.categoryIconContainer,
+                        { backgroundColor: `${category.color}20` },
+                      ]}
+                    >
+                      <Ionicons
+                        name={category.icon as any}
+                        size={24}
+                        color={category.color}
+                      />
+                    </View>
+                    <Text style={styles.categoryItemText}>{category.name}</Text>
+                    {selectedCategoryId === category.id && (
+                      <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
             </ScrollView>
           </View>
         </View>
@@ -441,37 +443,39 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.categoriesList}>
-              {accounts.map((account) => (
-                <TouchableOpacity
-                  key={account.id}
-                  style={[
-                    styles.categoryItem,
-                    selectedAccountId === account.id && styles.categoryItemActive,
-                  ]}
-                  onPress={() => {
-                    setSelectedAccountId(account.id);
-                    setShowAccountModal(false);
-                  }}
-                >
-                  <View
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.categoriesList}>
+                {accounts.map((account) => (
+                  <TouchableOpacity
+                    key={account.id}
                     style={[
-                      styles.categoryIconContainer,
-                      { backgroundColor: `${account.color}20` },
+                      styles.categoryItem,
+                      selectedAccountId === account.id && styles.categoryItemActive,
                     ]}
+                    onPress={() => {
+                      setSelectedAccountId(account.id);
+                      setShowAccountModal(false);
+                    }}
                   >
-                    <Ionicons
-                      name={account.icon as any}
-                      size={24}
-                      color={account.color}
-                    />
-                  </View>
-                  <Text style={styles.categoryItemText}>{account.title}</Text>
-                  {selectedAccountId === account.id && (
-                    <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
-                  )}
-                </TouchableOpacity>
-              ))}
+                    <View
+                      style={[
+                        styles.categoryIconContainer,
+                        { backgroundColor: `${account.color}20` },
+                      ]}
+                    >
+                      <Ionicons
+                        name={account.icon as any}
+                        size={24}
+                        color={account.color}
+                      />
+                    </View>
+                    <Text style={styles.categoryItemText}>{account.title}</Text>
+                    {selectedAccountId === account.id && (
+                      <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
             </ScrollView>
           </View>
         </View>
@@ -607,7 +611,7 @@ const createStyles = (colors: any, br: any, insets: any) => StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: colors.overlay,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -615,12 +619,15 @@ const createStyles = (colors: any, br: any, insets: any) => StyleSheet.create({
     borderTopLeftRadius: br.xl,
     borderTopRightRadius: br.xl,
     maxHeight: '80%',
+    flex: 1,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: Math.max(spacing.lg, insets.top),
+    paddingBottom: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
@@ -690,15 +697,24 @@ const createStyles = (colors: any, br: any, insets: any) => StyleSheet.create({
     color: colors.textPrimary,
   },
   categoriesList: {
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    paddingLeft: Math.max(spacing.md, insets.left),
+    paddingRight: Math.max(spacing.md, insets.right),
+    paddingBottom: Math.max(spacing.xl * 2, insets.bottom + spacing.xl),
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
   categoryItem: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: spacing.md,
+    justifyContent: 'center',
+    gap: spacing.sm,
     padding: spacing.md,
     borderRadius: br.md,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
+    width: '48%',
     backgroundColor: colors.surface,
     borderWidth: 2,
     borderColor: 'transparent',
@@ -708,9 +724,10 @@ const createStyles = (colors: any, br: any, insets: any) => StyleSheet.create({
   },
   categoryItemText: {
     flex: 1,
-    fontSize: typography.sizes.base,
+    fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
     color: colors.textPrimary,
+    textAlign: 'center',
   },
   fab: {
     position: 'absolute',
