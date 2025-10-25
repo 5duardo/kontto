@@ -187,7 +187,6 @@ export const BudgetsScreen = ({ navigation }: any) => {
           <View style={styles.progressContainer}>
             <ProgressBar
               progress={overallProgress}
-              color={overallProgress > 100 ? colors.error : colors.primary}
               height={8}
             />
           </View>
@@ -280,7 +279,6 @@ export const BudgetsScreen = ({ navigation }: any) => {
 
                   <ProgressBar
                     progress={progress}
-                    color={isOverBudget ? colors.error : colors.primary}
                     height={6}
                   />
 

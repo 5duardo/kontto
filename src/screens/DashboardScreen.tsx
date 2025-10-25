@@ -469,13 +469,6 @@ export const DashboardScreen = ({ navigation }: any) => {
                       <View style={styles.budgetProgressContainer}>
                         <ProgressBar
                           progress={(stats.monthlyExpense / (stats.monthlyBudget || 1)) * 100}
-                          color={
-                            stats.monthlyExpense > stats.monthlyBudget * 0.8
-                              ? stats.monthlyExpense > stats.monthlyBudget
-                                ? '#EF4444'
-                                : '#F59E0B'
-                              : colors.primary
-                          }
                           backgroundColor={colors.backgroundTertiary}
                           height={8}
                           showPercentage={false}

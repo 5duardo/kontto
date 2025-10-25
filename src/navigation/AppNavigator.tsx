@@ -87,13 +87,13 @@ const FABButton = ({ size }: { size: number }) => {
     <TouchableOpacity
       onPress={() => navigation.navigate('AddTransaction')}
       style={{
-        width: 56,
-        height: 56,
-        borderRadius: 28,
+        width: size * 2,
+        height: size * 2,
+        borderRadius: size,
         backgroundColor: colors.primary,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: -28,
+        marginTop: 0,
         elevation: 8,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },

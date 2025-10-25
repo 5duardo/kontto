@@ -19,7 +19,9 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const finalColor = color || colors.primary;
+  // Determine final color: allow `color` prop to override automatic status coloring
+  // Automatic coloring uses theme status colors (success/warning/error) based on
+  // how much of the budget has been spent (percentage).
   const finalBackgroundColor = backgroundColor || colors.backgroundTertiary;
 
   // Normalize progress: if > 1.5, assume it's a percentage (0-100), otherwise assume 0-1
@@ -31,6 +33,21 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   // Clamp to 0-1 range for display, but allow visualization up to 100%
   const displayProgress = Math.min(1, Math.max(0, normalizedProgress));
   const percentage = Math.round(normalizedProgress * 100);
+
+  // Color thresholds for budget usage (assumptions):
+  // Color thresholds updated per request:
+  // - percentage < 50 -> success (verde)
+  // - percentage == 50 -> warning (anaranjado)
+  // - percentage > 50 -> error (rojo)
+  // The caller can still pass `color` to override this automatic choice.
+  const autoColor =
+    percentage < 50
+      ? colors.success
+      : percentage === 50
+        ? colors.warning
+        : colors.error;
+
+  const finalColor = color || autoColor;
 
   return (
     <View>
