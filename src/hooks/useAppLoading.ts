@@ -27,7 +27,7 @@ export const useAppLoading = () => {
     if (fontsLoaded) {
       const timer = setTimeout(() => {
         setIsLoading(false);
-      }, 200); // Pequeño delay para smooth transition
+      }, 2000); // Mantener loader 2 segundos en el arranque
       return () => clearTimeout(timer);
     }
   }, [fontsLoaded]);

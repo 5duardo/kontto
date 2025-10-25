@@ -811,6 +811,10 @@ export const useAppStore = create<AppState>()(
           accounts: [],
           user: null,
           isLoggedIn: false,
+          // Reset security settings so app doesn't keep asking for PIN after reset
+          biometricEnabled: false,
+          pinEnabled: false,
+          pin: '',
           isInitialized: false,
           hasCompletedOnboarding: false,
         });

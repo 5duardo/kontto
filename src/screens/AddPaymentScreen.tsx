@@ -33,51 +33,52 @@ export const AddPaymentScreen = ({ navigation }: any) => {
   const styles = useMemo(() => createStyles(colors, br, insets), [colors, insets]);
 
   const {
-    categories,
     addRecurringPayment,
     preferredCurrency,
   } = useAppStore();
 
   // Form states
   const [type, setType] = useState<'income' | 'expense'>('expense');
+  const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly'>(
     'monthly'
   );
   const [nextDate, setNextDate] = useState<Date>(new Date());
   const [displayDate, setDisplayDate] = useState(new Date().toLocaleDateString('es-HN'));
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [reminderEnabled, setReminderEnabled] = useState(true);
-  const [reminderDaysBefore, setReminderDaysBefore] = useState('0');
   const [isActive, setIsActive] = useState(true);
   const [currency, setCurrency] = useState(preferredCurrency);
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
-
-  const filteredCategories = categories.filter((c) => c.type === type);
-  const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
+  const [selectedIcon, setSelectedIcon] = useState('wallet');
+  const [selectedColor, setSelectedColor] = useState('#3B82F6');
+  const [showIconColorModal, setShowIconColorModal] = useState(false);
 
   const handleSave = () => {
-    if (!amount || !selectedCategoryId) {
-      Alert.alert('Error', 'Por favor completa los campos requeridos (monto y categoría)');
+    if (!amount || !title) {
+      Alert.alert('Error', 'Por favor completa los campos requeridos (monto y título)');
       return;
     }
 
     addRecurringPayment({
       type,
       amount: parseFloat(amount),
-      categoryId: selectedCategoryId,
-      description: description || selectedCategory?.name || '',
+      title,
       frequency,
       nextDate: nextDate.toISOString(),
       isActive,
-      reminderEnabled,
-      reminderDaysBefore: parseInt(reminderDaysBefore) || 0,
       currency,
+      icon: selectedIcon,
+      color: selectedColor,
     });
 
     navigation.goBack();
+  };
+
+  const handleFrequencyChange = () => {
+    const frequencies = ['daily', 'weekly', 'biweekly', 'monthly', 'yearly'] as const;
+    const currentIndex = frequencies.indexOf(frequency);
+    const nextIndex = (currentIndex + 1) % frequencies.length;
+    setFrequency(frequencies[nextIndex]);
   };
 
   return (
@@ -101,7 +102,6 @@ export const AddPaymentScreen = ({ navigation }: any) => {
               ]}
               onPress={() => {
                 setType('income');
-                setSelectedCategoryId('');
               }}
             >
               <Ionicons
@@ -126,7 +126,6 @@ export const AddPaymentScreen = ({ navigation }: any) => {
               ]}
               onPress={() => {
                 setType('expense');
-                setSelectedCategoryId('');
               }}
             >
               <Ionicons
@@ -146,18 +145,15 @@ export const AddPaymentScreen = ({ navigation }: any) => {
           </View>
         </Card>
 
-        {/* Amount Input */}
-        <View style={styles.amountContainer}>
-          <Text style={styles.currency}>{currency}</Text>
-          <TextInput
-            style={styles.amountInput}
-            placeholder="0.00"
-            placeholderTextColor={colors.textTertiary}
-            value={amount}
-            onChangeText={setAmount}
-            keyboardType="decimal-pad"
-          />
-        </View>
+        {/* Title Input - First field */}
+        <Text style={styles.label}>Título (Requerido)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Netflix, Spotify, Renta, etc."
+          placeholderTextColor={colors.textTertiary}
+          value={title}
+          onChangeText={setTitle}
+        />
 
         {/* Currency Selector */}
         <Text style={styles.label}>Moneda</Text>
@@ -167,72 +163,28 @@ export const AddPaymentScreen = ({ navigation }: any) => {
           label="Seleccionar moneda"
         />
 
-        {/* Category Selection */}
-        <Text style={styles.label}>Categoría (Requerida)</Text>
-        <TouchableOpacity
-          style={styles.categorySelector}
-          onPress={() => setShowCategoryModal(true)}
-        >
-          {selectedCategory ? (
-            <View style={styles.selectedCategory}>
-              <View
-                style={[
-                  styles.categoryIconContainer,
-                  { backgroundColor: `${selectedCategory.color}20` },
-                ]}
-              >
-                <Ionicons
-                  name={selectedCategory.icon as any}
-                  size={24}
-                  color={selectedCategory.color}
-                />
-              </View>
-              <Text style={styles.categoryName}>{selectedCategory.name}</Text>
-            </View>
-          ) : (
-            <View style={styles.selectedCategory}>
-              <View style={styles.categoryIconContainer}>
-                <Ionicons name="apps" size={24} color={colors.textSecondary} />
-              </View>
-              <Text style={styles.categoryPlaceholder}>Seleccionar categoría</Text>
-            </View>
-          )}
-          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        {/* Description Input */}
-        <Text style={styles.label}>Descripción (Opcional)</Text>
+        {/* Amount Input */}
+        <Text style={styles.label}>Monto (Requerido)</Text>
         <TextInput
           style={styles.input}
-          placeholder="Netflix, Spotify, etc."
+          placeholder="0.00"
           placeholderTextColor={colors.textTertiary}
-          value={description}
-          onChangeText={setDescription}
+          value={amount}
+          onChangeText={setAmount}
+          keyboardType="decimal-pad"
         />
 
         {/* Frequency Selection */}
         <Text style={styles.label}>Frecuencia</Text>
-        <View style={styles.frequencyGrid}>
-          {(['daily', 'weekly', 'biweekly', 'monthly', 'yearly'] as const).map((f) => (
-            <TouchableOpacity
-              key={f}
-              style={[
-                styles.frequencyButton,
-                frequency === f && { backgroundColor: colors.primary, borderColor: colors.primary },
-              ]}
-              onPress={() => setFrequency(f)}
-            >
-              <Text
-                style={[
-                  styles.frequencyButtonText,
-                  frequency === f && { color: '#fff' },
-                ]}
-              >
-                {frequencyLabels[f]}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <TouchableOpacity
+          style={styles.frequencyButton}
+          onPress={handleFrequencyChange}
+        >
+          <Text style={styles.frequencyButtonText}>
+            {frequencyLabels[frequency]}
+          </Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
 
         {/* Date Selection */}
         <Text style={styles.label}>Próximo Pago</Text>
@@ -262,113 +214,161 @@ export const AddPaymentScreen = ({ navigation }: any) => {
           />
         )}
 
-        {/* Reminder Toggle */}
-        <View style={styles.toggleSection}>
-          <View style={styles.toggleHeader}>
-            <Text style={styles.label}>Recordatorio</Text>
-            <TouchableOpacity
+        {/* Icon and Color Selection */}
+        <Text style={styles.label}>Ícono y Color</Text>
+        <TouchableOpacity
+          style={styles.categorySelector}
+          onPress={() => setShowIconColorModal(true)}
+        >
+          <View style={styles.selectedCategory}>
+            <View
               style={[
-                styles.toggleButton,
-                { backgroundColor: reminderEnabled ? colors.primary : colors.surface },
+                styles.categoryIconContainer,
+                { backgroundColor: `${selectedColor}20` },
               ]}
-              onPress={() => setReminderEnabled(!reminderEnabled)}
             >
               <Ionicons
-                name={reminderEnabled ? 'checkmark' : 'close'}
-                size={16}
-                color={reminderEnabled ? '#fff' : colors.textSecondary}
+                name={selectedIcon as any}
+                size={24}
+                color={selectedColor}
               />
-            </TouchableOpacity>
+            </View>
+            <Text style={styles.categoryName}>
+              {selectedIcon} - {selectedColor}
+            </Text>
           </View>
-          {reminderEnabled && (
-            <TextInput
-              style={styles.input}
-              value={reminderDaysBefore}
-              onChangeText={setReminderDaysBefore}
-              keyboardType="number-pad"
-              placeholder="Días antes (ej: 1)"
-              placeholderTextColor={colors.textTertiary}
-            />
-          )}
-        </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
 
         {/* Active State Toggle */}
         <View style={styles.toggleSection}>
-          <View style={styles.toggleHeader}>
-            <Text style={styles.label}>Estado</Text>
+          <Text style={styles.label}>Estado</Text>
+          <View style={styles.stateButtonGroup}>
             <TouchableOpacity
               style={[
-                styles.toggleButton,
-                { backgroundColor: isActive ? colors.success : colors.textTertiary },
+                styles.stateButton,
+                isActive && { backgroundColor: colors.success },
               ]}
-              onPress={() => setIsActive(!isActive)}
+              onPress={() => setIsActive(true)}
             >
-              <Ionicons
-                name={isActive ? 'checkmark' : 'close'}
-                size={16}
-                color="#fff"
-              />
+              <Text
+                style={[
+                  styles.stateButtonText,
+                  isActive && { color: '#fff', fontWeight: 'bold' },
+                ]}
+              >
+                Activo
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.stateButton,
+                !isActive && { backgroundColor: colors.textTertiary },
+              ]}
+              onPress={() => setIsActive(false)}
+            >
+              <Text
+                style={[
+                  styles.stateButtonText,
+                  !isActive && { color: '#fff', fontWeight: 'bold' },
+                ]}
+              >
+                Inactivo
+              </Text>
             </TouchableOpacity>
           </View>
-          <Text style={styles.stateText}>
-            {isActive ? 'Pago activo' : 'Pago inactivo'}
-          </Text>
         </View>
 
         {/* Footer actions */}
         <View style={styles.modalFooter}>
           <TouchableOpacity
-            style={[styles.button, styles.saveButton]}
+            style={[styles.button, styles.saveButton, { flex: 1 }]}
             onPress={handleSave}
           >
-            <Text style={styles.saveButtonText}>Crear Pago</Text>
+            <Ionicons name="checkmark" size={24} color="#fff" />
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.button, styles.cancelButton]}
+            style={[styles.button, styles.cancelButton, { flex: 1 }]}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.cancelButtonText}>Cancelar</Text>
+            <Ionicons name="close" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
       </ScrollView>
 
-      {/* Category Modal */}
-      {showCategoryModal && (
+      {/* Icon and Color Modal */}
+      {showIconColorModal && (
         <TouchableOpacity
           activeOpacity={1}
           style={styles.categoryModalOverlay}
-          onPress={() => setShowCategoryModal(false)}
+          onPress={() => setShowIconColorModal(false)}
         >
           <View style={styles.categoryModal}>
             <View style={styles.categoryModalHeader}>
-              <Text style={styles.categoryModalTitle}>Categoría</Text>
-              <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
+              <Text style={styles.categoryModalTitle}>Ícono y Color</Text>
+              <TouchableOpacity onPress={() => setShowIconColorModal(false)}>
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.categoryModalContent} showsVerticalScrollIndicator={false}>
-              <View style={styles.categoryGrid}>
-                {filteredCategories.map((category) => (
+              {/* Color Selection */}
+              <Text style={styles.colorSectionTitle}>Color</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.horizontalScroll}
+                contentContainerStyle={styles.horizontalContent}
+              >
+                {['#3B82F6', '#8B5CF6', '#EC4899', '#EF4444', '#F59E0B', '#10B981', '#06B6D4', '#6B7280'].map((color) => (
                   <TouchableOpacity
-                    key={category.id}
+                    key={color}
                     style={[
-                      styles.categoryGridItem,
-                      selectedCategoryId === category.id && {
-                        backgroundColor: category.color + '20',
-                        borderColor: category.color,
-                        borderWidth: 2,
-                      },
+                      styles.colorOption,
+                      { backgroundColor: color },
+                      selectedColor === color && { borderWidth: 3, borderColor: '#fff' },
                     ]}
-                    onPress={() => {
-                      setSelectedCategoryId(category.id);
-                      setShowCategoryModal(false);
-                    }}
+                    onPress={() => setSelectedColor(color)}
+                  />
+                ))}
+              </ScrollView>
+
+              {/* Icon Selection */}
+              <Text style={styles.colorSectionTitle}>Ícono</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.horizontalScroll}
+                contentContainerStyle={styles.horizontalContent}
+              >
+                {['wallet', 'cash', 'card', 'briefcase', 'home', 'car', 'restaurant', 'heart', 'book', 'bag', 'airplane', 'gift', 'star', 'checkmark', 'alert', 'help', 'pizza', 'beer', 'musical-notes', 'game-controller', 'barbell', 'leaf', 'flame', 'water', 'cloud', 'sunny', 'moon', 'earth', 'call', 'camera', 'tv', 'headset'].map((icon) => (
+                  <TouchableOpacity
+                    key={icon}
+                    style={[
+                      styles.iconOption,
+                      { backgroundColor: selectedIcon === icon ? selectedColor + '20' : colors.backgroundSecondary },
+                      selectedIcon === icon && { borderColor: selectedColor, borderWidth: 2 },
+                    ]}
+                    onPress={() => setSelectedIcon(icon)}
                   >
-                    <CategoryIcon icon={category.icon} color={category.color} size={32} />
-                    <Text style={styles.categoryGridItemName}>{category.name}</Text>
+                    <Ionicons name={icon as any} size={28} color={selectedIcon === icon ? selectedColor : colors.textSecondary} />
                   </TouchableOpacity>
                 ))}
+              </ScrollView>
+
+              <View style={styles.previewSection}>
+                <Text style={styles.colorSectionTitle}>Vista previa</Text>
+                <View style={styles.previewContainer}>
+                  <View
+                    style={[
+                      styles.previewIcon,
+                      { backgroundColor: `${selectedColor}20` },
+                    ]}
+                  >
+                    <Ionicons name={selectedIcon as any} size={40} color={selectedColor} />
+                  </View>
+                  <Text style={styles.previewText}>Tu pago programado</Text>
+                </View>
               </View>
             </ScrollView>
           </View>
@@ -508,18 +508,18 @@ const createStyles = (colors: any, br: any, insets: any) =>
       marginBottom: spacing.md,
     },
     frequencyButton: {
-      flex: 1,
-      minWidth: '30%',
-      backgroundColor: colors.backgroundSecondary,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.sm,
-      borderRadius: br.md,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
       alignItems: 'center',
+      backgroundColor: colors.backgroundSecondary,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+      borderRadius: br.md,
       borderWidth: 1,
       borderColor: colors.border,
     },
     frequencyButtonText: {
-      fontSize: typography.sizes.xs,
+      fontSize: typography.sizes.base,
       fontWeight: typography.weights.semibold as any,
       color: colors.textPrimary,
     },
@@ -534,6 +534,27 @@ const createStyles = (colors: any, br: any, insets: any) =>
       justifyContent: 'space-between',
       alignItems: 'center',
       marginBottom: spacing.sm,
+    },
+    stateButtonGroup: {
+      flexDirection: 'row',
+      gap: spacing.md,
+      marginTop: spacing.sm,
+    },
+    stateButton: {
+      flex: 1,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+      borderRadius: br.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    stateButtonText: {
+      fontSize: typography.sizes.base,
+      fontWeight: typography.weights.semibold as any,
+      color: colors.textSecondary,
     },
     toggleButton: {
       width: 32,
@@ -550,6 +571,7 @@ const createStyles = (colors: any, br: any, insets: any) =>
       marginTop: spacing.xs,
     },
     modalFooter: {
+      flexDirection: 'row',
       gap: spacing.sm,
       marginTop: spacing.lg,
       paddingBottom: spacing.xl,
@@ -629,4 +651,77 @@ const createStyles = (colors: any, br: any, insets: any) =>
       color: colors.textPrimary,
       textAlign: 'center',
     },
+    colorSectionTitle: {
+      fontSize: typography.sizes.base,
+      fontWeight: typography.weights.semibold as any,
+      color: colors.textPrimary,
+      marginVertical: spacing.md,
+      textAlign: 'center',
+    },
+    horizontalScroll: {
+      marginBottom: spacing.lg,
+    },
+    horizontalContent: {
+      paddingHorizontal: spacing.md,
+      gap: spacing.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    colorGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: spacing.lg,
+      paddingHorizontal: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    colorOption: {
+      width: 56,
+      height: 56,
+      borderRadius: br.md,
+      borderWidth: 3,
+      borderColor: 'transparent',
+    },
+    iconGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: spacing.md,
+      paddingHorizontal: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    iconOption: {
+      width: 60,
+      height: 60,
+      borderRadius: br.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderColor: colors.border,
+    },
+    previewSection: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.lg,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    previewContainer: {
+      alignItems: 'center',
+      gap: spacing.md,
+      paddingVertical: spacing.lg,
+    },
+    previewIcon: {
+      width: 80,
+      height: 80,
+      borderRadius: br.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    previewText: {
+      fontSize: typography.sizes.base,
+      color: colors.textSecondary,
+    },
   });
+

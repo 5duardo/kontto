@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -11,29 +11,42 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, typography, useTheme } from '../theme';
+import { useAppStore } from '../store/useAppStore';
+
 
 export const SecuritySettingsScreen = ({ navigation }: any) => {
     const { colors } = useTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const [pinEnabled, setPinEnabled] = useState(false);
-    const [biometricEnabled, setBiometricEnabled] = useState(false);
+    // Store global
+    const {
+        pinEnabled: storePinEnabled,
+        pin: storePin,
+        setPinEnabled,
+        setPin,
+        validatePin,
+    } = useAppStore();
+
+    // Estado local
     const [showPinSetup, setShowPinSetup] = useState(false);
-    const [pin, setPin] = useState('');
+    const [pin, setLocalPin] = useState('');
     const [confirmPin, setConfirmPin] = useState('');
 
     const handleSetPin = () => {
-        if (pin.length < 4) {
-            Alert.alert('Error', 'El PIN debe tener al menos 4 dígitos');
+        if (pin.length !== 4 || !pin.match(/^\d+$/)) {
+            Alert.alert('Error', 'El PIN debe tener exactamente 4 dígitos');
             return;
         }
         if (pin !== confirmPin) {
             Alert.alert('Error', 'Los PINs no coinciden');
             return;
         }
+
+        // Guardar en store
+        setPin(pin);
         setPinEnabled(true);
         setShowPinSetup(false);
-        setPin('');
+        setLocalPin('');
         setConfirmPin('');
         Alert.alert('Éxito', 'PIN establecido correctamente');
     };
@@ -48,6 +61,7 @@ export const SecuritySettingsScreen = ({ navigation }: any) => {
                     text: 'Eliminar',
                     style: 'destructive',
                     onPress: () => {
+                        setPin('');
                         setPinEnabled(false);
                         Alert.alert('Éxito', 'PIN eliminado');
                     },
@@ -56,37 +70,33 @@ export const SecuritySettingsScreen = ({ navigation }: any) => {
         );
     };
 
-    const handleToggleBiometric = (value: boolean) => {
-        if (value && !pinEnabled) {
-            Alert.alert(
-                'PIN Requerido',
-                'Debes establecer un PIN antes de habilitar la autenticación biométrica'
-            );
-            return;
-        }
-        setBiometricEnabled(value);
-    };
-
     const handleChangePIN = () => {
-        Alert.alert(
+        Alert.prompt(
             'Cambiar PIN',
-            'Se cerrará la sesión actual para cambiar el PIN. ¿Continuar?',
+            'Ingresa el PIN actual (4 dígitos)',
             [
                 { text: 'Cancelar', style: 'cancel' },
                 {
                     text: 'Continuar',
-                    onPress: () => {
-                        setPinEnabled(false);
-                        setBiometricEnabled(false);
+                    onPress: (currentPin?: string) => {
+                        if (!currentPin || currentPin.length !== 4) {
+                            Alert.alert('Error', 'El PIN debe tener exactamente 4 dígitos');
+                            return;
+                        }
+
+                        if (!validatePin(currentPin)) {
+                            Alert.alert('Error', 'PIN incorrecto');
+                            return;
+                        }
+
                         setShowPinSetup(true);
-                        Alert.alert('Ingresa un nuevo PIN');
+                        Alert.alert('Nuevo PIN', 'Ingresa un nuevo PIN (4 dígitos)');
                     },
                 },
-            ]
+            ],
+            'secure-text'
         );
-    };
-
-    return (
+    }; return (
         <View style={styles.container}>
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                 {/* Protección con PIN */}
@@ -96,11 +106,11 @@ export const SecuritySettingsScreen = ({ navigation }: any) => {
                         <View>
                             <Text style={styles.settingTitle}>PIN de Acceso</Text>
                             <Text style={styles.settingSubtitle}>
-                                {pinEnabled ? 'PIN establecido' : 'Configurar PIN'}
+                                {storePinEnabled ? 'PIN establecido (4 dígitos)' : 'Configurar PIN de 4 dígitos'}
                             </Text>
                         </View>
                         <Switch
-                            value={pinEnabled}
+                            value={storePinEnabled}
                             onValueChange={(value) => {
                                 if (!value) {
                                     handleRemovePin();
@@ -109,11 +119,11 @@ export const SecuritySettingsScreen = ({ navigation }: any) => {
                                 }
                             }}
                             trackColor={{ false: colors.border, true: `${colors.primary}50` }}
-                            thumbColor={pinEnabled ? colors.primary : colors.textSecondary}
+                            thumbColor={storePinEnabled ? colors.primary : colors.textSecondary}
                         />
                     </View>
 
-                    {pinEnabled && (
+                    {storePinEnabled && (
                         <TouchableOpacity
                             style={styles.actionButton}
                             onPress={handleChangePIN}
@@ -123,26 +133,6 @@ export const SecuritySettingsScreen = ({ navigation }: any) => {
                             <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
                         </TouchableOpacity>
                     )}
-                </View>
-
-                {/* Autenticación Biométrica */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Biometría</Text>
-                    <View style={styles.settingRow}>
-                        <View>
-                            <Text style={styles.settingTitle}>Autenticación Biométrica</Text>
-                            <Text style={styles.settingSubtitle}>
-                                Usar huella dactilar o reconocimiento facial
-                            </Text>
-                        </View>
-                        <Switch
-                            value={biometricEnabled && pinEnabled}
-                            onValueChange={handleToggleBiometric}
-                            disabled={!pinEnabled}
-                            trackColor={{ false: colors.border, true: `${colors.primary}50` }}
-                            thumbColor={biometricEnabled && pinEnabled ? colors.primary : colors.textSecondary}
-                        />
-                    </View>
                 </View>
 
                 {/* Información de Privacidad */}
@@ -165,9 +155,13 @@ export const SecuritySettingsScreen = ({ navigation }: any) => {
                                 placeholder="PIN (4 dígitos)"
                                 keyboardType="number-pad"
                                 secureTextEntry
-                                maxLength={6}
+                                maxLength={4}
                                 value={pin}
-                                onChangeText={setPin}
+                                onChangeText={(text) => {
+                                    // Solo permitir números
+                                    const numericText = text.replace(/[^0-9]/g, '');
+                                    setLocalPin(numericText);
+                                }}
                                 placeholderTextColor={colors.textSecondary}
                             />
                             <TextInput
@@ -175,9 +169,13 @@ export const SecuritySettingsScreen = ({ navigation }: any) => {
                                 placeholder="Confirmar PIN"
                                 keyboardType="number-pad"
                                 secureTextEntry
-                                maxLength={6}
+                                maxLength={4}
                                 value={confirmPin}
-                                onChangeText={setConfirmPin}
+                                onChangeText={(text) => {
+                                    // Solo permitir números
+                                    const numericText = text.replace(/[^0-9]/g, '');
+                                    setConfirmPin(numericText);
+                                }}
                                 placeholderTextColor={colors.textSecondary}
                             />
                             <View style={styles.pinButtonsContainer}>

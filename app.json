@@ -3,6 +3,7 @@
     "name": "Kontto",
     "slug": "kontto",
     "version": "1.0.0",
+    "icon": "./assets/kontto.png",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "splash": {
@@ -12,11 +13,13 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.kontto.app",
+      "icon": "./assets/kontto.png",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
+      "icon": "./assets/kontto.png",
       "adaptiveIcon": {
         "backgroundColor": "#0D1117"
       },

@@ -591,7 +591,6 @@ export const DashboardScreen = ({ navigation }: any) => {
                   </View>
 
                   {getUpcomingPayments.map((payment, index) => {
-                    const category = categories.find((c) => c.id === payment.categoryId);
                     const paymentDate = new Date(payment.nextDate);
                     const today = new Date();
                     const daysUntil = Math.ceil((paymentDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
@@ -600,15 +599,15 @@ export const DashboardScreen = ({ navigation }: any) => {
                     return (
                       // @ts-ignore
                       <React.Fragment key={payment.id}>
-                        <View style={[styles.upcomingPaymentCard, { borderLeftColor: category?.color || colors.primary }]}>
+                        <View style={[styles.upcomingPaymentCard, { borderLeftColor: payment.color }]}>
                           <View style={styles.upcomingPaymentLeft}>
-                            <View style={[styles.accountIcon, { backgroundColor: `${category?.color || colors.primary}33` }]}>
-                              <Ionicons name={category?.icon as any || 'cash'} size={24} color={category?.color || colors.primary} />
+                            <View style={[styles.accountIcon, { backgroundColor: `${payment.color}33` }]}>
+                              <Ionicons name={payment.icon as any} size={24} color={payment.color} />
                             </View>
                             <View style={{ flex: 1 }}>
-                              <Text style={styles.upcomingPaymentDescription}>{payment.description}</Text>
+                              <Text style={styles.upcomingPaymentDescription}>{payment.title}</Text>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                                <Text style={styles.upcomingPaymentCategory}>{category?.name || 'Sin categoría'}</Text>
+                                <Text style={styles.upcomingPaymentCategory}>{payment.type === 'expense' ? 'Gasto' : 'Ingreso'}</Text>
                                 {payment.paid && (
                                   <View style={[styles.upcomingPaymentBadge, { backgroundColor: colors.success + '20' }]}>
                                     <Text style={[styles.upcomingPaymentBadgeText, { color: colors.success }]}>✓ Pagado</Text>

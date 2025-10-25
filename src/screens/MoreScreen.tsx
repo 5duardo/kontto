@@ -101,7 +101,10 @@ const MENU_SECTIONS: MenuSection[] = [
         icon: 'shield-checkmark',
         color: '#3B82F6',
         action: () => {
-          Alert.alert('Privacidad', 'Lee nuestra política de privacidad');
+          const url = 'https://konttoapp.hyped.center/privacy';
+          Linking.openURL(url).catch(() => {
+            Alert.alert('Error', 'No se pudo abrir la Política de privacidad');
+          });
         },
       },
       {
@@ -110,7 +113,22 @@ const MENU_SECTIONS: MenuSection[] = [
         icon: 'document-text',
         color: '#8B5CF6',
         action: () => {
-          Alert.alert('Términos', 'Lee nuestras condiciones de uso');
+          const url = 'https://konttoapp.hyped.center/terms';
+          Linking.openURL(url).catch(() => {
+            Alert.alert('Error', 'No se pudo abrir las Condiciones de uso');
+          });
+        },
+      },
+      {
+        id: 'ack',
+        title: 'Agradecimientos',
+        icon: 'heart',
+        color: '#10B981',
+        action: () => {
+          Alert.alert(
+            'Agradecimientos',
+            'Quiero expresar mi más sincero agradecimiento a mi familia y a mis amigos por su apoyo incondicional, paciencia y ánimo durante todas las etapas de este proyecto. Su confianza, observaciones y compañía han sido fundamentales para llevar Kontto adelante.'
+          );
         },
       },
     ],

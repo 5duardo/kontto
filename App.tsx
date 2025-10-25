@@ -20,9 +20,9 @@ function AppContent() {
     migrateData();
   }, [migrateData]);
 
-  // Mostrar loader mientras carga
+  // Mostrar loader mientras carga (2s)
   if (isLoading) {
-    return <LoadingScreen duration={300} onComplete={finishLoading} />;
+    return <LoadingScreen duration={2000} onComplete={finishLoading} />;
   }
 
   // Mostrar onboarding si no ha sido completado

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
+import { useAppStore } from '../store/useAppStore';
+import { accentColorMap } from '../theme/colorSchemes';
 
 interface LoadingScreenProps {
   duration?: number; // Duración en ms
@@ -9,11 +10,15 @@ interface LoadingScreenProps {
 }
 
 export const LoadingScreen: React.FC<LoadingScreenProps> = ({
-  duration = 300,
+  duration = 2000,
   onComplete,
 }) => {
   const { colors } = useTheme();
+  const accent = useAppStore((s) => s.accentColor);
   const [progress] = useState(new Animated.Value(0));
+
+  // Mapear el nombre del acento al color hexadecimal; fallback a colors.primary
+  const accentHex = accentColorMap[accent] ?? colors.primary;
 
   useEffect(() => {
     Animated.timing(progress, {
@@ -31,45 +36,18 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
   });
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: colors.background },
-      ]}
-    >
-      <View style={styles.content}>
-        {/* Icono animado */}
-        <MaterialCommunityIcons
-          name="wallet-outline"
-          size={80}
-          color={colors.primary}
-          style={styles.icon}
+    <View style={[styles.container, { backgroundColor: 'transparent' }]}>
+      {/* Solo mostrar la barra de progreso centrada, sin texto ni icono */}
+      <View style={styles.progressContainer}>
+        <Animated.View
+          style={[
+            styles.progressBar,
+            {
+              width: progressValue,
+              backgroundColor: accentHex,
+            },
+          ]}
         />
-
-        {/* Texto */}
-        <View style={styles.textContainer}>
-          <Animated.Text
-            style={[
-              styles.title,
-              { color: colors.textPrimary },
-            ]}
-          >
-            Kontto
-          </Animated.Text>
-        </View>
-
-        {/* Barra de progreso */}
-        <View style={styles.progressContainer}>
-          <Animated.View
-            style={[
-              styles.progressBar,
-              {
-                width: progressValue,
-                backgroundColor: colors.primary,
-              },
-            ]}
-          />
-        </View>
       </View>
     </View>
   );

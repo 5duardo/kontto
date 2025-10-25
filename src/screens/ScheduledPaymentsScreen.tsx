@@ -63,25 +63,8 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
   const styles = useMemo(() => createStyles(colors, borderRadius), [colors]);
   const insets = useSafeAreaInsets();
 
-  const [modalVisible, setModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<RecurringPayment | null>(null);
-  const [editingPayment, setEditingPayment] = useState<RecurringPayment | null>(null);
-
-  // Form states
-  const [type, setType] = useState<'income' | 'expense'>('expense');
-  const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState('');
-  const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly'>('monthly');
-  const [nextDate, setNextDate] = useState<Date>(new Date());
-  const [displayDate, setDisplayDate] = useState(new Date().toLocaleDateString('es-HN'));
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [reminderEnabled, setReminderEnabled] = useState(true);
-  const [reminderDaysBefore, setReminderDaysBefore] = useState('0');
-  const [isActive, setIsActive] = useState(true);
-  const [currency, setCurrency] = useState(preferredCurrency);
-  const [paid, setPaid] = useState(false);
 
   const formatCurrency = (amount: number, curr: string = preferredCurrency) => {
     const symbol = CURRENCY_SYMBOLS[curr] || curr;
@@ -116,10 +99,6 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
     return `${timeText} (${dateFormatted})`;
   };
 
-  const filteredCategories = categories.filter((c) => c.type === type);
-
-  const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
-
   // Agrupar pagos por mes
   const paymentsByMonth = useMemo(() => {
     const grouped: Record<string, RecurringPayment[]> = {};
@@ -133,49 +112,6 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
     });
     return grouped;
   }, [recurringPayments]);
-
-  const handleAddPayment = () => {
-    if (!amount || !selectedCategoryId) {
-      Alert.alert('Error', 'Por favor completa los campos requeridos');
-      return;
-    }
-
-    if (editingPayment) {
-      updateRecurringPayment(editingPayment.id, {
-        type,
-        amount: parseFloat(amount),
-        categoryId: selectedCategoryId,
-        description: description || selectedCategory?.name || '',
-        frequency,
-        nextDate: nextDate.toISOString(),
-        isActive,
-        reminderEnabled,
-        reminderDaysBefore: parseInt(reminderDaysBefore) || 0,
-        currency,
-        paid,
-      });
-    } else {
-      addRecurringPayment({
-        type,
-        amount: parseFloat(amount),
-        categoryId: selectedCategoryId,
-        description: description || selectedCategory?.name || '',
-        frequency,
-        nextDate: nextDate.toISOString(),
-        isActive,
-        reminderEnabled,
-        reminderDaysBefore: parseInt(reminderDaysBefore) || 0,
-        currency,
-      });
-    }
-
-    setModalVisible(false);
-    resetForm();
-  };
-
-  const handleEditPayment = (payment: RecurringPayment) => {
-    navigation.navigate('EditPayment', { payment });
-  };
 
   const handleDeletePayment = (paymentId: string) => {
     Alert.alert(
@@ -197,21 +133,6 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
 
   const handleToggleActive = (payment: RecurringPayment) => {
     updateRecurringPayment(payment.id, { isActive: !payment.isActive });
-  };
-
-  const resetForm = () => {
-    setType('expense');
-    setAmount('');
-    setDescription('');
-    setSelectedCategoryId('');
-    setFrequency('monthly');
-    setNextDate(new Date());
-    setDisplayDate(new Date().toLocaleDateString('es-HN'));
-    setReminderEnabled(true);
-    setReminderDaysBefore('0');
-    setIsActive(true);
-    setCurrency(preferredCurrency);
-    setEditingPayment(null);
   };
 
   const openDetailModal = (payment: RecurringPayment) => {
@@ -261,7 +182,6 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
               <View>
                 <Text style={styles.monthTitle}>{month}</Text>
                 {payments.map((payment) => {
-                  const cat = categories.find((c) => c.id === payment.categoryId);
                   const paymentCardStyle = !payment.isActive
                     ? [styles.paymentCard, styles.paymentCardInactive]
                     : styles.paymentCard;
@@ -276,12 +196,21 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
                       >
                         <View style={styles.paymentHeader}>
                           <View style={styles.paymentInfo}>
-                            {cat && (
-                              <CategoryIcon icon={cat.icon} color={cat.color} size={20} />
-                            )}
+                            <View
+                              style={[
+                                styles.categoryIconContainer,
+                                { backgroundColor: `${payment.color}20` },
+                              ]}
+                            >
+                              <Ionicons
+                                name={payment.icon as any}
+                                size={20}
+                                color={payment.color}
+                              />
+                            </View>
                             <View style={styles.paymentTextInfo}>
                               <Text style={styles.paymentDescription}>
-                                {payment.description}
+                                {payment.title}
                               </Text>
                               <View style={styles.paymentMeta}>
                                 <Text style={styles.paymentFrequency}>
@@ -317,14 +246,6 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
                             </Text>
                           </View>
                         </View>
-                        {payment.reminderEnabled && (
-                          <View style={styles.reminderInfo}>
-                            <Ionicons name="notifications" size={14} color={colors.primary} />
-                            <Text style={styles.reminderText}>
-                              Recordatorio {payment.reminderDaysBefore} días antes
-                            </Text>
-                          </View>
-                        )}
                       </Card>
                     </TouchableOpacity>
                   );
@@ -344,278 +265,6 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
       >
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
-
-      {/* Modal para agregar/editar pago */}
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => {
-          setModalVisible(false);
-          resetForm();
-        }}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {editingPayment ? 'Editar Pago' : 'Nuevo Pago Programado'}
-              </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setModalVisible(false);
-                  resetForm();
-                }}
-              >
-                <Ionicons name="close" size={24} color={colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-              {/* Tipo de pago */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Tipo de Pago</Text>
-                <View style={styles.typeSelector}>
-                  {(['expense', 'income'] as const).map((t) => (
-                    <TouchableOpacity
-                      key={t}
-                      style={[
-                        styles.typeButton,
-                        type === t && {
-                          backgroundColor: colors.primary,
-                        },
-                      ]}
-                      onPress={() => {
-                        setType(t);
-                        setSelectedCategoryId('');
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.typeButtonText,
-                          type === t && { color: '#fff' },
-                        ]}
-                      >
-                        {t === 'expense' ? 'Gasto' : 'Ingreso'}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              {/* Monto */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Monto</Text>
-                <TextInput
-                  style={styles.input}
-                  value={amount}
-                  onChangeText={setAmount}
-                  keyboardType="decimal-pad"
-                  placeholder="0.00"
-                  placeholderTextColor={colors.textTertiary}
-                />
-              </View>
-
-              {/* Moneda */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Moneda</Text>
-                <CurrencySelector
-                  selectedCurrency={currency}
-                  onCurrencyChange={setCurrency}
-                  label="Seleccionar moneda"
-                />
-              </View>
-
-              {/* Descripción */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Descripción</Text>
-                <TextInput
-                  style={styles.input}
-                  value={description}
-                  onChangeText={setDescription}
-                  placeholder="Netflix, Spotify, etc."
-                  placeholderTextColor={colors.textTertiary}
-                />
-              </View>
-
-              {/* Categoría */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Categoría</Text>
-                <View style={styles.categoriesGrid}>
-                  {filteredCategories.map((category) => {
-                    const isSelected = selectedCategoryId === category.id;
-                    return (
-                      <TouchableOpacity
-                        key={category.id}
-                        style={[
-                          styles.categoryItem,
-                          isSelected && {
-                            backgroundColor: category.color + '20',
-                            borderColor: category.color,
-                            borderWidth: 2,
-                          },
-                        ]}
-                        onPress={() => setSelectedCategoryId(category.id)}
-                      >
-                        <CategoryIcon
-                          icon={category.icon}
-                          color={category.color}
-                          size={24}
-                        />
-                        <Text style={styles.categoryItemName}>{category.name}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-
-              {/* Frecuencia */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Frecuencia</Text>
-                <View style={styles.frequencySelector}>
-                  {(['daily', 'weekly', 'biweekly', 'monthly', 'yearly'] as const).map((f) => (
-                    <TouchableOpacity
-                      key={f}
-                      style={[
-                        styles.frequencyButton,
-                        frequency === f && { backgroundColor: colors.primary },
-                      ]}
-                      onPress={() => setFrequency(f)}
-                    >
-                      <Text
-                        style={[
-                          styles.frequencyButtonText,
-                          frequency === f && { color: '#fff' },
-                        ]}
-                      >
-                        {frequencyLabels[f]}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              {/* Próxima fecha */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Próximo Pago</Text>
-                <TouchableOpacity
-                  style={styles.dateButton}
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <Ionicons name="calendar" size={20} color={colors.textSecondary} />
-                  <Text style={styles.dateButtonText}>{displayDate}</Text>
-                </TouchableOpacity>
-              </View>
-
-              {showDatePicker && (
-                <DateTimePicker
-                  value={nextDate}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={(event: any, selectedDate?: Date) => {
-                    if (selectedDate) {
-                      setShowDatePicker(Platform.OS === 'ios');
-                      setNextDate(selectedDate);
-                      setDisplayDate(selectedDate.toLocaleDateString('es-HN'));
-                    } else {
-                      setShowDatePicker(false);
-                    }
-                  }}
-                  minimumDate={new Date()}
-                />
-              )}
-
-              {/* Recordatorio */}
-              <View style={styles.inputGroup}>
-                <View style={styles.reminderToggle}>
-                  <Text style={styles.label}>Recordatorio</Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.toggleButton,
-                      { backgroundColor: reminderEnabled ? colors.primary : colors.surface },
-                    ]}
-                    onPress={() => setReminderEnabled(!reminderEnabled)}
-                  >
-                    <Ionicons
-                      name={reminderEnabled ? 'checkmark' : 'close'}
-                      size={16}
-                      color={reminderEnabled ? '#fff' : colors.textSecondary}
-                    />
-                  </TouchableOpacity>
-                </View>
-
-                {reminderEnabled && (
-                  <TextInput
-                    style={styles.input}
-                    value={reminderDaysBefore}
-                    onChangeText={setReminderDaysBefore}
-                    keyboardType="number-pad"
-                    placeholder="Días antes (ej: 1)"
-                    placeholderTextColor={colors.textTertiary}
-                  />
-                )}
-              </View>
-
-              {/* Estado activo */}
-              <View style={styles.inputGroup}>
-                <View style={styles.reminderToggle}>
-                  <Text style={styles.label}>Estado</Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.toggleButton,
-                      { backgroundColor: isActive ? colors.success : colors.textTertiary },
-                    ]}
-                    onPress={() => setIsActive(!isActive)}
-                  >
-                    <Ionicons
-                      name={isActive ? 'checkmark' : 'close'}
-                      size={16}
-                      color="#fff"
-                    />
-                  </TouchableOpacity>
-                </View>
-                <Text style={styles.stateText}>
-                  {isActive ? 'Pago activo' : 'Pago inactivo'}
-                </Text>
-              </View>
-
-              {/* Pagado */}
-              <View style={styles.inputGroup}>
-                <View style={styles.reminderToggle}>
-                  <Text style={styles.label}>Pagado</Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.toggleButton,
-                      { backgroundColor: paid ? colors.primary : colors.surface },
-                    ]}
-                    onPress={() => setPaid(!paid)}
-                  >
-                    <Ionicons
-                      name={paid ? 'checkmark' : 'close'}
-                      size={16}
-                      color={paid ? '#fff' : colors.textSecondary}
-                    />
-                  </TouchableOpacity>
-                </View>
-                <Text style={styles.stateText}>
-                  {paid ? 'Marcado como pagado' : 'No pagado'}
-                </Text>
-              </View>
-
-              <View style={{ height: 20 }} />
-            </ScrollView>
-
-            <View style={[styles.modalFooter, { paddingBottom: spacing.xl + (insets.bottom || 0) }]}>
-              <Button
-                title={editingPayment ? 'Actualizar' : 'Crear Pago'}
-                onPress={handleAddPayment}
-                variant="solidPrimary"
-                style={[styles.button, { width: '100%' }]}
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* Modal de detalles */}
       <Modal
@@ -638,8 +287,8 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
                 <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
                   <Card style={styles.detailCard}>
                     <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Descripción:</Text>
-                      <Text style={styles.detailValue}>{selectedPayment.description}</Text>
+                      <Text style={styles.detailLabel}>Título:</Text>
+                      <Text style={styles.detailValue}>{selectedPayment.title}</Text>
                     </View>
 
                     <View style={styles.detailRow}>
@@ -667,15 +316,6 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
                       <Text style={styles.detailLabel}>Próximo pago:</Text>
                       <Text style={styles.detailValue}>
                         {new Date(selectedPayment.nextDate).toLocaleDateString('es-HN')}
-                      </Text>
-                    </View>
-
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Recordatorio:</Text>
-                      <Text style={styles.detailValue}>
-                        {selectedPayment.reminderEnabled
-                          ? `${selectedPayment.reminderDaysBefore} días antes`
-                          : 'Desactivado'}
                       </Text>
                     </View>
 
@@ -737,7 +377,7 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
                     title="Editar"
                     onPress={() => {
                       setDetailModalVisible(false);
-                      handleEditPayment(selectedPayment);
+                      navigation.navigate('EditPayment', { payment: selectedPayment });
                     }}
                     variant="solidPrimary"
                     style={[styles.button, { width: '100%', marginBottom: spacing.sm }]}
@@ -872,6 +512,13 @@ const createStyles = (colors: any, br: any) => StyleSheet.create({
   paymentTextInfo: {
     flex: 1,
     marginLeft: spacing.sm,
+  },
+  categoryIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: br.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   paymentDescription: {
     fontSize: typography.sizes.base,

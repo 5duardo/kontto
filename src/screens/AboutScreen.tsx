@@ -4,6 +4,9 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  TouchableOpacity,
+  Alert,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, typography, useTheme } from '../theme';
@@ -88,18 +91,7 @@ export const AboutScreen = ({ navigation }: any) => {
           </View>
         </View>
 
-        {/* Créditos */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Créditos</Text>
-          <View style={styles.creditsCard}>
-            <Text style={styles.creditsText}>
-              <Text style={[styles.creditsText, { fontWeight: typography.weights.semibold }]}>Beta Testers:</Text>{'\n'}
-              • Nickolas Casam{'\n'}
-              • Christiam Espinal{'\n'}
-
-            </Text>
-          </View>
-        </View>
+        {/* (Enlaces legales y agradecimientos movidos a 'Más') */}
 
         <View style={{ height: 100 }} />
       </ScrollView>

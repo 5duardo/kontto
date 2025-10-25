@@ -56,14 +56,13 @@ export interface RecurringPayment {
   id: string;
   type: TransactionType;
   amount: number;
-  categoryId: string;
-  description: string;
+  title: string;
   frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
   nextDate: string;
   isActive: boolean;
-  reminderEnabled: boolean;
-  reminderDaysBefore: number;
   currency: string;
+  icon: string;
+  color: string;
   paid?: boolean;
   createdAt: string;
   updatedAt: string;

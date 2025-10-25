@@ -27,3 +27,4 @@ export { StylesSettingsScreen } from './StylesSettingsScreen';
 export { SyncSettingsScreen } from './SyncSettingsScreen';
 export { NotificationsSettingsScreen } from './NotificationsSettingsScreen';
 export { SecuritySettingsScreen } from './SecuritySettingsScreen';
+export { AuthenticationScreen } from './AuthenticationScreen';

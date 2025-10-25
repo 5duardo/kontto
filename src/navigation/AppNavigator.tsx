@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TouchableOpacity, View, Text } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { AppState, type AppStateStatus } from 'react-native';
 import { typography, useTheme } from '@theme';
 
 // Screens
@@ -37,7 +38,9 @@ import {
   NotificationsSettingsScreen,
   SecuritySettingsScreen,
   LocalBackupsScreen,
+  AuthenticationScreen,
 } from '@screens';
+import { useAppStore } from '@store/useAppStore';
 import type { Account, Goal, RecurringPayment } from '@types';
 
 // Navigation types
@@ -73,6 +76,7 @@ export type RootStackParamList = {
   NotificationsSettings: undefined;
   SecuritySettings: undefined;
   Transactions: undefined;
+  Authentication: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -226,6 +230,50 @@ const TabNavigator = () => {
 
 export const AppNavigator = () => {
   const { colors } = useTheme();
+  const { pinEnabled } = useAppStore();
+
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [appState, setAppState] = useState<AppStateStatus>('active');
+
+  // Monitorear cambios de estado de la aplicación
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => {
+      subscription.remove();
+    };
+  }, [isAuthenticated]);
+
+  const handleAppStateChange = (nextAppState: AppStateStatus) => {
+    // Si la app entra en background y tiene PIN habilitado, requiere autenticación al regresar
+    if (appState.match(/inactive|background/) && nextAppState === 'active') {
+      if (pinEnabled && isAuthenticated) {
+        setIsAuthenticated(false);
+      }
+    }
+    setAppState(nextAppState);
+  };
+
+  const handleAuthenticationSuccess = () => {
+    setIsAuthenticated(true);
+  };
+
+  // Si PIN está habilitado y no está autenticado, mostrar pantalla de autenticación
+  if (pinEnabled && !isAuthenticated) {
+    return (
+      <NavigationContainer>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen
+            name="Authentication"
+            options={{
+              gestureEnabled: false,
+            }}
+          >
+            {() => <AuthenticationScreen onAuthenticationSuccess={handleAuthenticationSuccess} />}
+          </Stack.Screen>
+        </Stack.Navigator>
+      </NavigationContainer>
+    );
+  }
 
   return (
     <NavigationContainer>
