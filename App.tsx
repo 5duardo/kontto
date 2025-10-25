@@ -7,16 +7,18 @@ import { ThemeProvider, useTheme } from '@theme';
 import { LoadingScreen } from '@components';
 import { OnboardingScreen } from '@screens';
 import { useAppLoading, useOnboarding } from '@hooks';
+import { useAppStore } from '@store/useAppStore';
 
 function AppContent() {
   const { theme } = useTheme();
   const { isLoading, finishLoading } = useAppLoading();
   const { hasCompletedOnboarding, completeOnboarding } = useOnboarding();
+  const { migrateData } = useAppStore();
 
   useEffect(() => {
-    // El loading ahora se controla desde useAppLoading cuando las fuentes están listas
-    // No necesitamos timeout fijo
-  }, []);
+    // Migrate data to ensure all transactions have accountId
+    migrateData();
+  }, [migrateData]);
 
   // Mostrar loader mientras carga
   if (isLoading) {

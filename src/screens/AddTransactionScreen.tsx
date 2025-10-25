@@ -110,7 +110,7 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
   };
 
   React.useEffect(() => {
-    if (transactionId) {
+    if (transactionId && transactions && transactions.length > 0) {
       const tx = transactions.find((t: any) => t.id === transactionId);
       if (tx) {
         setIsEditMode(true);
@@ -118,6 +118,7 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
         setAmount(String(tx.amount));
         setDescription(tx.description || '');
         setSelectedCategoryId(tx.categoryId || '');
+        // Always set account ID, even if empty
         setSelectedAccountId(tx.accountId || '');
         const d = new Date(tx.date);
         setTransactionDate(d);
@@ -333,14 +334,14 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
             style={[styles.button, styles.saveButton]}
             onPress={handleSubmit}
           >
-            <Text style={styles.saveButtonText}>{isEditMode ? 'Actualizar' : 'Crear'}</Text>
+            <Ionicons name="checkmark" size={24} color="#FFFFFF" />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.button, styles.cancelButton]}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.cancelButtonText}>Cancelar</Text>
+            <Ionicons name="close" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
 
           {isEditMode && transactionId && (
@@ -364,7 +365,7 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
                 );
               }}
             >
-              <Text style={styles.deleteButtonText}>Eliminar</Text>
+              <Ionicons name="trash" size={24} color="#FFFFFF" />
             </TouchableOpacity>
           )}
         </View>
@@ -639,19 +640,20 @@ const createStyles = (colors: any, br: any, insets: any) => StyleSheet.create({
     color: colors.textPrimary,
   },
   modalFooter: {
-    flexDirection: 'column',
+    flexDirection: 'row',
     gap: spacing.sm,
-    paddingHorizontal: 0, // use the ScrollView content padding for horizontal spacing
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.lg,
     paddingBottom: Math.max(insets.bottom, spacing.lg),
     borderTopWidth: 1,
     borderTopColor: colors.border,
     backgroundColor: colors.background,
-    alignItems: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   button: {
-    width: '100%',
-    paddingVertical: spacing.lg,
+    flex: 1,
+    height: 70,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -660,7 +662,6 @@ const createStyles = (colors: any, br: any, insets: any) => StyleSheet.create({
     backgroundColor: colors.backgroundSecondary,
     borderWidth: 1.5,
     borderColor: colors.border,
-    marginBottom: spacing.xs,
   },
   cancelButtonText: {
     fontSize: typography.sizes.base,
@@ -677,7 +678,6 @@ const createStyles = (colors: any, br: any, insets: any) => StyleSheet.create({
   },
   deleteButton: {
     backgroundColor: '#EF4444',
-    marginBottom: spacing.xs,
   },
   deleteButtonText: {
     fontSize: typography.sizes.base,

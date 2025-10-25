@@ -5,7 +5,7 @@ export interface Transaction {
   type: TransactionType;
   amount: number;
   categoryId: string;
-  accountId?: string;
+  accountId: string;
   description: string;
   date: string;
   isRecurring?: boolean;

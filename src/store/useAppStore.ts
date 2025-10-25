@@ -94,6 +94,7 @@ interface AppState {
 
   // Initialization
   initializeDefaultData: () => void;
+  migrateData: () => void;
   isInitialized: boolean;
 
   // Data Management
@@ -120,6 +121,24 @@ const defaultCategories: Omit<Category, 'id' | 'createdAt'>[] = [
   { name: 'Servicios', icon: 'flash', color: '#6B7280', type: 'expense', isDefault: true },
   { name: 'Otros Gastos', icon: 'close-circle', color: '#94A3B8', type: 'expense', isDefault: true },
 ];
+
+// Migration function to ensure all transactions have accountId
+const migrateTransactions = (transactions: any[], accounts: Account[]) => {
+  if (!transactions || transactions.length === 0) return transactions;
+  if (accounts.length === 0) return transactions;
+
+  return transactions.map(tx => {
+    // If transaction already has accountId, keep it
+    if (tx.accountId) return tx;
+
+    // Otherwise, assign the first available account
+    const firstAccount = accounts[0];
+    return {
+      ...tx,
+      accountId: firstAccount?.id || '',
+    };
+  });
+};
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -761,6 +780,17 @@ export const useAppStore = create<AppState>()(
           categories,
           isInitialized: true,
         });
+      },
+
+      // Migrate data to ensure all transactions have accountId
+      migrateData: () => {
+        const state = get();
+        const migratedTransactions = migrateTransactions(state.transactions, state.accounts);
+
+        // Only update if something changed
+        if (migratedTransactions.some((tx, i) => tx !== state.transactions[i])) {
+          set({ transactions: migratedTransactions });
+        }
       },
 
       // Clear all data

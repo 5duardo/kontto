@@ -119,6 +119,7 @@ export const EditAccountScreen = ({ navigation, route }: any) => {
               type: 'income',
               amount: balanceDifference,
               categoryId: otrosIngresosCategory.id,
+              accountId: account.id,
               description: `Saldo agregado a ${title.trim()}`,
               date: new Date().toISOString(),
             });
@@ -129,6 +130,7 @@ export const EditAccountScreen = ({ navigation, route }: any) => {
           type: 'income',
           amount: balanceDifference,
           categoryId: otrosIngresosCategory.id,
+          accountId: account.id,
           description: `Saldo agregado a ${title.trim()}`,
           date: new Date().toISOString(),
         });
@@ -157,6 +159,7 @@ export const EditAccountScreen = ({ navigation, route }: any) => {
               type: 'expense',
               amount: Math.abs(balanceDifference),
               categoryId: otrosGastosCategory.id,
+              accountId: account.id,
               description: `Saldo retirado de ${title.trim()}`,
               date: new Date().toISOString(),
             });
@@ -167,6 +170,7 @@ export const EditAccountScreen = ({ navigation, route }: any) => {
           type: 'expense',
           amount: Math.abs(balanceDifference),
           categoryId: otrosGastosCategory.id,
+          accountId: account.id,
           description: `Saldo retirado de ${title.trim()}`,
           date: new Date().toISOString(),
         });
@@ -214,6 +218,17 @@ export const EditAccountScreen = ({ navigation, route }: any) => {
             onChangeText={setTitle}
             placeholder="Escriba el título"
             placeholderTextColor={colors.textSecondary}
+          />
+        </View>
+
+        {/* Moneda */}
+        <View style={styles.section}>
+          <CurrencySelector
+            selectedCurrency={currency}
+            onCurrencyChange={setCurrency}
+            modalTitle="Seleccionar moneda"
+            label="Moneda de la cuenta"
+            showFullName={true}
           />
         </View>
 
@@ -324,17 +339,6 @@ export const EditAccountScreen = ({ navigation, route }: any) => {
               )}
             </TouchableOpacity>
           ))}
-        </View>
-
-        {/* Moneda */}
-        <View style={styles.section}>
-          <CurrencySelector
-            selectedCurrency={currency}
-            onCurrencyChange={setCurrency}
-            modalTitle="Seleccionar moneda"
-            label="Moneda de la cuenta"
-            showFullName={true}
-          />
         </View>
 
         {/* Límite de crédito (solo para cuentas de crédito) */}

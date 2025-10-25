@@ -8,6 +8,7 @@ import {
   Modal,
   TextInput,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../store/useAppStore';
 import { CURRENCIES } from '../components/CurrencySelector';
@@ -35,6 +36,7 @@ export const TransactionsScreen = ({ navigation }: any) => {
   const { transactions, categories, accounts, preferredCurrency } = useAppStore();
   const { rates: exchangeRates } = useExchangeRates();
   const styles = useMemo(() => createStyles(colors, borderRadius), [colors]);
+  const insets = useSafeAreaInsets();
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showMonthPicker, setShowMonthPicker] = useState(false);
@@ -230,7 +232,7 @@ export const TransactionsScreen = ({ navigation }: any) => {
         onRequestClose={() => setShowMonthPicker(false)}
       >
         <View style={styles.monthPickerOverlay}>
-          <View style={styles.monthPickerContent}>
+          <View style={[styles.monthPickerContent, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
             <View style={styles.monthPickerHeader}>
               <Text style={styles.monthPickerTitle}>Seleccionar Mes</Text>
               <TouchableOpacity onPress={() => setShowMonthPicker(false)}>

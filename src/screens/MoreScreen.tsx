@@ -77,7 +77,7 @@ const MENU_SECTIONS: MenuSection[] = [
       {
         id: 'support',
         title: 'Asistencia',
-        icon: 'help-circle',
+        icon: 'mail',
         color: '#F97316',
         action: () => {
           const email = 'info@hyped.center';

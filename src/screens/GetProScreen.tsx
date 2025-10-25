@@ -229,54 +229,6 @@ export const GetProScreen = ({ navigation }: any) => {
           </View>
         </View>
 
-        {/* FAQ Section */}
-        <View style={styles.faqSection}>
-          <Text style={styles.sectionTitle}>Preguntas frecuentes</Text>
-
-          <View style={styles.faqItem}>
-            <Text style={styles.faqQuestion}>¿Puedo cambiar de plan en cualquier momento?</Text>
-            <Text style={styles.faqAnswer}>
-              Sí, puedes cambiar o cancelar tu suscripción en cualquier momento desde tu cuenta.
-            </Text>
-          </View>
-
-          <View style={styles.faqItem}>
-            <Text style={styles.faqQuestion}>¿Hay período de prueba?</Text>
-            <Text style={styles.faqAnswer}>
-              Ofrecemos un período de prueba de 7 días gratis para que pruebes todas las funciones
-              premium.
-            </Text>
-          </View>
-
-          <View style={styles.faqItem}>
-            <Text style={styles.faqQuestion}>¿Mi suscripción se renovará automáticamente?</Text>
-            <Text style={styles.faqAnswer}>
-              Sí, tu suscripción se renovará automáticamente. Siempre puedes cancelarla antes del
-              período de renovación.
-            </Text>
-          </View>
-
-          <View style={styles.faqItem}>
-            <Text style={styles.faqQuestion}>¿Qué métodos de pago aceptan?</Text>
-            <Text style={styles.faqAnswer}>
-              Aceptamos tarjetas de crédito/débito y transferencias bancarias. Próximamente
-              agregaremos más opciones.
-            </Text>
-          </View>
-        </View>
-
-        {/* Contact Section */}
-        <View style={[styles.contactSection, { backgroundColor: colors.backgroundSecondary }]}>
-          <Text style={styles.contactTitle}>¿Tienes preguntas?</Text>
-          <Text style={styles.contactDescription}>
-            Nuestro equipo está disponible para ayudarte
-          </Text>
-          <TouchableOpacity style={[styles.contactButton, { backgroundColor: colors.primary }]}>
-            <Ionicons name="mail" size={20} color="#FFF" />
-            <Text style={styles.contactButtonText}>Contactar soporte</Text>
-          </TouchableOpacity>
-        </View>
-
         <View style={styles.bottomSpacing} />
       </ScrollView>
     </View>
@@ -443,60 +395,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     paddingHorizontal: spacing.md,
     marginVertical: spacing.lg,
   },
-  faqItem: {
-    backgroundColor: colors.backgroundSecondary,
-    borderRadius: 12,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  faqQuestion: {
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.bold,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  faqAnswer: {
-    fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
-    lineHeight: 20,
-  },
-  contactSection: {
-    marginHorizontal: spacing.md,
-    marginVertical: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  contactTitle: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  contactDescription: {
-    fontSize: typography.sizes.base,
-    color: colors.textSecondary,
-    marginBottom: spacing.lg,
-    textAlign: 'center',
-  },
-  contactButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: 10,
-    gap: spacing.md,
-    width: '100%',
-    justifyContent: 'center',
-  },
-  contactButtonText: {
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.bold,
-    color: '#FFF',
-  },
+  // contactSection styles removed
   bottomSpacing: {
     height: spacing.xl,
   },

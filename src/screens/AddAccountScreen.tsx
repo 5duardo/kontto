@@ -121,6 +121,7 @@ export const AddAccountScreen = ({ navigation, route }: any) => {
               type: 'income',
               amount: numBalance,
               categoryId: otrosIngresosCategory.id,
+              accountId,
               description: `Saldo inicial de ${title.trim()}`,
               date: new Date().toISOString(),
             });
@@ -131,6 +132,7 @@ export const AddAccountScreen = ({ navigation, route }: any) => {
           type: 'income',
           amount: numBalance,
           categoryId: otrosIngresosCategory.id,
+          accountId,
           description: `Saldo inicial de ${title.trim()}`,
           date: new Date().toISOString(),
         });
@@ -154,6 +156,17 @@ export const AddAccountScreen = ({ navigation, route }: any) => {
             onChangeText={setTitle}
             placeholder="Escriba el título"
             placeholderTextColor={colors.textSecondary}
+          />
+        </View>
+
+        {/* Moneda */}
+        <View style={styles.section}>
+          <CurrencySelector
+            selectedCurrency={currency}
+            onCurrencyChange={setCurrency}
+            modalTitle="Seleccionar moneda"
+            label="Moneda de la cuenta"
+            showFullName={true}
           />
         </View>
 
@@ -264,17 +277,6 @@ export const AddAccountScreen = ({ navigation, route }: any) => {
               )}
             </TouchableOpacity>
           ))}
-        </View>
-
-        {/* Moneda */}
-        <View style={styles.section}>
-          <CurrencySelector
-            selectedCurrency={currency}
-            onCurrencyChange={setCurrency}
-            modalTitle="Seleccionar moneda"
-            label="Moneda de la cuenta"
-            showFullName={true}
-          />
         </View>
 
         {/* Límite de crédito (solo para cuentas de crédito) */}

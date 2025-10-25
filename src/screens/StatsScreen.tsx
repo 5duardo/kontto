@@ -12,6 +12,7 @@ import { useAppStore } from '../store/useAppStore';
 import { Transaction } from '../types';
 import { spacing, typography, useTheme, borderRadius } from '../theme';
 import { Card, ProgressBar } from '../components/common';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Mapeo de símbolos de moneda
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -31,6 +32,7 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
 export const StatsScreen = () => {
   const { transactions, categories } = useAppStore();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showDetailedView, setShowDetailedView] = useState(false);
@@ -67,6 +69,31 @@ export const StatsScreen = () => {
           name: category?.name || 'Sin categoría',
           amount,
           color: category?.color || colors.primary,
+        };
+      })
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 6);
+  }, [transactions, categories]);
+
+  const incomesByCategory = useMemo(() => {
+    const incomes = transactions.filter((t) => t.type === 'income');
+    const categoryTotals: { [key: string]: number } = {};
+
+    incomes.forEach((inc) => {
+      if (categoryTotals[inc.categoryId]) {
+        categoryTotals[inc.categoryId] += inc.amount;
+      } else {
+        categoryTotals[inc.categoryId] = inc.amount;
+      }
+    });
+
+    return Object.entries(categoryTotals)
+      .map(([categoryId, amount]) => {
+        const category = categories.find((c) => c.id === categoryId);
+        return {
+          name: category?.name || 'Sin categoría',
+          amount,
+          color: category?.color || colors.income,
         };
       })
       .sort((a, b) => b.amount - a.amount)
@@ -186,6 +213,7 @@ export const StatsScreen = () => {
   const hasMonthData = selectedMonthData && (selectedMonthData.income > 0 || selectedMonthData.expense > 0);
 
   const totalExpense = expensesByCategory.reduce((sum, item) => sum + item.amount, 0);
+  const totalIncome = incomesByCategory.reduce((sum, item) => sum + item.amount, 0);
 
   const renderTransactionItem = (transaction: Transaction) => {
     const categoryColor = getCategoryColor(transaction.categoryId);
@@ -276,53 +304,41 @@ export const StatsScreen = () => {
           </View>
         )}
 
-        {/* Transactions List */}
-        {selectedMonthData && (
+        {/* Transactions list removed per request */}
+
+        {/* Incomes by Category */}
+        {hasMonthData && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Transacciones del Mes</Text>
+            <Text style={styles.sectionTitle}>Ingresos por Categoría</Text>
+            {incomesByCategory.length > 0 ? (
+              <>
+                {incomesByCategory.map((item, index) => (
+                  // @ts-ignore
+                  <React.Fragment key={`income-${index}-${item.name}`}>
+                    <Card style={styles.categoryCard}>
+                      <View style={styles.categoryRow}>
+                        <View style={styles.categoryLeft}>
+                          <View style={[styles.categoryDot, { backgroundColor: item.color }]} />
+                          <Text style={styles.categoryName}>{item.name}</Text>
+                        </View>
+                        <Text style={styles.categoryAmount}>{formatCurrency(item.amount)}</Text>
+                      </View>
+                      <ProgressBar progress={totalIncome > 0 ? item.amount / totalIncome : 0} color={item.color} />
+                      <Text style={styles.categoryPercentage}>{totalIncome > 0 ? ((item.amount / totalIncome) * 100).toFixed(1) : '0.0'}%</Text>
+                    </Card>
+                  </React.Fragment>
+                ))}
 
-            {/* Income Transactions */}
-            {transactionsByType.income.length > 0 && (
-              <View>
-                <View style={styles.transactionSection}>
-                  <Text style={styles.transactionSectionTitle}>
-                    <Ionicons name="arrow-down" size={16} color={colors.income} /> Ingresos
-                  </Text>
-                  {transactionsByType.income.map((transaction: Transaction) => (
-                    // @ts-ignore
-                    <React.Fragment key={transaction.id}>
-                      {renderTransactionItem(transaction)}
-                    </React.Fragment>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {/* Expense Transactions */}
-            {transactionsByType.expense.length > 0 && (
-              <View>
-                <View style={styles.transactionSection}>
-                  <Text style={styles.transactionSectionTitle}>
-                    <Ionicons name="arrow-up" size={16} color={colors.expense} /> Gastos
-                  </Text>
-                  {transactionsByType.expense.map((transaction: Transaction) => (
-                    // @ts-ignore
-                    <React.Fragment key={transaction.id}>
-                      {renderTransactionItem(transaction)}
-                    </React.Fragment>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {transactionsByType.income.length === 0 && transactionsByType.expense.length === 0 && (
+                <Card style={styles.totalCard}>
+                  <Text style={styles.totalLabel}>Total Ingresos</Text>
+                  <Text style={[styles.totalAmount, { color: colors.income }]}>{formatCurrency(totalIncome)}</Text>
+                </Card>
+              </>
+            ) : (
               <Card style={styles.emptyCard}>
-                <View style={styles.emptyContent}>
-                  <Ionicons name="stats-chart" size={64} color={colors.textTertiary} />
-                  <Text style={styles.emptyTitle}>Las estadísticas estarían aquí</Text>
-                  <Text style={styles.emptySubtitle}>
-                    Comienza a añadir ingresos o gastos para ver tus datos
-                  </Text>
+                <View>
+                  <Ionicons name="pie-chart-outline" size={48} color={colors.textTertiary} />
+                  <Text style={styles.emptyText}>No hay datos de ingresos</Text>
                 </View>
               </Card>
             )}
@@ -379,7 +395,7 @@ export const StatsScreen = () => {
         onRequestClose={() => setShowMonthPicker(false)}
       >
         <View style={styles.monthPickerOverlay}>
-          <View style={styles.monthPickerContent}>
+          <View style={[styles.monthPickerContent, { paddingBottom: (insets.bottom || spacing.xl) }]}>
             <View style={styles.monthPickerHeader}>
               <Text style={styles.monthPickerTitle}>Seleccionar Mes</Text>
               <TouchableOpacity onPress={() => setShowMonthPicker(false)}>
