@@ -172,29 +172,39 @@ export const DashboardScreen = ({ navigation }: any) => {
       return false;
     });
 
-    const monthlyBudgetAmount = activeBudgetsForDisplay.reduce((sum, b) => sum + b.amount, 0);
+    // Convertir presupuestos a USD para comparación consistente
+    const monthlyBudgetAmountUSD = activeBudgetsForDisplay.reduce((sum, b) => sum + convertToUSD(b.amount, b.currency, exchangeRates), 0);
 
     // Gastos que coinciden con las categorías de presupuestos activos
     const activeCategories = new Set(
       activeBudgetsForDisplay.flatMap((b) => b.categoryIds)
     );
 
-    const monthlyExpenseAmount = transactions
+    // Calcular gastos en USD (obtener moneda de la cuenta asociada)
+    const monthlyExpenseAmountUSD = transactions
       .filter((t) => {
         if (t.type !== 'expense') return false;
         const transactionMonth = new Date(t.date).toLocaleString('es-HN', { month: '2-digit', year: 'numeric' });
         // Incluir gastos del mes actual que coincidan con categorías de presupuestos activos
         return transactionMonth === currentMonth && activeCategories.has(t.categoryId);
       })
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => {
+        const account = accounts.find(a => a.id === t.accountId);
+        const accountCurrency = account?.currency || preferredCurrency;
+        return sum + convertToUSD(t.amount, accountCurrency, exchangeRates);
+      }, 0);
+
+    // Convertir a la moneda de display para visualización
+    const monthlyBudgetDisplay = convertCurrency(monthlyBudgetAmountUSD, 'USD', getDisplayInfo().currency, exchangeRates);
+    const monthlyExpenseDisplay = convertCurrency(monthlyExpenseAmountUSD, 'USD', getDisplayInfo().currency, exchangeRates);
 
     return {
       totalIncome,
       totalExpense,
       balance: displayBalance,
       transactionsBalance: totalIncome - totalExpense,
-      monthlyBudget: monthlyBudgetAmount,
-      monthlyExpense: monthlyExpenseAmount,
+      monthlyBudget: monthlyBudgetDisplay,
+      monthlyExpense: monthlyExpenseDisplay,
     };
   }, [transactions, accounts, budgets, exchangeRates, displayState, preferredCurrency, conversionCurrency]);
 

@@ -82,8 +82,6 @@ export const EditAccountScreen = ({ navigation, route }: any) => {
 
     const numBalance = parseFloat(balance) || 0;
     const numCreditLimit = accountType === 'credit' ? parseFloat(creditLimit) || 0 : undefined;
-    const oldBalance = account?.balance || 0;
-    const balanceDifference = numBalance - oldBalance;
 
     updateAccount(account.id, {
       title: title.trim(),
@@ -96,86 +94,6 @@ export const EditAccountScreen = ({ navigation, route }: any) => {
       creditLimit: numCreditLimit,
       includeInTotal,
     });
-
-    // Si hay aumento de balance, crear transacción de ingreso (sin accountId para no duplicar)
-    if (balanceDifference > 0) {
-      let otrosIngresosCategory = categories.find((c: any) => c.name === 'Otros Ingresos' && c.type === 'income');
-
-      // Si la categoría no existe, crearla
-      if (!otrosIngresosCategory) {
-        addCategory({
-          name: 'Otros Ingresos',
-          icon: 'cash',
-          color: '#06B6D4',
-          type: 'income',
-          isDefault: true,
-        });
-        // Esperar un poco para que se actualice el estado y buscar nuevamente
-        setTimeout(() => {
-          const updatedStore = useAppStore.getState();
-          otrosIngresosCategory = updatedStore.categories.find((c: any) => c.name === 'Otros Ingresos' && c.type === 'income');
-          if (otrosIngresosCategory) {
-            addTransaction({
-              type: 'income',
-              amount: balanceDifference,
-              categoryId: otrosIngresosCategory.id,
-              accountId: account.id,
-              description: `Saldo agregado a ${title.trim()}`,
-              date: new Date().toISOString(),
-            });
-          }
-        }, 100);
-      } else if (otrosIngresosCategory) {
-        addTransaction({
-          type: 'income',
-          amount: balanceDifference,
-          categoryId: otrosIngresosCategory.id,
-          accountId: account.id,
-          description: `Saldo agregado a ${title.trim()}`,
-          date: new Date().toISOString(),
-        });
-      }
-    }
-
-    // Si hay disminución de balance, crear transacción de gasto (sin accountId para no duplicar)
-    if (balanceDifference < 0) {
-      let otrosGastosCategory = categories.find((c: any) => c.name === 'Otros Gastos' && c.type === 'expense');
-
-      // Si la categoría no existe, crearla
-      if (!otrosGastosCategory) {
-        addCategory({
-          name: 'Otros Gastos',
-          icon: 'close-circle',
-          color: '#94A3B8',
-          type: 'expense',
-          isDefault: true,
-        });
-        // Esperar un poco para que se actualice el estado y buscar nuevamente
-        setTimeout(() => {
-          const updatedStore = useAppStore.getState();
-          otrosGastosCategory = updatedStore.categories.find((c: any) => c.name === 'Otros Gastos' && c.type === 'expense');
-          if (otrosGastosCategory) {
-            addTransaction({
-              type: 'expense',
-              amount: Math.abs(balanceDifference),
-              categoryId: otrosGastosCategory.id,
-              accountId: account.id,
-              description: `Saldo retirado de ${title.trim()}`,
-              date: new Date().toISOString(),
-            });
-          }
-        }, 100);
-      } else if (otrosGastosCategory) {
-        addTransaction({
-          type: 'expense',
-          amount: Math.abs(balanceDifference),
-          categoryId: otrosGastosCategory.id,
-          accountId: account.id,
-          description: `Saldo retirado de ${title.trim()}`,
-          date: new Date().toISOString(),
-        });
-      }
-    }
 
     Alert.alert('Éxito', 'Cuenta actualizada correctamente', [
       { text: 'OK', onPress: () => navigation.goBack() },

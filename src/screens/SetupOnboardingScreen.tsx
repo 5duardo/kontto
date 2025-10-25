@@ -509,18 +509,23 @@ export const SetupOnboardingScreen: React.FC<SetupOnboardingScreenProps> = ({ on
 
             {/* Navigation Buttons */}
             <View style={[styles.buttonContainer, { backgroundColor: colors.background }]}>
-                <Button
-                    title={currentStepIndex === 0 ? 'Omitir' : 'Anterior'}
-                    onPress={currentStepIndex === 0 ? onComplete : handlePrev}
-                    variant="outline"
-                    size="large"
-                />
-                <Button
-                    title={currentStepIndex === steps.length - 1 ? 'Finalizar' : 'Siguiente'}
-                    onPress={handleStepComplete}
-                    variant="solidPrimary"
-                    size="large"
-                />
+                <View style={styles.buttonWrapper}>
+                    <Button
+                        title={currentStepIndex === 0 ? 'Omitir' : 'Anterior'}
+                        onPress={currentStepIndex === 0 ? onComplete : handlePrev}
+                        variant="outline"
+                        size="large"
+                    />
+                </View>
+
+                <View style={styles.buttonWrapper}>
+                    <Button
+                        title={currentStepIndex === steps.length - 1 ? 'Finalizar' : 'Siguiente'}
+                        onPress={handleStepComplete}
+                        variant="solidPrimary"
+                        size="large"
+                    />
+                </View>
             </View>
         </SafeAreaView>
     );
@@ -810,6 +815,10 @@ const createStyles = (colors: any) =>
             paddingVertical: spacing.lg,
             borderTopWidth: 1,
             borderTopColor: colors.border,
+            justifyContent: 'space-between',
+        },
+        buttonWrapper: {
+            flex: 0.48,
         },
         modalHeader: {
             flexDirection: 'row',
