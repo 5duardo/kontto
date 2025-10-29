@@ -58,7 +58,7 @@ const ICON_COLORS = [
 ];
 
 export const AddAccountScreen = ({ navigation, route }: any) => {
-  const { addAccount, addTransaction, categories, addCategory } = useAppStore();
+  const { addAccount, addTransaction, categories, addCategory, canCreateAccount } = useAppStore();
   const { colors } = useTheme();
   const params = route?.params || {};
 
@@ -82,6 +82,15 @@ export const AddAccountScreen = ({ navigation, route }: any) => {
 
     const numBalance = parseFloat(balance) || 0;
     const numCreditLimit = accountType === 'credit' ? parseFloat(creditLimit) || 0 : undefined;
+
+    // Check plan limits
+    if (!canCreateAccount()) {
+      Alert.alert('Límite alcanzado', 'Has alcanzado el límite de cuentas gratuitas. ¿Quieres obtener Kontto Pro?', [
+        { text: 'Más tarde' },
+        { text: 'Obtener Pro', onPress: () => navigation.navigate('GetPro') },
+      ]);
+      return;
+    }
 
     // Usar generateId del store o crear uno manualmente
     const accountId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;

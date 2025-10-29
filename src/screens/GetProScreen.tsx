@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, typography, useTheme } from '../theme';
+import { useAppStore, FREE_LIMITS } from '../store/useAppStore';
+import useInAppPurchases from '../hooks/useInAppPurchases';
 
 interface ProFeature {
   id: string;
@@ -107,25 +109,38 @@ export const GetProScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
-  const handlePurchase = (planId: string) => {
-    Alert.alert(
-      'Compra de suscripción',
-      'Esta función estará disponible pronto. Gracias por tu interés en Kontto Pro.',
-      [{ text: 'OK' }]
-    );
+  // Get current counts from store to show comparison
+  const accountsCount = useAppStore(state => state.accounts.length);
+  const goalsCount = useAppStore(state => state.goals.length);
+  const budgetsCount = useAppStore(state => state.budgets.length);
+  const recurringCount = useAppStore(state => state.recurringPayments.length);
+  const isPro = useAppStore(state => state.isPro);
+
+  const { buy, restorePurchases, loading: iapLoading, products, DEFAULT_PRODUCT_IDS, error: iapError } = useInAppPurchases();
+
+  const handlePurchase = async (planId: string) => {
+    const prodId = (DEFAULT_PRODUCT_IDS as any)[planId];
+    if (!prodId) {
+      Alert.alert('Producto no encontrado', 'ID de producto no configurado para este plan.');
+      return;
+    }
+    try {
+      await buy(prodId);
+    } catch (e: any) {
+      Alert.alert('Error', String(e?.message || e));
+    }
   };
 
-  const renderFeature = (feature: ProFeature) => (
-    <View key={feature.id} style={styles.featureItem}>
-      <View style={[styles.featureIconContainer, { backgroundColor: `${colors.primary}20` }]}>
-        <Ionicons name={feature.icon as any} size={24} color={colors.primary} />
-      </View>
-      <View style={styles.featureContent}>
-        <Text style={styles.featureTitle}>{feature.title}</Text>
-        <Text style={styles.featureDescription}>{feature.description}</Text>
-      </View>
-    </View>
-  );
+  const handleRestore = async () => {
+    try {
+      await restorePurchases();
+      Alert.alert('Restaurar', 'Solicitud de restauración enviada. Revisa el historial de compras.');
+    } catch (e: any) {
+      Alert.alert('Error', String(e?.message || e));
+    }
+  };
+
+  // renderFeature removed — features are shown in the comparison table instead
 
   const renderPricingPlan = (plan: typeof PRICING_PLANS[0]) => (
     <View
@@ -147,10 +162,19 @@ export const GetProScreen = ({ navigation }: any) => {
         </View>
       )}
       <Text style={styles.planName}>{plan.name}</Text>
-      <View style={styles.priceContainer}>
-        <Text style={styles.price}>{plan.price}</Text>
-        <Text style={styles.period}>{plan.period}</Text>
-      </View>
+      {/* show price from products if available */}
+      {(() => {
+        const prodId = (DEFAULT_PRODUCT_IDS as any)[plan.id];
+        const product = products?.find(p => p.productId === prodId) as any;
+        const priceStr = product?.price || product?.priceString || product?.localizedPrice || plan.price;
+        return (
+          <View style={styles.priceContainer}>
+            <Text style={styles.price}>{priceStr}</Text>
+            <Text style={styles.period}>{plan.period}</Text>
+          </View>
+        );
+      })()}
+
       {plan.savings && (
         <Text style={[styles.savings, { color: colors.success || '#10B981' }]}>
           {plan.savings}
@@ -173,16 +197,14 @@ export const GetProScreen = ({ navigation }: any) => {
         ]}
         onPress={() => handlePurchase(plan.id)}
       >
-        <Text
-          style={[
-            styles.purchaseButtonText,
-            {
-              // Texto blanco para mejor contraste en todos los botones
-              color: '#FFFFFF',
-            },
-          ]}
-        >
-          Comprar ahora
+        <Text style={[styles.purchaseButtonText, { color: '#FFFFFF' }]}>
+          {(() => {
+            // button label prefers product price when available
+            const prodId = (DEFAULT_PRODUCT_IDS as any)[plan.id];
+            const product = products?.find(p => p.productId === prodId) as any;
+            const labelPrice = product?.price || product?.priceString || product?.localizedPrice;
+            return labelPrice ? `Comprar ${labelPrice}` : 'Comprar ahora';
+          })()}
         </Text>
       </TouchableOpacity>
     </View>
@@ -199,31 +221,122 @@ export const GetProScreen = ({ navigation }: any) => {
             Desbloquea todas las funciones premium y lleva tu gestión financiera al siguiente nivel
           </Text>
         </View>
-
-        {/* Current Plan Info */}
-        <View style={[styles.currentPlanCard, { backgroundColor: `${colors.primary}20` }]}>
-          <View style={styles.currentPlanContent}>
-            <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
-            <View style={{ flex: 1, marginLeft: spacing.md }}>
-              <Text style={styles.currentPlanTitle}>Plan Gratuito Activo</Text>
-              <Text style={styles.currentPlanDescription}>
-                Tienes acceso a todas las funciones básicas
-              </Text>
-            </View>
+        {/* Plan actual (badge con subtítulo) */}
+        <View style={[
+          styles.planBadge,
+          isPro
+            ? { backgroundColor: `${colors.success}18`, borderColor: colors.success }
+            : { backgroundColor: `${colors.primary}12`, borderColor: colors.primary },
+        ]}>
+          <Ionicons name={isPro ? 'checkmark-circle' : 'information-circle'} size={18} color={isPro ? colors.success : colors.primary} style={styles.planBadgeIcon} />
+          <View style={styles.planBadgeTextContainer}>
+            <Text style={[styles.planBadgeText, isPro ? { color: colors.success } : { color: colors.primary }]}>
+              {isPro ? 'Pro activo' : 'Plan gratuito activo'}
+            </Text>
+            <Text style={[styles.planBadgeSubText, isPro ? { color: colors.success } : { color: colors.textSecondary }]}>
+              {isPro
+                ? 'Tienes acceso a todas las funciones.'
+                : 'Mejora a Pro para disfrutar de funciones avanzadas y recursos ilimitados.'}
+            </Text>
           </View>
         </View>
 
-        {/* Features Section */}
-        <View style={styles.featuresSection}>
-          <Text style={styles.sectionTitle}>Funciones Premium</Text>
-          <View style={styles.featuresContainer}>
-            {PRO_FEATURES.map((feature) => renderFeature(feature))}
+        {/* Comparison Section: Free vs Pro (resources + premium features) */}
+        <View style={styles.comparisonSection}>
+          <Text style={styles.sectionTitle}>Comparación: Gratis vs Pro</Text>
+
+          {/* Table header */}
+          <View style={styles.tableHeader}>
+            <Text style={[styles.columnTitle, { flex: 1 }]}>Recurso / Función</Text>
+            <Text style={[styles.columnTitle, { width: 96, textAlign: 'center' }]}>Gratis</Text>
+            <Text style={[styles.columnTitle, { width: 96, textAlign: 'center' }]}>Pro</Text>
           </View>
+
+          {/* Resources rows */}
+          <View style={styles.comparisonContainer}>
+            {[
+              { key: 'accounts', label: 'Cuentas', used: accountsCount, limit: FREE_LIMITS.accounts },
+              { key: 'goals', label: 'Metas', used: goalsCount, limit: FREE_LIMITS.goals },
+              { key: 'budgets', label: 'Presupuestos', used: budgetsCount, limit: FREE_LIMITS.budgets },
+              { key: 'recurring', label: 'Pagos programados', used: recurringCount, limit: FREE_LIMITS.recurringPayments },
+            ].map((item) => {
+              const atLimit = item.used >= item.limit;
+              return (
+                <View key={item.key} style={styles.tableRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.resourceName}>{item.label}</Text>
+                  </View>
+                  <View style={[styles.cellCenter, { width: 96 }]}>
+                    <Text style={[styles.freeValue, atLimit && { color: colors.error }]}
+                    >
+                      {item.used}/{item.limit}
+                    </Text>
+                  </View>
+                  <View style={[styles.cellCenter, { width: 96 }]}>
+                    <Text style={styles.proValue}>Ilimitado</Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+
+          {/* Premium features rows */}
+          <View style={[styles.comparisonContainer, { marginTop: spacing.md }]}>
+            {PRO_FEATURES
+              .filter(f => !['unlimited', 'recurring-transactions', 'budget-tracking'].includes(f.id))
+              .map((feature) => (
+                <View key={feature.id} style={styles.tableRowFeature}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.featureName}>{feature.title}</Text>
+                  </View>
+
+                  <View style={[styles.cellCenter, { width: 96 }]}>
+                    <Text style={styles.freeValue}>—</Text>
+                  </View>
+
+                  <View style={[styles.cellCenter, { width: 96 }]}>
+                    <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                  </View>
+                </View>
+              ))}
+          </View>
+
+          {/* comparisonNote removed to keep table compact */}
         </View>
+
+        {/* Current Plan Info removed (now displayed as badge above) */}
+
+        {/* Features Section removed: premium features are displayed inside the comparison table above */}
 
         {/* Pricing Section */}
         <View style={styles.pricingSection}>
           <Text style={styles.sectionTitle}>Planes de precios</Text>
+          {/* Show IAP error banner when native module is missing */}
+          {iapError ? (
+            <View style={[styles.planStatusCard, { borderColor: colors.error, backgroundColor: `${colors.error}14` }]}>
+              <Text style={[styles.planStatusTitle, { color: colors.error }]}>Compras dentro de la app no disponibles</Text>
+              <Text style={styles.planStatusSub}>{iapError}</Text>
+            </View>
+          ) : null}
+          <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}>
+            <TouchableOpacity
+              style={[
+                styles.purchaseButton,
+                { flex: 1, backgroundColor: `${colors.primary}22`, borderWidth: 1, borderColor: colors.primary, opacity: iapError ? 0.5 : 1 },
+              ]}
+              onPress={iapError ? undefined : handleRestore}
+              disabled={!!iapError}
+            >
+              <Text style={[styles.purchaseButtonText, { color: colors.primary }]}>Restaurar compras</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.purchaseButton, { flex: 1, backgroundColor: colors.primary, opacity: iapError ? 0.6 : 1 }]}
+              onPress={iapError ? undefined : () => handlePurchase('weekly')}
+              disabled={!!iapError}
+            >
+              <Text style={[styles.purchaseButtonText, { color: '#fff' }]}>{iapLoading ? 'Procesando...' : 'Comprar semanal'}</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.pricingContainer}>
             {PRICING_PLANS.map((plan) => renderPricingPlan(plan))}
           </View>
@@ -263,27 +376,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
-  currentPlanCard: {
-    marginHorizontal: spacing.md,
-    marginVertical: spacing.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    borderRadius: 12,
-  },
-  currentPlanContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  currentPlanTitle: {
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.bold,
-    color: colors.textPrimary,
-  },
-  currentPlanDescription: {
-    fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
+  // currentPlanCard/styles removed; plan status is shown in badge above the comparison table
   featuresSection: {
     paddingHorizontal: spacing.md,
     marginVertical: spacing.lg,
@@ -398,5 +491,162 @@ const createStyles = (colors: any) => StyleSheet.create({
   // contactSection styles removed
   bottomSpacing: {
     height: spacing.xl,
+  },
+  comparisonSection: {
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: 12,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  comparisonContainer: {
+    marginTop: spacing.sm,
+    gap: spacing.sm,
+  },
+  comparisonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  resourceName: {
+    fontSize: typography.sizes.base,
+    color: colors.textPrimary,
+  },
+  resourceValues: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  resourceValue: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.bold,
+    color: colors.textSecondary,
+  },
+  proValue: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    fontWeight: typography.weights.semibold,
+  },
+  comparisonNote: {
+    marginTop: spacing.md,
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    marginTop: spacing.sm,
+  },
+  columnTitle: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    fontWeight: typography.weights.semibold,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  tableRowFeature: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  cellCenter: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  freeValue: {
+    fontSize: typography.sizes.base,
+    color: colors.textSecondary,
+  },
+  featureName: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold,
+    color: colors.textPrimary,
+  },
+  // featureDesc removed to keep comparison table compact
+  planStatusCard: {
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  planStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  planStatusTitle: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.bold,
+    color: colors.textPrimary,
+  },
+  planStatusSub: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  planStatusButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  planStatusButtonText: {
+    color: '#fff',
+    fontWeight: typography.weights.semibold,
+  },
+  planStatusSimpleWrap: {
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 12,
+    backgroundColor: 'transparent',
+    alignItems: 'flex-start',
+  },
+  planStatusSimpleText: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold,
+    color: colors.textPrimary,
+  },
+  planBadge: {
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  planBadgeIcon: {
+    marginRight: spacing.sm,
+  },
+  planBadgeTextContainer: {
+    flexDirection: 'column',
+  },
+  planBadgeText: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold,
+  },
+  planBadgeSubText: {
+    fontSize: typography.sizes.sm,
+    marginTop: spacing.xs,
   },
 });

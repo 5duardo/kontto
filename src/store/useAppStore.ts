@@ -3,6 +3,19 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Transaction, Category, Budget, Goal, RecurringPayment, Account, User } from '../types';
 
+// Free plan limits
+export const FREE_LIMITS = {
+  accounts: 3,
+  goals: 2,
+  budgets: 2,
+  recurringPayments: 2,
+  // Free users category limits by type
+  categories: {
+    income: 4,
+    expense: 9,
+  },
+};
+
 interface AppState {
   // Transactions
   transactions: Transaction[];
@@ -101,6 +114,16 @@ interface AppState {
   migrateData: () => void;
   isInitialized: boolean;
 
+  // Pro / Limits
+  isPro: boolean;
+  setPro: (value: boolean) => void;
+  // Helpers to check if user can create new resources
+  canCreateAccount: () => boolean;
+  canCreateGoal: () => boolean;
+  canCreateBudget: () => boolean;
+  canCreateRecurringPayment: () => boolean;
+  canCreateCategory: (type: 'income' | 'expense') => boolean;
+
   // Data Management
   clearAllData: () => void;
 }
@@ -167,6 +190,8 @@ export const useAppStore = create<AppState>()(
       hasCompletedSetupOnboarding: false,
       user: null,
       isLoggedIn: false,
+      // Pro plan flag
+      isPro: false,
       biometricEnabled: false,
       pinEnabled: false,
       pin: '',
@@ -370,6 +395,12 @@ export const useAppStore = create<AppState>()(
 
       // Category actions
       addCategory: (category) => {
+        // Respect free limits (check by type)
+        if (!get().canCreateCategory(category.type)) {
+          console.warn('Límite de categorías alcanzado. Actualiza a Pro para crear más.');
+          return;
+        }
+
         const newCategory: Category = {
           ...category,
           id: generateId(),
@@ -399,6 +430,12 @@ export const useAppStore = create<AppState>()(
 
       // Budget actions
       addBudget: (budget) => {
+        // Respect free limits
+        if (!get().canCreateBudget()) {
+          console.warn('Límite de presupuestos alcanzado. Actualiza a Pro para crear más.');
+          return;
+        }
+
         const now = new Date().toISOString();
         const newBudget: Budget = {
           ...budget,
@@ -483,6 +520,11 @@ export const useAppStore = create<AppState>()(
 
       // Goal actions
       addGoal: (goal) => {
+        if (!get().canCreateGoal()) {
+          console.warn('Límite de metas alcanzado. Actualiza a Pro para crear más.');
+          return;
+        }
+
         const now = new Date().toISOString();
         const newGoal: Goal = {
           ...goal,
@@ -527,6 +569,11 @@ export const useAppStore = create<AppState>()(
 
       // Recurring Payment actions
       addRecurringPayment: (payment) => {
+        if (!get().canCreateRecurringPayment()) {
+          console.warn('Límite de pagos programados alcanzado. Actualiza a Pro para crear más.');
+          return;
+        }
+
         const now = new Date().toISOString();
         const newPayment: RecurringPayment = {
           ...payment,
@@ -558,6 +605,11 @@ export const useAppStore = create<AppState>()(
 
       // Account actions
       addAccount: (account) => {
+        if (!get().canCreateAccount()) {
+          console.warn('Límite de cuentas alcanzado. Actualiza a Pro para crear más.');
+          return;
+        }
+
         const now = new Date().toISOString();
         const newAccount: Account = {
           ...account,
@@ -778,6 +830,39 @@ export const useAppStore = create<AppState>()(
 
       validatePin: (pin) => {
         return get().pin === pin;
+      },
+
+      // Pro / Limits
+      setPro: (value: boolean) => {
+        set({ isPro: value });
+      },
+
+      canCreateAccount: () => {
+        const state = get();
+        return state.isPro || state.accounts.length < FREE_LIMITS.accounts;
+      },
+
+      canCreateGoal: () => {
+        const state = get();
+        return state.isPro || state.goals.length < FREE_LIMITS.goals;
+      },
+
+      canCreateBudget: () => {
+        const state = get();
+        return state.isPro || state.budgets.length < FREE_LIMITS.budgets;
+      },
+
+      canCreateRecurringPayment: () => {
+        const state = get();
+        return state.isPro || state.recurringPayments.length < FREE_LIMITS.recurringPayments;
+      },
+
+      canCreateCategory: (type: 'income' | 'expense') => {
+        const state = get();
+        // Count total categories of the requested type (include defaults)
+        const totalCategoriesCount = state.categories.filter(c => c.type === type).length;
+        const limit = FREE_LIMITS.categories[type];
+        return state.isPro || totalCategoriesCount < limit;
       },
 
       // Initialize default data

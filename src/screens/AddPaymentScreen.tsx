@@ -36,6 +36,7 @@ export const AddPaymentScreen = ({ navigation }: any) => {
     addRecurringPayment,
     preferredCurrency,
   } = useAppStore();
+  const canCreateRecurringPayment = useAppStore(state => state.canCreateRecurringPayment);
 
   // Form states
   const [type, setType] = useState<'income' | 'expense'>('expense');
@@ -56,6 +57,14 @@ export const AddPaymentScreen = ({ navigation }: any) => {
   const handleSave = () => {
     if (!amount || !title) {
       Alert.alert('Error', 'Por favor completa los campos requeridos (monto y título)');
+      return;
+    }
+
+    if (!canCreateRecurringPayment()) {
+      Alert.alert('Límite alcanzado', 'Has alcanzado el límite de pagos programados gratuitos. ¿Quieres obtener Kontto Pro?', [
+        { text: 'Más tarde' },
+        { text: 'Obtener Pro', onPress: () => navigation.navigate('GetPro') },
+      ]);
       return;
     }
 

@@ -57,6 +57,7 @@ const ICON_COLORS = [
 
 export const AddGoalScreen = ({ navigation }: any) => {
   const addGoal = useAppStore((state) => state.addGoal);
+  const canCreateGoal = useAppStore((state) => state.canCreateGoal);
   const preferredCurrency = useAppStore((state) => state.preferredCurrency);
   const { colors } = useTheme();
 
@@ -88,6 +89,14 @@ export const AddGoalScreen = ({ navigation }: any) => {
 
     if (numCurrent > numTarget) {
       Alert.alert('Error', 'El saldo actual no puede ser mayor al objetivo');
+      return;
+    }
+
+    if (!canCreateGoal()) {
+      Alert.alert('Límite alcanzado', 'Has alcanzado el límite de metas gratuitas. ¿Quieres obtener Kontto Pro?', [
+        { text: 'Más tarde' },
+        { text: 'Obtener Pro', onPress: () => navigation.navigate('GetPro') },
+      ]);
       return;
     }
 

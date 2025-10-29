@@ -41,6 +41,7 @@ export const CategoriesScreen = ({ navigation }: any) => {
   const addCategory = useAppStore((state) => state.addCategory);
   const updateCategory = useAppStore((state) => state.updateCategory);
   const deleteCategory = useAppStore((state) => state.deleteCategory);
+  const canCreateCategory = useAppStore((state) => state.canCreateCategory);
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -48,6 +49,19 @@ export const CategoriesScreen = ({ navigation }: any) => {
   const expenseCategories = categories.filter((c) => c.type === 'expense');
 
   const openAddModal = (type: 'income' | 'expense') => {
+    // Check free limits before opening
+    if (!canCreateCategory(type)) {
+      Alert.alert(
+        'Límite alcanzado',
+        'Has alcanzado el límite de categorías del plan gratuito. Actualiza a Pro para crear más.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Obtener Pro', onPress: () => navigation.navigate('GetPro') },
+        ]
+      );
+      return;
+    }
+
     setCategoryName('');
     setSelectedIcon('cart');
     setSelectedColor('#10B981');
@@ -68,6 +82,19 @@ export const CategoriesScreen = ({ navigation }: any) => {
   const handleSaveCategory = () => {
     if (!categoryName.trim()) {
       Alert.alert('Error', 'El nombre de la categoría no puede estar vacío');
+      return;
+    }
+
+    // Check again in case the limit changed while modal was open
+    if (!editingCategory && !canCreateCategory(categoryType)) {
+      Alert.alert(
+        'Límite alcanzado',
+        'Has alcanzado el límite de categorías del plan gratuito. Actualiza a Pro para crear más.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Obtener Pro', onPress: () => navigation.navigate('GetPro') },
+        ]
+      );
       return;
     }
 

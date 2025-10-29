@@ -34,6 +34,7 @@ export const BudgetsScreen = ({ navigation }: any) => {
     categories,
     transactions,
     addBudget,
+    canCreateBudget,
     updateBudget,
     deleteBudget,
     preferredCurrency,
@@ -114,6 +115,14 @@ export const BudgetsScreen = ({ navigation }: any) => {
         endDate: endDate.toISOString(),
       });
     } else {
+      if (!canCreateBudget()) {
+        Alert.alert('Límite alcanzado', 'Has alcanzado el límite de presupuestos gratuitos. ¿Quieres obtener Kontto Pro?', [
+          { text: 'Más tarde' },
+          { text: 'Obtener Pro', onPress: () => navigation.navigate('GetPro') },
+        ]);
+        return;
+      }
+
       addBudget({
         categoryIds: selectedCategoryIds,
         amount: parseFloat(amount),
