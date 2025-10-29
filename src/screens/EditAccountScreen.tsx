@@ -83,17 +83,67 @@ export const EditAccountScreen = ({ navigation, route }: any) => {
     const numBalance = parseFloat(balance) || 0;
     const numCreditLimit = accountType === 'credit' ? parseFloat(creditLimit) || 0 : undefined;
 
-    updateAccount(account.id, {
+    // Si el saldo cambió, en vez de sobrescribir directamente el balance, creamos
+    // una transacción de ajuste que refleje la diferencia. Así queda rastro
+    // (audit trail) y evitamos aplicar el cambio dos veces.
+    const originalBalance = account?.balance || 0;
+    const diff = numBalance - originalBalance;
+
+    const updatedAccountFields: any = {
       title: title.trim(),
       icon,
       color: iconColor,
       description: description.trim() || undefined,
       type: accountType,
       currency,
-      balance: numBalance,
       creditLimit: numCreditLimit,
       includeInTotal,
-    });
+    };
+
+    if (diff !== 0) {
+      // Actualizar los metadatos de la cuenta sin tocar el balance directamente
+      updateAccount(account.id, updatedAccountFields);
+
+      // Preparar transacción de ajuste
+      const adjustmentType: any = diff > 0 ? 'income' : 'expense';
+      const amount = Math.abs(diff);
+
+      // Buscar una categoría de ajuste existente (no queremos crear muchas duplicadas)
+      let adjustmentCategory = categories.find(
+        (c) => c.name === 'Ajuste de saldo' && c.type === adjustmentType
+      );
+
+      // Si no existe, crearla y obtener su id desde el estado inmediatamente
+      if (!adjustmentCategory) {
+        addCategory({
+          name: 'Ajuste de saldo',
+          icon: 'swap-vertical',
+          color: '#6B7280',
+          type: adjustmentType,
+          isDefault: false,
+        });
+
+        // Obtener la categoría recién creada desde el estado global
+        const newCats = useAppStore.getState().categories;
+        adjustmentCategory = newCats.find(
+          (c) => c.name === 'Ajuste de saldo' && c.type === adjustmentType
+        );
+      }
+
+      const categoryId = adjustmentCategory?.id || 'adjustment';
+
+      addTransaction({
+        type: adjustmentType,
+        amount,
+        categoryId,
+        accountId: account.id,
+        description: `Ajuste de saldo - ${account.title}`,
+        date: new Date().toISOString(),
+      });
+    } else {
+      // Sin cambio en saldo: actualizar la cuenta incluyendo el campo balance (sin efecto)
+      updateAccount(account.id, { ...updatedAccountFields, balance: numBalance });
+    }
 
     Alert.alert('Éxito', 'Cuenta actualizada correctamente', [
       { text: 'OK', onPress: () => navigation.goBack() },

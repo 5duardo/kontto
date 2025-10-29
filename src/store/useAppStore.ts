@@ -42,6 +42,8 @@ interface AppState {
   addAccount: (account: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateAccount: (id: string, account: Partial<Account>) => void;
   deleteAccount: (id: string) => void;
+  // Reorder accounts (persist the new accounts array order)
+  reorderAccounts: (accounts: Account[]) => void;
   transferMoney: (params: {
     sourceAccountId: string;
     destinationAccountId: string;
@@ -582,6 +584,11 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           accounts: state.accounts.filter((a) => a.id !== id),
         }));
+      },
+
+      // Replace the accounts array with a new order (used by drag-and-drop)
+      reorderAccounts: (newAccounts) => {
+        set(() => ({ accounts: newAccounts }));
       },
 
       transferMoney: ({ sourceAccountId, destinationAccountId, amount, description }) => {

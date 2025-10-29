@@ -68,12 +68,13 @@ const convertToBase = (amount: number, currency: string, rates: Record<string, n
 
 export const DashboardScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
-  const { transactions, goals, accounts, budgets, recurringPayments, categories, initializeDefaultData, isInitialized, preferredCurrency, conversionCurrency, updateAccount } = useAppStore();
+  const { transactions, goals, accounts, budgets, recurringPayments, categories, initializeDefaultData, isInitialized, preferredCurrency, conversionCurrency, updateAccount, reorderAccounts } = useAppStore();
   const { rates: exchangeRates, isLoading: ratesLoading } = useExchangeRates();
   const [activeTab, setActiveTab] = useState<'cuentas' | 'total'>('cuentas');
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [archivedExpanded, setArchivedExpanded] = useState(false);
+  const [activeReorderId, setActiveReorderId] = useState<string | null>(null);
 
   // Ciclo de estados: 'base' → 'conversion' → 'hidden' → 'base'
   const [displayState, setDisplayState] = useState<'base' | 'conversion' | 'hidden'>('base');
@@ -107,6 +108,26 @@ export const DashboardScreen = ({ navigation }: any) => {
       }
     });
   }, []);
+
+  // Mover cuenta arriba/abajo en la lista de cuentas no archivadas
+  const handleMoveAccount = (accountId: string, delta: number) => {
+    const active = accounts.filter(a => !a.isArchived);
+    const idx = active.findIndex(a => a.id === accountId);
+    if (idx === -1) return;
+    const newIdx = idx + delta;
+    if (newIdx < 0 || newIdx >= active.length) return;
+
+    const newActive = [...active];
+    const [item] = newActive.splice(idx, 1);
+    newActive.splice(newIdx, 0, item);
+
+    // Mantener las archivadas al final en su orden actual
+    const archived = accounts.filter(a => a.isArchived);
+    const newOrder = [...newActive, ...archived];
+
+    // Persistir en el store
+    reorderAccounts(newOrder);
+  };
 
   // Obtener moneda y visibilidad según estado
   const getDisplayInfo = () => {
@@ -505,19 +526,21 @@ export const DashboardScreen = ({ navigation }: any) => {
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>Cuentas</Text>
-                  {!getDisplayInfo().isHidden ? (
-                    <Text style={styles.sectionBalance}>
-                      {(() => {
-                        const totalUSD = accounts
-                          .filter(a => a.includeInTotal && !a.isArchived)
-                          .reduce((sum, a) => sum + convertToUSD(a.balance, a.currency, exchangeRates), 0);
-                        const totalDisplay = convertCurrency(totalUSD, 'USD', getDisplayInfo().currency, exchangeRates);
-                        return formatCurrency(totalDisplay, getDisplayInfo().currency);
-                      })()}
-                    </Text>
-                  ) : (
-                    <Text style={styles.sectionBalance}>••••••</Text>
-                  )}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                    {!getDisplayInfo().isHidden ? (
+                      <Text style={styles.sectionBalance}>
+                        {(() => {
+                          const totalUSD = accounts
+                            .filter(a => a.includeInTotal && !a.isArchived)
+                            .reduce((sum, a) => sum + convertToUSD(a.balance, a.currency, exchangeRates), 0);
+                          const totalDisplay = convertCurrency(totalUSD, 'USD', getDisplayInfo().currency, exchangeRates);
+                          return formatCurrency(totalDisplay, getDisplayInfo().currency);
+                        })()}
+                      </Text>
+                    ) : (
+                      <Text style={styles.sectionBalance}>••••••</Text>
+                    )}
+                  </View>
                 </View>
 
                 {accounts.filter(a => !a.isArchived).length === 0 ? (
@@ -527,13 +550,23 @@ export const DashboardScreen = ({ navigation }: any) => {
                     <Text style={styles.emptySubtext}>Agrega tu primera cuenta financiera</Text>
                   </View>
                 ) : (
+                  // Modo normal: mostrar lista de cuentas; si estamos en reorderMode mostrar controles subir/bajar
                   accounts
                     .filter(a => !a.isArchived)
-                    .map((account) => (
+                    .map((account, index, arr) => (
                       <TouchableOpacity
                         key={account.id}
                         style={styles.accountCard}
-                        onPress={() => handleAccountPress(account)}
+                        onPress={() => {
+                          // Si los controles de reorden están visibles, ocultarlos al tocar
+                          if (activeReorderId) {
+                            setActiveReorderId(null);
+                            return;
+                          }
+                          handleAccountPress(account);
+                        }}
+                        onLongPress={() => setActiveReorderId(account.id)}
+                        activeOpacity={0.7}
                       >
                         <View style={styles.accountLeft}>
                           <View style={[styles.accountIcon, { backgroundColor: `${account.color}33` }]}>
@@ -559,6 +592,35 @@ export const DashboardScreen = ({ navigation }: any) => {
                             </View>
                           </View>
                         </View>
+
+                        {activeReorderId === account.id && (
+                          <View style={styles.reorderControls}>
+                            <TouchableOpacity
+                              onPress={() => handleMoveAccount(account.id, -1)}
+                              disabled={index === 0}
+                              style={[
+                                styles.reorderButton,
+                                index === 0 && { opacity: 0.4 },
+                                { transform: [{ translateY: -4 }] }, // subir un poco la flecha hacia arriba
+                              ]}
+                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            >
+                              <Ionicons name="chevron-up" size={24} color={colors.primary} style={styles.reorderIcon} />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              onPress={() => handleMoveAccount(account.id, 1)}
+                              disabled={index === arr.length - 1}
+                              style={[
+                                styles.reorderButton,
+                                index === arr.length - 1 && { opacity: 0.4 },
+                              ]}
+                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            >
+                              <Ionicons name="chevron-down" size={24} color={colors.primary} style={styles.reorderIcon} />
+                            </TouchableOpacity>
+                          </View>
+                        )}
                       </TouchableOpacity>
                     ))
                 )}
@@ -1013,6 +1075,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
     padding: spacing.md,
+    paddingRight: spacing.lg * 2,
     borderRadius: 12,
     marginBottom: spacing.sm,
   },
@@ -1373,4 +1436,23 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: colors.textSecondary,
     fontWeight: typography.weights.medium as any,
   },
+  reorderControls: {
+    position: 'absolute',
+    right: spacing.md,
+    top: '50%',
+    transform: [{ translateY: -20 }],
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reorderButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'visible',
+  },
+  reorderIcon: {},
 });
