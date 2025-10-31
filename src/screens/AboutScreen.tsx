@@ -24,7 +24,7 @@ export const AboutScreen = ({ navigation }: any) => {
             <Ionicons name="wallet" size={64} color={colors.primary} />
           </View>
           <Text style={styles.appName}>Kontto</Text>
-          <Text style={styles.version}>Versión 1.0.0</Text>
+          <Text style={styles.version}>Versión 30.10.25</Text>
         </View>
 
         {/* Descripción */}

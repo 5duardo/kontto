@@ -97,7 +97,7 @@ const MENU_SECTIONS: MenuSection[] = [
       },
       {
         id: 'team',
-        title: 'Acerca de nuestro equipo',
+        title: 'Acerca de Kontto',
         icon: 'people',
         color: '#EC4899',
         screen: 'About',
