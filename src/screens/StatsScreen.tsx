@@ -331,14 +331,14 @@ export const StatsScreen = () => {
             </Text>
           </View>
         </View>
-        <Text
-          style={[
-            styles.transactionAmount,
-            { color: transaction.type === 'income' ? colors.income : colors.expense },
-          ]}
-        >
-          {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
-        </Text>
+        <View style={styles.transactionRight}>
+          <Text style={[styles.transactionSign, { color: transaction.type === 'income' ? colors.income : colors.expense }]}>
+            {transaction.type === 'income' ? '+' : '-'}
+          </Text>
+          <Text style={[styles.transactionAmount, { color: transaction.type === 'income' ? colors.income : colors.expense }]}>
+            {formatCurrency(transaction.amount)}
+          </Text>
+        </View>
       </View>
     );
   };
@@ -423,7 +423,7 @@ export const StatsScreen = () => {
                   <View>
                     <Text style={styles.summaryLabel}>Ingresos</Text>
                     <Text style={[styles.summaryValue, { color: colors.income }]}>
-                      {formatCurrency(selectedMonthData.income)}
+                      {formatCurrency(displayTotalIncome)}
                     </Text>
                   </View>
                 </View>
@@ -437,7 +437,7 @@ export const StatsScreen = () => {
                   <View>
                     <Text style={styles.summaryLabel}>Gastos</Text>
                     <Text style={[styles.summaryValue, { color: colors.expense }]}>
-                      {formatCurrency(selectedMonthData.expense)}
+                      {formatCurrency(displayTotalExpense)}
                     </Text>
                   </View>
                 </View>
@@ -485,7 +485,7 @@ export const StatsScreen = () => {
                 ))}
 
                 <Card style={styles.totalCard}>
-                  <Text style={styles.totalLabel}>{selectedPeriod ? 'Total Ingresos (Periodo)' : 'Total Ingresos'}</Text>
+                  <Text style={styles.totalLabel}>Total Ingresos</Text>
                   <Text style={[styles.totalAmount, { color: colors.income }]}>{formatCurrency(displayTotalIncome)}</Text>
                 </Card>
               </>
@@ -524,7 +524,7 @@ export const StatsScreen = () => {
                 ))}
 
                 <Card style={styles.totalCard}>
-                  <Text style={styles.totalLabel}>{selectedPeriod ? 'Total Gastado (Periodo)' : 'Total Gastado'}</Text>
+                  <Text style={styles.totalLabel}>Total Gastado</Text>
                   <Text style={styles.totalAmount}>{formatCurrency(displayTotalExpense)}</Text>
                 </Card>
               </>
@@ -642,12 +642,15 @@ const createStyles = (colors: any) =>
       marginBottom: spacing.md,
     },
     summaryCard: {
-      padding: spacing.lg,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      marginBottom: spacing.md,
+      // mantener fondo del Card por defecto
     },
     summaryRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: spacing.md,
+      marginBottom: spacing.sm,
     },
     summaryItem: {
       flex: 1,
@@ -656,9 +659,9 @@ const createStyles = (colors: any) =>
       gap: spacing.md,
     },
     summaryIconContainer: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: colors.backgroundTertiary,
       justifyContent: 'center',
       alignItems: 'center',
@@ -674,7 +677,7 @@ const createStyles = (colors: any) =>
     },
     divider: {
       width: 1,
-      height: 48,
+      height: 40,
       backgroundColor: colors.border,
       marginHorizontal: spacing.md,
     },
@@ -739,6 +742,15 @@ const createStyles = (colors: any) =>
     transactionAmount: {
       fontSize: typography.sizes.base,
       fontWeight: typography.weights.bold,
+    },
+    transactionRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    transactionSign: {
+      fontSize: typography.sizes.sm,
+      fontWeight: typography.weights.bold,
+      marginRight: spacing.xs,
     },
     categoryCard: {
       marginBottom: spacing.md,
