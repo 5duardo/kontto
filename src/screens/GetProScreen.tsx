@@ -10,7 +10,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, typography, useTheme } from '../theme';
 import { useAppStore, FREE_LIMITS } from '../store/useAppStore';
-import useInAppPurchases from '../hooks/useInAppPurchases';
 
 interface ProFeature {
   id: string;
@@ -70,40 +69,7 @@ const PRO_FEATURES: ProFeature[] = [
   },
 ];
 
-const PRICING_PLANS = [
-  {
-    id: 'weekly',
-    name: 'Semanal',
-    price: '$0.99',
-    period: '/semana',
-    savings: null,
-    badge: null,
-  },
-  {
-    id: 'monthly',
-    name: 'Mensual',
-    price: '$2.99',
-    period: '/mes',
-    savings: null,
-    badge: null,
-  },
-  {
-    id: 'annual',
-    name: 'Anual',
-    price: '$19.99',
-    period: '/año',
-    savings: null,
-    badge: 'popular',
-  },
-  {
-    id: 'lifetime',
-    name: 'Para siempre',
-    price: '$39.99',
-    period: 'pago único',
-    savings: 'Mejor valor',
-    badge: 'best',
-  },
-];
+// Pricing is intentionally removed for demo mode — use the toggle below to enable/disable Pro locally
 
 export const GetProScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
@@ -116,101 +82,14 @@ export const GetProScreen = ({ navigation }: any) => {
   const recurringCount = useAppStore(state => state.recurringPayments.length);
   const isPro = useAppStore(state => state.isPro);
 
-  const { buy, restorePurchases, loading: iapLoading, products, DEFAULT_PRODUCT_IDS, error: iapError } = useInAppPurchases();
-  // for debugging: last purchases payload
-  const { lastPurchases } = useInAppPurchases() as any;
-
-  const handlePurchase = async (planId: string) => {
-    const prodId = (DEFAULT_PRODUCT_IDS as any)[planId];
-    if (!prodId) {
-      Alert.alert('Producto no encontrado', 'ID de producto no configurado para este plan.');
-      return;
-    }
-    try {
-      await buy(prodId);
-    } catch (e: any) {
-      Alert.alert('Error', String(e?.message || e));
-    }
-  };
-
-  const handleRestore = async () => {
-    try {
-      await restorePurchases();
-      Alert.alert('Restaurar', 'Solicitud de restauración enviada. Revisa el historial de compras.');
-    } catch (e: any) {
-      Alert.alert('Error', String(e?.message || e));
-    }
+  const setPro = useAppStore(state => state.setPro);
+  // Toggle Pro flag locally for demo: this does not perform any native purchase
+  const handleSetPro = (value: boolean) => {
+    setPro(value);
+    Alert.alert(value ? 'Pro habilitado (demo)' : 'Pro deshabilitado');
   };
 
   // renderFeature removed — features are shown in the comparison table instead
-
-  const renderPricingPlan = (plan: typeof PRICING_PLANS[0]) => (
-    <View
-      key={plan.id}
-      style={[
-        styles.pricingCard,
-        plan.badge === 'popular' && { borderColor: colors.primary, borderWidth: 2 },
-        plan.badge === 'best' && { borderColor: '#10B981', borderWidth: 2 },
-      ]}
-    >
-      {plan.badge === 'popular' && (
-        <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-          <Text style={styles.badgeText}>MÁS POPULAR</Text>
-        </View>
-      )}
-      {plan.badge === 'best' && (
-        <View style={[styles.badge, { backgroundColor: '#10B981' }]}>
-          <Text style={styles.badgeText}>MEJOR VALOR</Text>
-        </View>
-      )}
-      <Text style={styles.planName}>{plan.name}</Text>
-      {/* show price from products if available */}
-      {(() => {
-        const prodId = (DEFAULT_PRODUCT_IDS as any)[plan.id];
-        const product = products?.find(p => p.productId === prodId) as any;
-        const priceStr = product?.price || product?.priceString || product?.localizedPrice || plan.price;
-        return (
-          <View style={styles.priceContainer}>
-            <Text style={styles.price}>{priceStr}</Text>
-            <Text style={styles.period}>{plan.period}</Text>
-          </View>
-        );
-      })()}
-
-      {plan.savings && (
-        <Text style={[styles.savings, { color: colors.success || '#10B981' }]}>
-          {plan.savings}
-        </Text>
-      )}
-      <TouchableOpacity
-        style={[
-          styles.purchaseButton,
-          {
-            // Planes con badge mantienen su color; planes sin badge usan un fondo sutil con primary
-            backgroundColor:
-              plan.badge === 'popular'
-                ? colors.primary
-                : plan.badge === 'best'
-                  ? '#10B981'
-                  : `${colors.primary}22`,
-            borderWidth: plan.badge ? 0 : 1,
-            borderColor: plan.badge ? 'transparent' : colors.primary,
-          },
-        ]}
-        onPress={() => handlePurchase(plan.id)}
-      >
-        <Text style={[styles.purchaseButtonText, { color: '#FFFFFF' }]}>
-          {(() => {
-            // button label prefers product price when available
-            const prodId = (DEFAULT_PRODUCT_IDS as any)[plan.id];
-            const product = products?.find(p => p.productId === prodId) as any;
-            const labelPrice = product?.price || product?.priceString || product?.localizedPrice;
-            return labelPrice ? `Comprar ${labelPrice}` : 'Comprar ahora';
-          })()}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
 
   return (
     <View style={styles.container}>
@@ -310,67 +189,25 @@ export const GetProScreen = ({ navigation }: any) => {
 
         {/* Features Section removed: premium features are displayed inside the comparison table above */}
 
-        {/* Pricing Section */}
+        {/* Demo Pro Toggle Section: enable/disable Pro locally (no native purchases) */}
         <View style={styles.pricingSection}>
-          <Text style={styles.sectionTitle}>Planes de precios</Text>
-          {/* Show IAP error banner when native module is missing */}
-          {iapError ? (
-            <View style={[styles.planStatusCard, { borderColor: colors.error, backgroundColor: `${colors.error}14` }]}>
-              <Text style={[styles.planStatusTitle, { color: colors.error }]}>Compras dentro de la app no disponibles</Text>
-              <Text style={styles.planStatusSub}>{iapError}</Text>
+          <Text style={styles.sectionTitle}>Pro (modo demo)</Text>
+          <View style={styles.planStatusSimpleWrap}>
+            <Text style={styles.planStatusSimpleText}>Activa o desactiva Pro para demo. Esto no realiza compras reales.</Text>
+            <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm }}>
+              <TouchableOpacity
+                style={[styles.purchaseButton, { flex: 1, backgroundColor: isPro ? colors.error : colors.primary, marginRight: spacing.sm }]}
+                onPress={() => handleSetPro(false)}
+              >
+                <Text style={[styles.purchaseButtonText, { color: '#fff' }]}>Deshabilitar Pro</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.purchaseButton, { flex: 1, backgroundColor: isPro ? colors.primary : `${colors.primary}22`, borderWidth: 1, borderColor: colors.primary }]}
+                onPress={() => handleSetPro(true)}
+              >
+                <Text style={[styles.purchaseButtonText, { color: isPro ? '#fff' : colors.primary }]}>{isPro ? 'Pro activo' : 'Habilitar Pro (demo)'}</Text>
+              </TouchableOpacity>
             </View>
-          ) : null}
-          <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}>
-            <TouchableOpacity
-              style={[
-                styles.purchaseButton,
-                { flex: 1, backgroundColor: `${colors.primary}22`, borderWidth: 1, borderColor: colors.primary, opacity: iapError ? 0.5 : 1 },
-              ]}
-              onPress={iapError ? undefined : handleRestore}
-              disabled={!!iapError}
-            >
-              <Text style={[styles.purchaseButtonText, { color: colors.primary }]}>Restaurar compras</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.purchaseButton, { flex: 1, backgroundColor: colors.primary, opacity: iapError ? 0.6 : 1 }]}
-              onPress={iapError ? undefined : () => handlePurchase('weekly')}
-              disabled={!!iapError}
-            >
-              <Text style={[styles.purchaseButtonText, { color: '#fff' }]}>{iapLoading ? 'Procesando...' : 'Comprar semanal'}</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.pricingContainer}>
-            {PRICING_PLANS.map((plan) => renderPricingPlan(plan))}
-          </View>
-
-          {/* Debug: show fetched products and last purchases (visible only in dev) */}
-          <View style={{ marginTop: spacing.md }}>
-            <Text style={[styles.sectionTitle, { fontSize: 16 }]}>Debug IAP</Text>
-            <Text style={{ color: colors.textSecondary, marginTop: spacing.xs }}>Productos cargados: {products?.length ?? 0}</Text>
-            {products && products.length > 0 && (
-              <View style={{ marginTop: spacing.sm }}>
-                {products.map((p: any) => (
-                  <View key={p.productId} style={{ paddingVertical: 6 }}>
-                    <Text style={{ color: colors.textPrimary }}>{p.productId} — {p.title || p.description}</Text>
-                    <Text style={{ color: colors.textSecondary }}>{p.price || p.priceString || p.localizedPrice}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            <Text style={{ color: colors.textSecondary, marginTop: spacing.md }}>Últimas transacciones:</Text>
-            {lastPurchases ? (
-              <View style={{ marginTop: spacing.sm }}>
-                {lastPurchases.map((t: any, i: number) => (
-                  <View key={i} style={{ paddingVertical: 6 }}>
-                    <Text style={{ color: colors.textPrimary }}>{t.productId || t.transactionId}</Text>
-                    <Text style={{ color: colors.textSecondary }}>{JSON.stringify(t)}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <Text style={{ color: colors.textSecondary }}>— Ninguna</Text>
-            )}
           </View>
         </View>
 
