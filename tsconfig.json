@@ -1,5 +1,6 @@
 {
-  "extends": "expo/tsconfig.base",
+  // Use the local expo base config file so editors/TS server can resolve it reliably
+  "extends": "./node_modules/expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
     "baseUrl": ".",

@@ -18,6 +18,7 @@ const useInAppPurchases = (productIds: string[] = Object.values(DEFAULT_PRODUCT_
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [lastPurchases, setLastPurchases] = useState<any[] | null>(null);
     const listenerAttached = useRef(false);
 
     useEffect(() => {
@@ -55,6 +56,9 @@ const useInAppPurchases = (productIds: string[] = Object.values(DEFAULT_PRODUCT_
                 if (!listenerAttached.current) {
                     InAppPurchases.setPurchaseListener((payload: any) => {
                         const { results, errorCode } = payload || {};
+                        if (results && results.length) {
+                            setLastPurchases(results);
+                        }
                         // results: array of purchases
                         if (results && results.length) {
                             results.forEach(async (purchase: any) => {
@@ -159,6 +163,7 @@ const useInAppPurchases = (productIds: string[] = Object.values(DEFAULT_PRODUCT_
         products,
         loading,
         error,
+        lastPurchases,
         buy,
         refreshProducts,
         restorePurchases,

@@ -46,7 +46,7 @@ import type { Account, Goal, RecurringPayment } from '@types';
 // Navigation types
 export type RootTabParamList = {
   Accounts: undefined;
-  Categories: undefined;
+  Transactions: undefined;
   AddTransactionFAB: undefined;
   Stats: undefined;
   More: undefined;
@@ -54,6 +54,7 @@ export type RootTabParamList = {
 
 export type RootStackParamList = {
   Main: undefined;
+  Categories: undefined;
   AddTransaction: { transactionId?: string; type?: 'income' | 'expense'; accountId?: string } | undefined;
   AddAccount: undefined;
   EditAccount: { account: Account } | undefined;
@@ -123,8 +124,8 @@ const TabNavigator = () => {
 
           if (route.name === 'Accounts') {
             iconName = focused ? 'wallet' : 'wallet-outline';
-          } else if (route.name === 'Categories') {
-            iconName = focused ? 'grid' : 'grid-outline';
+          } else if (route.name === 'Transactions') {
+            iconName = focused ? 'receipt' : 'receipt-outline';
           } else if (route.name === 'AddTransactionFAB') {
             return <FABButton size={size} />;
           } else if (route.name === 'Stats') {
@@ -140,8 +141,8 @@ const TabNavigator = () => {
 
           if (route.name === 'Accounts') {
             label = 'Inicio';
-          } else if (route.name === 'Categories') {
-            label = 'Categorías';
+          } else if (route.name === 'Transactions') {
+            label = 'Transacciones';
           } else if (route.name === 'AddTransactionFAB') {
             return null;
           } else if (route.name === 'Stats') {
@@ -151,7 +152,18 @@ const TabNavigator = () => {
           }
 
           return (
-            <Text style={{ fontSize: typography.sizes.xs, fontWeight: typography.weights.medium, color }}>
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              style={{
+                fontSize: 10,
+                lineHeight: 12,
+                fontWeight: typography.weights.medium,
+                color,
+                maxWidth: 80,
+                textAlign: 'center',
+              }}
+            >
               {label}
             </Text>
           );
@@ -162,14 +174,20 @@ const TabNavigator = () => {
           backgroundColor: colors.backgroundSecondary,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          height: 70 + insets.bottom,
-          paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
-          paddingTop: 8,
+          height: 60 + insets.bottom,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 6,
+          paddingTop: 6,
         },
         tabBarLabelStyle: {
-          fontSize: typography.sizes.xs,
+          fontSize: 10,
           fontWeight: typography.weights.medium,
-          marginTop: 4,
+          marginTop: 2,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 4,
+        },
+        tabBarIconStyle: {
+          marginBottom: 2,
         },
         headerStyle: {
           backgroundColor: colors.background,
@@ -193,9 +211,9 @@ const TabNavigator = () => {
       />
       {/* @ts-ignore */}
       <Tab.Screen
-        name="Categories"
-        component={CategoriesScreen}
-        options={{ title: 'Gestionar Categorías' }}
+        name="Transactions"
+        component={TransactionsScreen}
+        options={{ title: 'Transacciones' }}
       />
       {/* Central Floating Action Button */}
       {/* @ts-ignore */}
@@ -540,6 +558,18 @@ export const AppNavigator = () => {
           component={TransactionsScreen}
           options={({ navigation }) => ({
             title: 'Transacciones',
+            headerLeft: () => (
+              <TouchableOpacity onPress={() => navigation.goBack()}>
+                <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+              </TouchableOpacity>
+            ),
+          })}
+        />
+        <Stack.Screen
+          name="Categories"
+          component={CategoriesScreen}
+          options={({ navigation }) => ({
+            title: 'Categorías',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
                 <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />

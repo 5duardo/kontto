@@ -117,6 +117,8 @@ export const GetProScreen = ({ navigation }: any) => {
   const isPro = useAppStore(state => state.isPro);
 
   const { buy, restorePurchases, loading: iapLoading, products, DEFAULT_PRODUCT_IDS, error: iapError } = useInAppPurchases();
+  // for debugging: last purchases payload
+  const { lastPurchases } = useInAppPurchases() as any;
 
   const handlePurchase = async (planId: string) => {
     const prodId = (DEFAULT_PRODUCT_IDS as any)[planId];
@@ -339,6 +341,36 @@ export const GetProScreen = ({ navigation }: any) => {
           </View>
           <View style={styles.pricingContainer}>
             {PRICING_PLANS.map((plan) => renderPricingPlan(plan))}
+          </View>
+
+          {/* Debug: show fetched products and last purchases (visible only in dev) */}
+          <View style={{ marginTop: spacing.md }}>
+            <Text style={[styles.sectionTitle, { fontSize: 16 }]}>Debug IAP</Text>
+            <Text style={{ color: colors.textSecondary, marginTop: spacing.xs }}>Productos cargados: {products?.length ?? 0}</Text>
+            {products && products.length > 0 && (
+              <View style={{ marginTop: spacing.sm }}>
+                {products.map((p: any) => (
+                  <View key={p.productId} style={{ paddingVertical: 6 }}>
+                    <Text style={{ color: colors.textPrimary }}>{p.productId} — {p.title || p.description}</Text>
+                    <Text style={{ color: colors.textSecondary }}>{p.price || p.priceString || p.localizedPrice}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <Text style={{ color: colors.textSecondary, marginTop: spacing.md }}>Últimas transacciones:</Text>
+            {lastPurchases ? (
+              <View style={{ marginTop: spacing.sm }}>
+                {lastPurchases.map((t: any, i: number) => (
+                  <View key={i} style={{ paddingVertical: 6 }}>
+                    <Text style={{ color: colors.textPrimary }}>{t.productId || t.transactionId}</Text>
+                    <Text style={{ color: colors.textSecondary }}>{JSON.stringify(t)}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={{ color: colors.textSecondary }}>— Ninguna</Text>
+            )}
           </View>
         </View>
 

@@ -147,6 +147,15 @@ export const TransactionsScreen = ({ navigation }: any) => {
               <Text style={styles.dayHeader}>{day}</Text>
               {dayTransactions.map((transaction) => {
                 const category = categories.find((c) => c.id === transaction.categoryId);
+
+                // Fallbacks to match Dashboard behaviour for adjustments and transfers
+                const isAdjustment = transaction.categoryId === 'adjustment';
+                const isTransfer = transaction.categoryId === 'transfer';
+
+                const displayCategoryName = category?.name || (isAdjustment ? 'Ajuste de saldo' : isTransfer ? 'Transferencia' : 'Sin categoría');
+                const displayIcon = (category?.icon as any) || (isAdjustment ? 'swap-vertical' : isTransfer ? 'swap-horizontal' : 'help-circle-outline');
+                const displayColor = category?.color || (isAdjustment ? '#6B7280' : isTransfer ? colors.primary : colors.primary);
+
                 return (
                   <TouchableOpacity
                     key={transaction.id}
@@ -158,18 +167,18 @@ export const TransactionsScreen = ({ navigation }: any) => {
                           <View
                             style={[
                               styles.transactionIcon,
-                              { backgroundColor: `${category?.color || colors.primary}20` },
+                              { backgroundColor: `${displayColor}33` },
                             ]}
                           >
                             <Ionicons
-                              name={(category?.icon as any) || 'wallet'}
+                              name={displayIcon}
                               size={24}
-                              color={category?.color || colors.primary}
+                              color={displayColor}
                             />
                           </View>
                           <View style={styles.transactionInfo}>
                             <Text style={styles.transactionTitle}>
-                              {category?.name || 'Sin categoría'}
+                              {displayCategoryName}
                             </Text>
                             <Text style={styles.transactionDescription}>
                               {transaction.description}

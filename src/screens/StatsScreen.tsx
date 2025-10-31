@@ -1,12 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Modal,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../store/useAppStore';
 import { Transaction } from '../types';
@@ -36,6 +29,7 @@ export const StatsScreen = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showDetailedView, setShowDetailedView] = useState(false);
+  const [granularity, setGranularity] = useState<'day' | 'week' | 'month'>('day');
 
 
   const formatCurrency = (amount: number, currency: string = 'HNL') => {
@@ -171,6 +165,108 @@ export const StatsScreen = () => {
     };
   }, [selectedMonthData]);
 
+  // Series data depending on granularity: day / week / month (for the selected month)
+  const periodSeries = useMemo(() => {
+    if (!selectedMonthData) return [];
+
+    const year = selectedMonth.getFullYear();
+    const month = selectedMonth.getMonth();
+    const startOfMonth = new Date(year, month, 1);
+    const endOfMonth = new Date(year, month + 1, 0);
+
+    const tx: (Transaction & { _date: Date })[] = selectedMonthData.transactions.map((t: Transaction) => ({ ...t, _date: new Date(t.date) }));
+
+    if (granularity === 'day') {
+      const daysInMonth = endOfMonth.getDate();
+      const series: Array<any> = [];
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dayStart = new Date(year, month, d, 0, 0, 0);
+        const dayEnd = new Date(year, month, d, 23, 59, 59);
+        const dayTx = tx.filter((t) => t._date >= dayStart && t._date <= dayEnd);
+        const income = dayTx.filter((t) => t.type === 'income').reduce((s: number, t: Transaction) => s + t.amount, 0);
+        const expense = dayTx.filter((t) => t.type === 'expense').reduce((s: number, t: Transaction) => s + t.amount, 0);
+        series.push({ label: String(d), income, expense, balance: income - expense, start: dayStart, end: dayEnd });
+      }
+      return series;
+    }
+
+    if (granularity === 'week') {
+      const series: Array<any> = [];
+      let weekStart = new Date(startOfMonth);
+      let weekIndex = 1;
+      while (weekStart <= endOfMonth) {
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        const clampEnd = weekEnd > endOfMonth ? endOfMonth : weekEnd;
+        const weekTx = tx.filter((t) => t._date >= weekStart && t._date <= clampEnd);
+        const income = weekTx.filter((t) => t.type === 'income').reduce((s: number, t: Transaction) => s + t.amount, 0);
+        const expense = weekTx.filter((t) => t.type === 'expense').reduce((s: number, t: Transaction) => s + t.amount, 0);
+        const label = `${weekStart.getDate()}-${clampEnd.getDate()}`;
+        series.push({ label: `Sem ${weekIndex} (${label})`, income, expense, balance: income - expense, start: new Date(weekStart), end: new Date(clampEnd) });
+        weekIndex++;
+        weekStart = new Date(weekStart);
+        weekStart.setDate(weekStart.getDate() + 7);
+      }
+      return series;
+    }
+
+    const monthLabel = new Date(year, month).toLocaleDateString('es-HN', { month: 'long', year: 'numeric' });
+    return [
+      {
+        label: monthLabel,
+        income: selectedMonthData.income,
+        expense: selectedMonthData.expense,
+        balance: selectedMonthData.balance,
+        start: startOfMonth,
+        end: endOfMonth,
+      },
+    ];
+  }, [granularity, selectedMonthData, selectedMonth]);
+
+  const [selectedPeriodIndex, setSelectedPeriodIndex] = useState<number>(0);
+
+  // When periodSeries or selectedMonth changes, default-select current day/week if inside month
+  React.useEffect(() => {
+    if (!periodSeries || periodSeries.length === 0) return;
+    const today = new Date();
+    const found = periodSeries.findIndex((p: any) => {
+      const s: Date = p.start;
+      const e: Date = p.end;
+      return today >= s && today <= e;
+    });
+    setSelectedPeriodIndex(found >= 0 ? found : 0);
+  }, [periodSeries, selectedMonth, granularity]);
+
+  const selectedPeriod = periodSeries[selectedPeriodIndex] || null;
+
+  const incomesByCategoryPeriod = useMemo(() => {
+    if (!selectedPeriod || !selectedMonthData) return [];
+    const start: Date = selectedPeriod.start;
+    const end: Date = selectedPeriod.end;
+    const tx = selectedMonthData.transactions.filter((t: Transaction) => {
+      const d = new Date(t.date);
+      return d >= start && d <= end && t.type === 'income';
+    });
+    const totals: { [key: string]: number } = {};
+    tx.forEach((t: Transaction) => { totals[t.categoryId] = (totals[t.categoryId] || 0) + t.amount; });
+    return Object.entries(totals).map(([categoryId, amount]) => ({ categoryId, name: getCategoryName(categoryId), amount, color: getCategoryColor(categoryId) })).sort((a, b) => b.amount - a.amount);
+  }, [selectedPeriod, selectedMonthData]);
+
+  const expensesByCategoryPeriod = useMemo(() => {
+    if (!selectedPeriod || !selectedMonthData) return [];
+    const start: Date = selectedPeriod.start;
+    const end: Date = selectedPeriod.end;
+    const tx = selectedMonthData.transactions.filter((t: Transaction) => {
+      const d = new Date(t.date);
+      return d >= start && d <= end && t.type === 'expense';
+    });
+    const totals: { [key: string]: number } = {};
+    tx.forEach((t: Transaction) => { totals[t.categoryId] = (totals[t.categoryId] || 0) + t.amount; });
+    return Object.entries(totals).map(([categoryId, amount]) => ({ categoryId, name: getCategoryName(categoryId), amount, color: getCategoryColor(categoryId) })).sort((a, b) => b.amount - a.amount);
+  }, [selectedPeriod, selectedMonthData]);
+
+  const periodTotalIncome = (selectedPeriod && selectedPeriod.income) || 0;
+  const periodTotalExpense = (selectedPeriod && selectedPeriod.expense) || 0;
 
   // Obtener todos los meses/años con transacciones
   const availableMonths = useMemo(() => {
@@ -196,13 +292,13 @@ export const StatsScreen = () => {
       });
   }, [transactions]);
 
-  const getCategoryName = (categoryId: string) => {
+  function getCategoryName(categoryId: string) {
     return categories.find((c) => c.id === categoryId)?.name || 'Sin categoría';
-  };
+  }
 
-  const getCategoryColor = (categoryId: string) => {
+  function getCategoryColor(categoryId: string) {
     return categories.find((c) => c.id === categoryId)?.color || colors.textTertiary;
-  };
+  }
 
   const currentMonthLabel = selectedMonth.toLocaleDateString('es-HN', {
     month: 'long',
@@ -214,6 +310,11 @@ export const StatsScreen = () => {
 
   const totalExpense = expensesByCategory.reduce((sum, item) => sum + item.amount, 0);
   const totalIncome = incomesByCategory.reduce((sum, item) => sum + item.amount, 0);
+
+  const displayIncomes = selectedPeriod ? incomesByCategoryPeriod : incomesByCategory;
+  const displayExpenses = selectedPeriod ? expensesByCategoryPeriod : expensesByCategory;
+  const displayTotalIncome = selectedPeriod ? periodTotalIncome : totalIncome;
+  const displayTotalExpense = selectedPeriod ? periodTotalExpense : totalExpense;
 
   const renderTransactionItem = (transaction: Transaction) => {
     const categoryColor = getCategoryColor(transaction.categoryId);
@@ -257,10 +358,63 @@ export const StatsScreen = () => {
           </TouchableOpacity>
         </View>
 
+        {/* Granularity selector (día / semana / mes) */}
+        <View style={styles.section}>
+          <View style={styles.granularityContainer}>
+            <TouchableOpacity
+              style={[styles.granularityButton, granularity === 'day' && styles.granularityButtonActive]}
+              onPress={() => setGranularity('day')}
+            >
+              <Text style={[styles.granularityText, granularity === 'day' && styles.granularityTextActive]}>Día</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.granularityButton, granularity === 'week' && styles.granularityButtonActive]}
+              onPress={() => setGranularity('week')}
+            >
+              <Text style={[styles.granularityText, granularity === 'week' && styles.granularityTextActive]}>Semana</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.granularityButton, granularity === 'month' && styles.granularityButtonActive]}
+              onPress={() => setGranularity('month')}
+            >
+              <Text style={[styles.granularityText, granularity === 'month' && styles.granularityTextActive]}>Mes</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Period series preview */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.periodScroll}>
+            {periodSeries.map((p: any, idx: number) => {
+              const isCurrent = (() => {
+                const today = new Date();
+                const s: Date = p.start;
+                const e: Date = p.end;
+                return today >= s && today <= e;
+              })();
+              return (
+                <TouchableOpacity
+                  key={`${p.label}-${idx}`}
+                  style={[
+                    styles.periodCard,
+                    idx === selectedPeriodIndex && { borderWidth: 2, borderColor: colors.primary },
+                    isCurrent && idx !== selectedPeriodIndex && { borderWidth: 2, borderColor: colors.primary + '55' },
+                  ]}
+                  onPress={() => setSelectedPeriodIndex(idx)}
+                >
+                  <Text style={styles.periodLabel}>{p.label}</Text>
+                  <Text style={[styles.periodValue, { color: p.balance >= 0 ? colors.income : colors.expense }]}>{formatCurrency(p.balance)}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
         {/* Month Summary Card */}
         {hasMonthData && (
           <View style={styles.section}>
             <Card style={styles.summaryCard}>
+              {/* Balance removed per UI request */}
               <View style={styles.summaryRow}>
                 <View style={styles.summaryItem}>
                   <View style={styles.summaryIconContainer}>
@@ -288,18 +442,6 @@ export const StatsScreen = () => {
                   </View>
                 </View>
               </View>
-
-              <View style={styles.balanceContainer}>
-                <Text style={styles.balanceLabel}>Balance</Text>
-                <Text
-                  style={[
-                    styles.balanceValue,
-                    { color: selectedMonthData.balance >= 0 ? colors.income : colors.expense },
-                  ]}
-                >
-                  {formatCurrency(selectedMonthData.balance)}
-                </Text>
-              </View>
             </Card>
           </View>
         )}
@@ -323,9 +465,9 @@ export const StatsScreen = () => {
         {hasMonthData && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Ingresos por Categoría</Text>
-            {incomesByCategory.length > 0 ? (
+            {displayIncomes.length > 0 ? (
               <>
-                {incomesByCategory.map((item, index) => (
+                {displayIncomes.map((item, index) => (
                   // @ts-ignore
                   <React.Fragment key={`income-${index}-${item.name}`}>
                     <Card style={styles.categoryCard}>
@@ -336,20 +478,20 @@ export const StatsScreen = () => {
                         </View>
                         <Text style={styles.categoryAmount}>{formatCurrency(item.amount)}</Text>
                       </View>
-                      <ProgressBar progress={totalIncome > 0 ? item.amount / totalIncome : 0} color={item.color} />
-                      <Text style={styles.categoryPercentage}>{totalIncome > 0 ? ((item.amount / totalIncome) * 100).toFixed(1) : '0.0'}%</Text>
+                      <ProgressBar progress={displayTotalIncome > 0 ? item.amount / displayTotalIncome : 0} color={item.color} />
+                      <Text style={styles.categoryPercentage}>{displayTotalIncome > 0 ? ((item.amount / displayTotalIncome) * 100).toFixed(1) : '0.0'}%</Text>
                     </Card>
                   </React.Fragment>
                 ))}
 
                 <Card style={styles.totalCard}>
-                  <Text style={styles.totalLabel}>Total Ingresos</Text>
-                  <Text style={[styles.totalAmount, { color: colors.income }]}>{formatCurrency(totalIncome)}</Text>
+                  <Text style={styles.totalLabel}>{selectedPeriod ? 'Total Ingresos (Periodo)' : 'Total Ingresos'}</Text>
+                  <Text style={[styles.totalAmount, { color: colors.income }]}>{formatCurrency(displayTotalIncome)}</Text>
                 </Card>
               </>
             ) : (
               <Card style={styles.emptyCard}>
-                <View>
+                <View style={styles.emptyContent}>
                   <Ionicons name="pie-chart-outline" size={48} color={colors.textTertiary} />
                   <Text style={styles.emptyText}>No hay datos de ingresos</Text>
                 </View>
@@ -362,9 +504,9 @@ export const StatsScreen = () => {
         {hasMonthData && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Gastos por Categoría</Text>
-            {expensesByCategory.length > 0 ? (
+            {displayExpenses.length > 0 ? (
               <>
-                {expensesByCategory.map((item, index) => (
+                {displayExpenses.map((item, index) => (
                   // @ts-ignore
                   <React.Fragment key={`category-${index}-${item.name}`}>
                     <Card style={styles.categoryCard}>
@@ -375,20 +517,20 @@ export const StatsScreen = () => {
                         </View>
                         <Text style={styles.categoryAmount}>{formatCurrency(item.amount)}</Text>
                       </View>
-                      <ProgressBar progress={item.amount / totalExpense} color={item.color} />
-                      <Text style={styles.categoryPercentage}>{((item.amount / totalExpense) * 100).toFixed(1)}%</Text>
+                      <ProgressBar progress={displayTotalExpense > 0 ? item.amount / displayTotalExpense : 0} color={item.color} />
+                      <Text style={styles.categoryPercentage}>{displayTotalExpense > 0 ? ((item.amount / displayTotalExpense) * 100).toFixed(1) : '0.0'}%</Text>
                     </Card>
                   </React.Fragment>
                 ))}
 
                 <Card style={styles.totalCard}>
-                  <Text style={styles.totalLabel}>Total Gastado</Text>
-                  <Text style={styles.totalAmount}>{formatCurrency(totalExpense)}</Text>
+                  <Text style={styles.totalLabel}>{selectedPeriod ? 'Total Gastado (Periodo)' : 'Total Gastado'}</Text>
+                  <Text style={styles.totalAmount}>{formatCurrency(displayTotalExpense)}</Text>
                 </Card>
               </>
             ) : (
               <Card style={styles.emptyCard}>
-                <View>
+                <View style={styles.emptyContent}>
                   <Ionicons name="pie-chart-outline" size={48} color={colors.textTertiary} />
                   <Text style={styles.emptyText}>No hay datos de gastos</Text>
                 </View>
@@ -505,7 +647,7 @@ const createStyles = (colors: any) =>
     summaryRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: spacing.lg,
+      marginBottom: spacing.md,
     },
     summaryItem: {
       flex: 1,
@@ -538,7 +680,7 @@ const createStyles = (colors: any) =>
     },
     balanceContainer: {
       alignItems: 'center',
-      paddingTop: spacing.md,
+      paddingTop: spacing.sm,
       borderTopWidth: 1,
       borderTopColor: colors.border,
     },
@@ -658,6 +800,57 @@ const createStyles = (colors: any) =>
       fontWeight: typography.weights.bold,
       color: colors.textPrimary,
       marginBottom: spacing.md,
+    },
+    granularityContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: spacing.md,
+      gap: spacing.sm,
+    },
+    granularityButton: {
+      flex: 1,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: 8,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+    },
+    granularityButtonActive: {
+      backgroundColor: colors.primary,
+    },
+    granularityText: {
+      fontSize: typography.sizes.sm,
+      color: colors.textPrimary,
+      fontWeight: typography.weights.medium,
+    },
+    granularityTextActive: {
+      color: '#fff',
+    },
+    periodScroll: {
+      marginTop: spacing.sm,
+      paddingBottom: spacing.sm,
+    },
+    periodCard: {
+      minWidth: 120,
+      padding: spacing.md,
+      borderRadius: 12,
+      backgroundColor: colors.surface,
+      marginRight: spacing.md,
+      alignItems: 'center',
+    },
+    periodLabel: {
+      fontSize: typography.sizes.sm,
+      color: colors.textSecondary,
+      marginBottom: spacing.xs,
+    },
+    periodValue: {
+      fontSize: typography.sizes.lg,
+      fontWeight: typography.weights.bold,
+    },
+    periodSub: {
+      fontSize: typography.sizes.xs,
+      color: colors.textTertiary,
+      marginTop: spacing.xs,
     },
     monthStats: {
       flexDirection: 'row',
