@@ -16,6 +16,7 @@ import { spacing, typography, borderRadius, useTheme } from '../theme';
 import { useAppStore } from '../store/useAppStore';
 import { Button, Card, CategoryIcon } from '../components/common';
 import { CurrencySelector, CURRENCIES } from '../components/CurrencySelector';
+import SearchBar from '../components/common/SearchBar';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 const { width, height } = Dimensions.get('window');
@@ -68,9 +69,11 @@ export const SetupOnboardingScreen: React.FC<SetupOnboardingScreenProps> = ({ on
 
     // Main Currency
     const [mainCurrency, setMainCurrency] = useState(preferredCurrency);
+    const [searchMainCurrency, setSearchMainCurrency] = useState('');
 
     // Conversion Currency
     const [conversionCurrency, setConversionCurrencyState] = useState('HNL');
+    const [searchConversionCurrency, setSearchConversionCurrency] = useState('');
 
     // First Account
     const [accountTitle, setAccountTitle] = useState('Mi Cuenta Principal');
@@ -203,13 +206,24 @@ export const SetupOnboardingScreen: React.FC<SetupOnboardingScreenProps> = ({ on
                                 Selecciona tu moneda principal para todas tus finanzas
                             </Text>
                         </View>
+                        <SearchBar
+                            value={searchMainCurrency}
+                            onChange={setSearchMainCurrency}
+                            placeholder="Buscar moneda..."
+                            containerStyle={{ marginBottom: 12 }}
+                        />
+
                         <ScrollView
                             horizontal={false}
                             showsVerticalScrollIndicator={false}
                             style={styles.currencyListContainer}
                         >
                             <View style={styles.currencyListGrid}>
-                                {CURRENCIES.map(currency => (
+                                {CURRENCIES.filter(c => {
+                                    const term = searchMainCurrency.trim().toLowerCase();
+                                    if (!term) return true;
+                                    return (`${c.code} ${c.name} ${c.symbol}`).toLowerCase().includes(term);
+                                }).map(currency => (
                                     <TouchableOpacity
                                         key={currency.code}
                                         style={[
@@ -250,13 +264,24 @@ export const SetupOnboardingScreen: React.FC<SetupOnboardingScreenProps> = ({ on
                                 Selecciona una moneda secundaria para comparar valores (no puede ser la principal)
                             </Text>
                         </View>
+                        <SearchBar
+                            value={searchConversionCurrency}
+                            onChange={setSearchConversionCurrency}
+                            placeholder="Buscar moneda..."
+                            containerStyle={{ marginBottom: 12 }}
+                        />
+
                         <ScrollView
                             horizontal={false}
                             showsVerticalScrollIndicator={false}
                             style={styles.currencyListContainer}
                         >
                             <View style={styles.currencyListGrid}>
-                                {CURRENCIES.filter(c => c.code !== mainCurrency).map(currency => (
+                                {CURRENCIES.filter(c => c.code !== mainCurrency).filter(c => {
+                                    const term = searchConversionCurrency.trim().toLowerCase();
+                                    if (!term) return true;
+                                    return (`${c.code} ${c.name} ${c.symbol}`).toLowerCase().includes(term);
+                                }).map(currency => (
                                     <TouchableOpacity
                                         key={currency.code}
                                         style={[
@@ -369,7 +394,7 @@ export const SetupOnboardingScreen: React.FC<SetupOnboardingScreenProps> = ({ on
                                         ]}
                                         onPress={() => setAccountIcon(icon)}
                                     >
-                                        <Ionicons name={icon as any} size={40} color={accountIconColor} />
+                                        <Ionicons name={icon as any} size={32} color={accountIconColor} />
                                     </TouchableOpacity>
                                 ))}
                             </ScrollView>
@@ -475,7 +500,7 @@ export const SetupOnboardingScreen: React.FC<SetupOnboardingScreenProps> = ({ on
                                         ]}
                                         onPress={() => setGoalIcon(icon)}
                                     >
-                                        <Ionicons name={icon as any} size={40} color={goalIconColor} />
+                                        <Ionicons name={icon as any} size={32} color={goalIconColor} />
                                     </TouchableOpacity>
                                 ))}
                             </ScrollView>
@@ -885,24 +910,24 @@ const createStyles = (colors: any) =>
             color: colors.textSecondary,
         },
         horizontalScroll: {
-            marginVertical: spacing.md,
+            marginVertical: spacing.sm,
         },
         horizontalScrollContent: {
-            paddingHorizontal: spacing.lg,
+            paddingHorizontal: spacing.md,
             gap: spacing.md,
             alignItems: 'center',
             justifyContent: 'center',
         },
         iconOptionBox: {
-            width: 80,
-            height: 80,
+            width: 64,
+            height: 64,
             borderRadius: borderRadius.lg,
             justifyContent: 'center',
             alignItems: 'center',
         },
         colorOptionBox: {
-            width: 80,
-            height: 80,
+            width: 64,
+            height: 64,
             borderRadius: borderRadius.lg,
         },
         currencyListContainer: {
@@ -912,7 +937,7 @@ const createStyles = (colors: any) =>
             flexDirection: 'row',
             flexWrap: 'wrap',
             gap: spacing.md,
-            padding: spacing.lg,
+            padding: 0,
             justifyContent: 'center',
         },
         currencyListOption: {

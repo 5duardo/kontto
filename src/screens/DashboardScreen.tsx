@@ -258,6 +258,20 @@ export const DashboardScreen = ({ navigation }: any) => {
     return `${symbol} ${formattedAmount}`;
   };
 
+  const renderCurrencyLabel = (code: string) => {
+    const symbol = CURRENCY_SYMBOLS[code] || code;
+    const iconName = code === 'BTC' ? 'logo-bitcoin' : code === 'ETH' ? 'logo-ethereum' : 'cash';
+    return (
+      <View style={styles.currencyLabelRow}>
+        <View style={[styles.currencyBadge, { backgroundColor: colors.backgroundSecondary }]}>
+          <Text style={styles.currencyBadgeText}>{symbol}</Text>
+        </View>
+        <Text style={styles.totalCurrency}>{code}</Text>
+        <Ionicons name={iconName as any} size={16} color={colors.textSecondary} style={{ marginLeft: spacing.sm }} />
+      </View>
+    );
+  };
+
   // Función para obtener el saldo convertido a la moneda preferida
   const getConvertedBalance = (account: Account): string => {
     const converted = convertCurrency(
@@ -318,17 +332,24 @@ export const DashboardScreen = ({ navigation }: any) => {
           style={[styles.tab, activeTab === 'cuentas' && styles.tabActive]}
           onPress={() => setActiveTab('cuentas')}
         >
-          <Text style={[styles.tabText, activeTab === 'cuentas' && styles.tabTextActive]}>
-            Cuentas
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <Ionicons name="wallet" size={18} color={activeTab === 'cuentas' ? colors.primary : colors.textSecondary} />
+            <Text style={[styles.tabText, activeTab === 'cuentas' && styles.tabTextActive]}>
+              Cuentas
+            </Text>
+          </View>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'total' && styles.tabActive]}
           onPress={() => setActiveTab('total')}
         >
-          <Text style={[styles.tabText, activeTab === 'total' && styles.tabTextActive]}>
-            Total
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <Ionicons name="cash" size={18} color={activeTab === 'total' ? colors.primary : colors.textSecondary} />
+            <Text style={[styles.tabText, activeTab === 'total' && styles.tabTextActive]}>
+              Total
+            </Text>
+            {/* total amount removed from tab selector per request */}
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -344,7 +365,7 @@ export const DashboardScreen = ({ navigation }: any) => {
                 <View style={styles.totalCard}>
                   {/* HNL Total */}
                   <View style={styles.totalRow}>
-                    <Text style={styles.totalCurrency}>HNL</Text>
+                    {renderCurrencyLabel('HNL')}
                     <Text style={styles.totalAmount}>
                       {formatCurrency(
                         accounts
@@ -356,7 +377,7 @@ export const DashboardScreen = ({ navigation }: any) => {
 
                   {/* USD Total */}
                   <View style={styles.totalRow}>
-                    <Text style={styles.totalCurrency}>USD</Text>
+                    {renderCurrencyLabel('USD')}
                     <Text style={styles.totalAmount}>
                       {formatCurrency(
                         accounts
@@ -370,7 +391,7 @@ export const DashboardScreen = ({ navigation }: any) => {
                   {/* EUR Total */}
                   {accounts.some(a => a.currency === 'EUR' && a.includeInTotal && !a.isArchived) && (
                     <View style={styles.totalRow}>
-                      <Text style={styles.totalCurrency}>EUR</Text>
+                      {renderCurrencyLabel('EUR')}
                       <Text style={styles.totalAmount}>
                         {formatCurrency(
                           accounts
@@ -399,7 +420,7 @@ export const DashboardScreen = ({ navigation }: any) => {
                 <View style={styles.totalCard}>
                   {/* HNL Cuentas */}
                   <View style={styles.totalRow}>
-                    <Text style={styles.totalCurrency}>HNL</Text>
+                    {renderCurrencyLabel('HNL')}
                     <Text style={styles.totalAmount}>
                       {formatCurrency(
                         accounts
@@ -411,7 +432,7 @@ export const DashboardScreen = ({ navigation }: any) => {
 
                   {/* USD Cuentas */}
                   <View style={styles.totalRow}>
-                    <Text style={styles.totalCurrency}>USD</Text>
+                    {renderCurrencyLabel('USD')}
                     <Text style={styles.totalAmount}>
                       {formatCurrency(
                         accounts
@@ -425,7 +446,7 @@ export const DashboardScreen = ({ navigation }: any) => {
                   {/* EUR Cuentas */}
                   {accounts.some(a => a.currency === 'EUR' && a.includeInTotal && !a.isArchived) && (
                     <View style={styles.totalRow}>
-                      <Text style={styles.totalCurrency}>EUR</Text>
+                      {renderCurrencyLabel('EUR')}
                       <Text style={styles.totalAmount}>
                         {formatCurrency(
                           accounts
@@ -1053,6 +1074,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: colors.primary,
     fontWeight: typography.weights.semibold as any,
   },
+
   content: {
     flex: 1,
   },
@@ -1235,6 +1257,23 @@ const createStyles = (colors: any) => StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  currencyLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  currencyBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  currencyBadgeText: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold as any,
+    color: colors.textPrimary,
   },
   totalCurrency: {
     fontSize: typography.sizes.base,

@@ -10,6 +10,7 @@ import {
   TextStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import SearchBar from './common/SearchBar';
 import { spacing, typography, useTheme } from '../theme';
 
 export const CURRENCIES = [
@@ -153,6 +154,7 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
 }) => {
   const { colors } = useTheme();
   const [modalVisible, setModalVisible] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const selectedCurrencyData = CURRENCIES.find((c) => c.code === selectedCurrency);
@@ -179,9 +181,7 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
       >
         <View style={styles.currencyButtonContent}>
           {label && <Text style={styles.currencyButtonLabel}>{label}</Text>}
-          <Text style={[styles.currencyButtonText, buttonTextStyle]}>
-            {getButtonText()}
-          </Text>
+          <Text style={[styles.currencyButtonText, buttonTextStyle]}>{getButtonText()}</Text>
         </View>
         <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
       </TouchableOpacity>
@@ -203,8 +203,16 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
               <View style={{ width: 28 }} />
             </View>
 
+            <View style={styles.searchWrapper}>
+              <SearchBar value={searchTerm} onChange={setSearchTerm} placeholder="Buscar moneda..." />
+            </View>
+
             <ScrollView style={styles.currencyList}>
-              {CURRENCIES.map((currency) => (
+              {CURRENCIES.filter((c) => {
+                const term = searchTerm.trim().toLowerCase();
+                if (!term) return true;
+                return (`${c.code} ${c.name} ${c.symbol}`).toLowerCase().includes(term);
+              }).map((currency) => (
                 <TouchableOpacity
                   key={currency.code}
                   style={[
@@ -283,15 +291,20 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontWeight: typography.weights.bold as any,
     color: colors.textPrimary,
   },
+  searchWrapper: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
+  },
   currencyList: {
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
   },
   currencyListItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: 0,
     borderRadius: 8,
     marginBottom: spacing.xs,
   },

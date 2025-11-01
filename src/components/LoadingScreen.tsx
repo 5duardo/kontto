@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { useTheme } from '../theme';
 import { useAppStore } from '../store/useAppStore';
 import { accentColorMap } from '../theme/colorSchemes';
+import DotLoader from './common/DotLoader';
 
 interface LoadingScreenProps {
   duration?: number; // Duración en ms
@@ -15,39 +16,19 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
 }) => {
   const { colors } = useTheme();
   const accent = useAppStore((s) => s.accentColor);
-  const [progress] = useState(new Animated.Value(0));
 
   // Mapear el nombre del acento al color hexadecimal; fallback a colors.primary
   const accentHex = accentColorMap[accent] ?? colors.primary;
 
   useEffect(() => {
-    Animated.timing(progress, {
-      toValue: 100,
-      duration: duration,
-      useNativeDriver: false,
-    }).start(() => {
-      onComplete?.();
-    });
-  }, [progress, duration, onComplete]);
-
-  const progressValue = progress.interpolate({
-    inputRange: [0, 100],
-    outputRange: ['0%', '100%'],
-  });
+    const t = setTimeout(() => onComplete?.(), duration);
+    return () => clearTimeout(t);
+  }, [duration, onComplete]);
 
   return (
     <View style={[styles.container, { backgroundColor: 'transparent' }]}>
-      {/* Solo mostrar la barra de progreso centrada, sin texto ni icono */}
-      <View style={styles.progressContainer}>
-        <Animated.View
-          style={[
-            styles.progressBar,
-            {
-              width: progressValue,
-              backgroundColor: accentHex,
-            },
-          ]}
-        />
+      <View style={styles.content}>
+        <DotLoader size={16} color={accentHex} gap={12} />
       </View>
     </View>
   );
