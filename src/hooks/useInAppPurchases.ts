@@ -1,13 +1,13 @@
 // Temporary file-level ignore for TS until 'expo-in-app-purchases' types are available in the project
 // @ts-nocheck
 import { useEffect, useState, useRef } from 'react';
-import { NativeModules, Platform } from 'react-native';
+import { NativeModules, Platform, Alert } from 'react-native';
 let InAppPurchases: any = null;
 
 type Product = any;
 
 const DEFAULT_PRODUCT_IDS = {
-    weekly: 'com.kontto.app.subscription.weekly',
+    weekly: 'KonttoPro1Semana',
     monthly: 'com.kontto.app.subscription.monthly',
     annual: 'com.kontto.app.subscription.annual',
     lifetime: 'com.kontto.app.subscription.lifetime',
@@ -19,6 +19,7 @@ const useInAppPurchases = (productIds: string[] = Object.values(DEFAULT_PRODUCT_
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [lastPurchases, setLastPurchases] = useState<any[] | null>(null);
+    const [isModuleAvailable, setIsModuleAvailable] = useState(false);
     const listenerAttached = useRef(false);
 
     useEffect(() => {
@@ -31,9 +32,10 @@ const useInAppPurchases = (productIds: string[] = Object.values(DEFAULT_PRODUCT_
                 try {
                     InAppPurchases = require('expo-in-app-purchases');
                 } catch (reqErr) {
-                    const msg = 'Native module ExpoInAppPurchases not found (module missing at runtime). Rebuild the app with the native module (EAS build or prebuild + run on device).';
+                    const msg = 'Módulo nativo ExpoInAppPurchases no disponible. Reconstruye la app con: npx expo prebuild --clean && eas build --platform ios';
                     console.warn(msg, reqErr);
                     setError(msg);
+                    setIsModuleAvailable(false);
                     setLoading(false);
                     return;
                 }
@@ -41,12 +43,15 @@ const useInAppPurchases = (productIds: string[] = Object.values(DEFAULT_PRODUCT_
                 // If the native module object exists but the native implementation isn't linked, check NativeModules
                 const nativeExists = !!(NativeModules && (NativeModules as any).ExpoInAppPurchases);
                 if ((Platform.OS === 'ios' || Platform.OS === 'android') && !nativeExists) {
-                    const msg = 'Native module ExpoInAppPurchases JS wrapper loaded but native implementation not found. Rebuild the app with the native module (EAS build or prebuild + run on device).';
+                    const msg = 'Módulo nativo ExpoInAppPurchases no vinculado. Reconstruye la app con: npx expo prebuild --clean && eas build --platform ios';
                     console.warn(msg);
                     setError(msg);
+                    setIsModuleAvailable(false);
                     setLoading(false);
                     return;
                 }
+
+                setIsModuleAvailable(true);
 
                 const connectResult = await InAppPurchases.connectAsync();
                 if (!mounted) return;
@@ -127,15 +132,17 @@ const useInAppPurchases = (productIds: string[] = Object.values(DEFAULT_PRODUCT_
         setLoading(true);
         setError(null);
         try {
+            if (!isModuleAvailable) {
+                throw new Error('El módulo nativo de compras no está disponible. Necesitas reconstruir la app.\n\nEjecuta:\nnpx expo prebuild --clean\neas build --platform ios --profile preview');
+            }
             if (!InAppPurchases || typeof InAppPurchases.purchaseItemAsync !== 'function') {
-                const msg = 'IAP module not available: cannot start purchase.';
-                setError(msg);
-                setLoading(false);
-                return;
+                throw new Error('Módulo IAP no disponible: no se puede iniciar la compra.');
             }
             await InAppPurchases.purchaseItemAsync(productId);
         } catch (e: any) {
             setError(String(e?.message || e));
+            setLoading(false);
+            throw e;
         } finally {
             setLoading(false);
         }
@@ -168,6 +175,7 @@ const useInAppPurchases = (productIds: string[] = Object.values(DEFAULT_PRODUCT_
         refreshProducts,
         restorePurchases,
         DEFAULT_PRODUCT_IDS,
+        isModuleAvailable,
     } as const;
 };
 

@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, typography, useTheme } from '../theme';
 import { useAppStore, FREE_LIMITS } from '../store/useAppStore';
+import useInAppPurchases from '../hooks/useInAppPurchases';
 
 interface ProFeature {
   id: string;
@@ -69,8 +70,6 @@ const PRO_FEATURES: ProFeature[] = [
   },
 ];
 
-// Pricing is intentionally removed for demo mode — use the toggle below to enable/disable Pro locally
-
 export const GetProScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
@@ -83,10 +82,36 @@ export const GetProScreen = ({ navigation }: any) => {
   const isPro = useAppStore(state => state.isPro);
 
   const setPro = useAppStore(state => state.setPro);
-  // Toggle Pro flag locally for demo: this does not perform any native purchase
-  const handleSetPro = (value: boolean) => {
-    setPro(value);
-    Alert.alert(value ? 'Pro habilitado (demo)' : 'Pro deshabilitado');
+
+  // Setup in-app purchases
+  const { buy, loading, error, products, DEFAULT_PRODUCT_IDS, isModuleAvailable } = useInAppPurchases();
+
+  // Handle purchase
+  const handlePurchase = async (productId: string) => {
+    if (!isModuleAvailable) {
+      Alert.alert(
+        'Módulo no disponible',
+        'El módulo nativo de compras in-app no está disponible.\n\nPara usar compras reales, necesitas reconstruir la app:\n\n1. npx expo prebuild --clean\n2. eas build --platform ios --profile preview\n\nO instala desde TestFlight cuando esté lista.',
+        [{ text: 'Entendido', onPress: () => { } }]
+      );
+      return;
+    }
+    if (loading) {
+      Alert.alert('Por favor espera', 'Una compra está en progreso...');
+      return;
+    }
+    if (error) {
+      Alert.alert('Error', `Error al procesar compra: ${error}`);
+      return;
+    }
+    try {
+      await buy(productId);
+      // After successful purchase, enable Pro
+      setPro(true);
+      Alert.alert('¡Éxito!', '¡Gracias por tu compra! Pro ha sido activado.');
+    } catch (err: any) {
+      Alert.alert('Error', `Hubo un problema al procesar tu compra: ${err?.message || err}`);
+    }
   };
 
   // renderFeature removed — features are shown in the comparison table instead
@@ -189,25 +214,68 @@ export const GetProScreen = ({ navigation }: any) => {
 
         {/* Features Section removed: premium features are displayed inside the comparison table above */}
 
-        {/* Demo Pro Toggle Section: enable/disable Pro locally (no native purchases) */}
+        {/* Subscription Plans Section */}
         <View style={styles.pricingSection}>
-          <Text style={styles.sectionTitle}>Pro (modo demo)</Text>
-          <View style={styles.planStatusSimpleWrap}>
-            <Text style={styles.planStatusSimpleText}>Activa o desactiva Pro para demo. Esto no realiza compras reales.</Text>
-            <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm }}>
-              <TouchableOpacity
-                style={[styles.purchaseButton, { flex: 1, backgroundColor: isPro ? colors.error : colors.primary, marginRight: spacing.sm }]}
-                onPress={() => handleSetPro(false)}
-              >
-                <Text style={[styles.purchaseButtonText, { color: '#fff' }]}>Deshabilitar Pro</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.purchaseButton, { flex: 1, backgroundColor: isPro ? colors.primary : `${colors.primary}22`, borderWidth: 1, borderColor: colors.primary }]}
-                onPress={() => handleSetPro(true)}
-              >
-                <Text style={[styles.purchaseButtonText, { color: isPro ? '#fff' : colors.primary }]}>{isPro ? 'Pro activo' : 'Habilitar Pro (demo)'}</Text>
-              </TouchableOpacity>
+          <Text style={styles.sectionTitle}>Elige tu plan</Text>
+
+          {/* Weekly Plan */}
+          <View style={styles.pricingCard}>
+            <Text style={styles.planName}>1 Semana</Text>
+            <View style={styles.priceContainer}>
+              <Text style={styles.price}>$2.99</Text>
+              <Text style={styles.period}>/semana</Text>
             </View>
+            <Text style={styles.savingsText}>Prueba Pro sin compromiso</Text>
+            <TouchableOpacity
+              style={[styles.purchaseButton, { backgroundColor: colors.primary, opacity: loading ? 0.6 : 1 }]}
+              onPress={() => handlePurchase(DEFAULT_PRODUCT_IDS.weekly)}
+              disabled={loading}
+            >
+              <Text style={[styles.purchaseButtonText, { color: '#fff' }]}>
+                {loading ? 'Procesando...' : 'Comprar suscripción'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Monthly Plan */}
+          <View style={styles.pricingCard}>
+            <Text style={styles.planName}>1 Mes</Text>
+            <View style={styles.priceContainer}>
+              <Text style={styles.price}>$9.99</Text>
+              <Text style={styles.period}>/mes</Text>
+            </View>
+            <Text style={styles.savingsText}>Mejor valor mensual</Text>
+            <TouchableOpacity
+              style={[styles.purchaseButton, { backgroundColor: colors.primary, opacity: loading ? 0.6 : 1 }]}
+              onPress={() => handlePurchase(DEFAULT_PRODUCT_IDS.monthly)}
+              disabled={loading}
+            >
+              <Text style={[styles.purchaseButtonText, { color: '#fff' }]}>
+                {loading ? 'Procesando...' : 'Comprar suscripción'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Annual Plan */}
+          <View style={[styles.pricingCard, { borderColor: colors.primary, borderWidth: 2 }]}>
+            <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+              <Text style={styles.badgeText}>Mejor precio</Text>
+            </View>
+            <Text style={styles.planName}>1 Año</Text>
+            <View style={styles.priceContainer}>
+              <Text style={styles.price}>$79.99</Text>
+              <Text style={styles.period}>/año</Text>
+            </View>
+            <Text style={styles.savingsText}>Ahorra 33% vs mensual</Text>
+            <TouchableOpacity
+              style={[styles.purchaseButton, { backgroundColor: colors.primary, opacity: loading ? 0.6 : 1 }]}
+              onPress={() => handlePurchase(DEFAULT_PRODUCT_IDS.annual)}
+              disabled={loading}
+            >
+              <Text style={[styles.purchaseButtonText, { color: '#fff' }]}>
+                {loading ? 'Procesando...' : 'Comprar suscripción'}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -341,6 +409,12 @@ const createStyles = (colors: any) => StyleSheet.create({
   savings: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.bold,
+    marginBottom: spacing.md,
+  },
+  savingsText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    color: colors.textSecondary,
     marginBottom: spacing.md,
   },
   purchaseButton: {
@@ -479,20 +553,6 @@ const createStyles = (colors: any) => StyleSheet.create({
   planStatusButtonText: {
     color: '#fff',
     fontWeight: typography.weights.semibold,
-  },
-  planStatusSimpleWrap: {
-    marginHorizontal: spacing.md,
-    marginTop: spacing.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: 12,
-    backgroundColor: 'transparent',
-    alignItems: 'flex-start',
-  },
-  planStatusSimpleText: {
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.semibold,
-    color: colors.textPrimary,
   },
   planBadge: {
     marginHorizontal: spacing.md,

@@ -112,6 +112,34 @@ eas submit -p ios --latest
 
 Configura tus credenciales de Google Play Console / App Store Connect cuando te lo pida.
 
+## 🛒 Compras In-App (KonttoPro)
+
+La app incluye un sistema de compras in-app con tres planes:
+
+| Plan | ID de Producto | Precio |
+|------|---|---|
+| 1 Semana | `KonttoPro1Semana` | $2.99 |
+| 1 Mes | `com.kontto.app.subscription.monthly` | $9.99 |
+| 1 Año | `com.kontto.app.subscription.annual` | $79.99 |
+
+### Requisitos para compras funcionales
+
+El módulo nativo `ExpoInAppPurchases` necesita ser compilado. Sigue estos pasos:
+
+```bash
+# 1. Limpiar archivos previos
+npx expo prebuild --clean
+
+# 2. Construir con EAS (recomendado)
+eas build --platform ios --profile preview
+# o para Android:
+eas build --platform android --profile preview
+
+# 3. Instalar en dispositivo físico desde TestFlight (iOS) o Google Play (Android)
+```
+
+Ver `SETUP_COMPRAS.md` para detalles completos.
+
 ### Versionado
 
 El versionado está gestionado por EAS (`appVersionSource: "remote"`). Actualiza la versión en la página del proyecto en Expo o usa:
