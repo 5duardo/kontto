@@ -22,12 +22,15 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   AOA: 'Kz', ETB: 'Br', AUD: 'A$', NZD: 'NZ$', FJD: 'FJ$', BTC: '₿', ETH: 'Ξ',
 };
 
+// Reuse same month selector behavior as ScheduledPayments (prev/next + 12 months window)
+const MONTHS_TO_SHOW = 12;
+
 export const StatsScreen = () => {
   const { transactions, categories } = useAppStore();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [selectedMonth, setSelectedMonth] = useState(new Date());
-  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState<number>(MONTHS_TO_SHOW - 1); // default to current month (last in window)
   const [showDetailedView, setShowDetailedView] = useState(false);
   const [granularity, setGranularity] = useState<'day' | 'week' | 'month'>('day');
 
@@ -43,6 +46,22 @@ export const StatsScreen = () => {
   };
 
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  // monthOptions derived from current month forward
+  const monthDates = React.useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - (MONTHS_TO_SHOW - 1), 1);
+    return Array.from({ length: MONTHS_TO_SHOW }, (_, i) => new Date(start.getFullYear(), start.getMonth() + i, 1));
+  }, []);
+
+  const monthOptions = React.useMemo(() => monthDates.map((d) => d.toLocaleDateString('es-HN', { year: 'numeric', month: 'long' })), [monthDates]);
+
+  const selectedMonthKey = monthOptions[selectedMonthIndex] || monthOptions[0];
+
+  React.useEffect(() => {
+    const d = monthDates[selectedMonthIndex] || new Date();
+    setSelectedMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+  }, [selectedMonthIndex, monthDates]);
 
   const expensesByCategory = useMemo(() => {
     const expenses = transactions.filter((t) => t.type === 'expense');
@@ -237,6 +256,18 @@ export const StatsScreen = () => {
     setSelectedPeriodIndex(found >= 0 ? found : 0);
   }, [periodSeries, selectedMonth, granularity]);
 
+  // Ensure when granularity changes the current day/week is selected (useLayoutEffect to run after periodSeries updates)
+  React.useLayoutEffect(() => {
+    if (!periodSeries || periodSeries.length === 0) return;
+    const today = new Date();
+    const found = periodSeries.findIndex((p: any) => {
+      const s: Date = p.start;
+      const e: Date = p.end;
+      return today >= s && today <= e;
+    });
+    setSelectedPeriodIndex(found >= 0 ? found : 0);
+  }, [granularity, periodSeries]);
+
   const selectedPeriod = periodSeries[selectedPeriodIndex] || null;
 
   const incomesByCategoryPeriod = useMemo(() => {
@@ -300,10 +331,7 @@ export const StatsScreen = () => {
     return categories.find((c) => c.id === categoryId)?.color || colors.textTertiary;
   }
 
-  const currentMonthLabel = selectedMonth.toLocaleDateString('es-HN', {
-    month: 'long',
-    year: 'numeric',
-  });
+  const currentMonthLabel = selectedMonth.toLocaleDateString('es-HN', { month: 'long', year: 'numeric' });
 
   // Verificar si el mes actual tiene datos
   const hasMonthData = selectedMonthData && (selectedMonthData.income > 0 || selectedMonthData.expense > 0);
@@ -345,70 +373,85 @@ export const StatsScreen = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Month Selector Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.monthSelectorButton}
-            onPress={() => setShowMonthPicker(true)}
-          >
-            <Ionicons name="calendar" size={20} color={colors.primary} />
-            <Text style={styles.monthSelectorText}>{currentMonthLabel}</Text>
-            <Ionicons name="chevron-down" size={20} color={colors.primary} />
-          </TouchableOpacity>
+      {/* Month Selector Header (prev / label / next) - always visible */}
+      <View style={styles.monthSelectorContainer}>
+        <TouchableOpacity
+          onPress={() => setSelectedMonthIndex((s) => Math.max(0, s - 1))}
+          style={styles.monthNavButton}
+        >
+          <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+
+        <View style={styles.monthLabelButton}>
+          <Text style={styles.monthLabelText}>{selectedMonthKey}</Text>
         </View>
 
-        {/* Granularity selector (día / semana / mes) */}
-        <View style={styles.section}>
-          <View style={styles.granularityContainer}>
-            <TouchableOpacity
-              style={[styles.granularityButton, granularity === 'day' && styles.granularityButtonActive]}
-              onPress={() => setGranularity('day')}
-            >
-              <Text style={[styles.granularityText, granularity === 'day' && styles.granularityTextActive]}>Día</Text>
-            </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setSelectedMonthIndex((s) => Math.min(MONTHS_TO_SHOW - 1, s + 1))}
+          style={styles.monthNavButton}
+        >
+          <Ionicons name="chevron-forward" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+      </View>
 
-            <TouchableOpacity
-              style={[styles.granularityButton, granularity === 'week' && styles.granularityButtonActive]}
-              onPress={() => setGranularity('week')}
-            >
-              <Text style={[styles.granularityText, granularity === 'week' && styles.granularityTextActive]}>Semana</Text>
-            </TouchableOpacity>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={!hasMonthData ? styles.emptyContainer : undefined}
+      >
 
-            <TouchableOpacity
-              style={[styles.granularityButton, granularity === 'month' && styles.granularityButtonActive]}
-              onPress={() => setGranularity('month')}
-            >
-              <Text style={[styles.granularityText, granularity === 'month' && styles.granularityTextActive]}>Mes</Text>
-            </TouchableOpacity>
+        {/* Granularity selector (día / semana / mes) - solo si hay datos del mes */}
+        {hasMonthData && (
+          <View style={styles.section}>
+            <View style={styles.granularityContainer}>
+              <TouchableOpacity
+                style={[styles.granularityButton, granularity === 'day' && styles.granularityButtonActive]}
+                onPress={() => setGranularity('day')}
+              >
+                <Text style={[styles.granularityText, granularity === 'day' && styles.granularityTextActive]}>Día</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.granularityButton, granularity === 'week' && styles.granularityButtonActive]}
+                onPress={() => setGranularity('week')}
+              >
+                <Text style={[styles.granularityText, granularity === 'week' && styles.granularityTextActive]}>Semana</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.granularityButton, granularity === 'month' && styles.granularityButtonActive]}
+                onPress={() => setGranularity('month')}
+              >
+                <Text style={[styles.granularityText, granularity === 'month' && styles.granularityTextActive]}>Mes</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Period series preview */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.periodScroll}>
+              {periodSeries.map((p: any, idx: number) => {
+                const isCurrent = (() => {
+                  const today = new Date();
+                  const s: Date = p.start;
+                  const e: Date = p.end;
+                  return today >= s && today <= e;
+                })();
+                return (
+                  <TouchableOpacity
+                    key={`${p.label}-${idx}`}
+                    style={[
+                      styles.periodCard,
+                      idx === selectedPeriodIndex && { borderWidth: 2, borderColor: colors.primary },
+                      isCurrent && idx !== selectedPeriodIndex && { borderWidth: 2, borderColor: colors.primary + '55' },
+                    ]}
+                    onPress={() => setSelectedPeriodIndex(idx)}
+                  >
+                    <Text style={styles.periodLabel}>{p.label}</Text>
+                    <Text style={[styles.periodValue, { color: p.balance >= 0 ? colors.income : colors.expense }]}>{formatCurrency(p.balance)}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
-
-          {/* Period series preview */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.periodScroll}>
-            {periodSeries.map((p: any, idx: number) => {
-              const isCurrent = (() => {
-                const today = new Date();
-                const s: Date = p.start;
-                const e: Date = p.end;
-                return today >= s && today <= e;
-              })();
-              return (
-                <TouchableOpacity
-                  key={`${p.label}-${idx}`}
-                  style={[
-                    styles.periodCard,
-                    idx === selectedPeriodIndex && { borderWidth: 2, borderColor: colors.primary },
-                    isCurrent && idx !== selectedPeriodIndex && { borderWidth: 2, borderColor: colors.primary + '55' },
-                  ]}
-                  onPress={() => setSelectedPeriodIndex(idx)}
-                >
-                  <Text style={styles.periodLabel}>{p.label}</Text>
-                  <Text style={[styles.periodValue, { color: p.balance >= 0 ? colors.income : colors.expense }]}>{formatCurrency(p.balance)}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
+        )}
 
         {/* Month Summary Card */}
         {hasMonthData && (
@@ -448,16 +491,11 @@ export const StatsScreen = () => {
 
         {/* Transactions list removed per request */}
 
-        {/* No transactions message */}
-        {!hasMonthData && transactions.length === 0 && (
-          <View style={styles.section}>
-            <Card style={styles.emptyCard}>
-              <View style={styles.emptyContent}>
-                <Ionicons name="document-text-outline" size={64} color={colors.textTertiary} />
-                <Text style={styles.emptyTitle}>No hay transacciones</Text>
-                <Text style={styles.emptyDescription}>Comienza a registrar transacciones para ver estadísticas</Text>
-              </View>
-            </Card>
+        {/* Empty state for selected month (no stats) */}
+        {!hasMonthData && (
+          <View style={styles.emptyInline}>
+            <Ionicons name="receipt-outline" size={48} color={colors.textTertiary} />
+            <Text style={styles.emptyTitle}>No hay estadísticas disponibles</Text>
           </View>
         )}
 
@@ -542,61 +580,7 @@ export const StatsScreen = () => {
         {/* Monthly Comparison removed per user request */}
       </ScrollView>
 
-      {/* Month Picker Modal */}
-      <Modal
-        visible={showMonthPicker}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowMonthPicker(false)}
-      >
-        <View style={styles.monthPickerOverlay}>
-          <View style={[styles.monthPickerContent, { paddingBottom: (insets.bottom || spacing.xl) }]}>
-            <View style={styles.monthPickerHeader}>
-              <Text style={styles.monthPickerTitle}>Seleccionar Mes</Text>
-              <TouchableOpacity onPress={() => setShowMonthPicker(false)}>
-                <Ionicons name="close" size={24} color={colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.monthList} showsVerticalScrollIndicator={false}>
-              {availableMonths.length === 0 ? (
-                <View style={styles.emptyMonthList}>
-                  <Text style={styles.emptyMonthText}>
-                    No hay transacciones registradas
-                  </Text>
-                </View>
-              ) : (
-                availableMonths.map((month) => (
-                  <TouchableOpacity
-                    key={month.monthYear}
-                    style={[
-                      styles.monthOption,
-                      selectedMonth.getFullYear() === month.date.getFullYear() &&
-                      selectedMonth.getMonth() === month.date.getMonth() &&
-                      styles.monthOptionActive,
-                    ]}
-                    onPress={() => {
-                      setSelectedMonth(month.date);
-                      setShowMonthPicker(false);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.monthOptionText,
-                        selectedMonth.getFullYear() === month.date.getFullYear() &&
-                        selectedMonth.getMonth() === month.date.getMonth() &&
-                        styles.monthOptionTextActive,
-                      ]}
-                    >
-                      {month.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))
-              )}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      {/* Month selector now uses prev/next UI (no modal) */}
     </View>
   );
 };
@@ -631,6 +615,33 @@ const createStyles = (colors: any) =>
       fontWeight: typography.weights.semibold,
       color: colors.textPrimary,
       textTransform: 'capitalize',
+    },
+    monthSelectorContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      paddingHorizontal: spacing.md,
+      marginTop: spacing.sm,
+      marginBottom: spacing.sm,
+    },
+    monthNavButton: {
+      padding: spacing.sm,
+      borderRadius: borderRadius.sm,
+      backgroundColor: colors.surface,
+    },
+    monthLabelButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.surface,
+    },
+    monthLabelText: {
+      fontSize: typography.sizes.base,
+      color: colors.textPrimary,
+      marginRight: spacing.xs,
     },
     section: {
       padding: spacing.lg,
@@ -905,10 +916,10 @@ const createStyles = (colors: any) =>
       justifyContent: 'center',
     },
     emptyTitle: {
-      fontSize: typography.sizes.lg,
-      fontWeight: typography.weights.bold,
-      color: colors.textPrimary,
-      marginTop: spacing.md,
+      fontSize: typography.sizes.xl,
+      fontWeight: typography.weights.semibold,
+      color: colors.textSecondary,
+      marginTop: spacing.lg,
       textAlign: 'center',
     },
     emptySubtitle: {
@@ -985,5 +996,15 @@ const createStyles = (colors: any) =>
     emptyMonthText: {
       fontSize: typography.sizes.base,
       color: colors.textSecondary,
+    },
+    // Empty inline (icon + text only)
+    emptyInline: {
+      alignItems: 'center',
+      paddingVertical: spacing.lg,
+    },
+    emptyContainer: {
+      flexGrow: 1,
+      justifyContent: 'center',
+      padding: spacing.lg,
     },
   });

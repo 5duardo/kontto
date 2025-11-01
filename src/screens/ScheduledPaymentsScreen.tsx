@@ -72,12 +72,13 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<RecurringPayment | null>(null);
   const [selectedOccurrenceDate, setSelectedOccurrenceDate] = useState<Date | null>(null);
-  // Selector de mes
-  const [selectedMonthIndex, setSelectedMonthIndex] = useState<number>(0); // 0 = mes actual
+  // Selector de mes: mostrar ventana de meses previos + actual
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState<number>(MONTHS_TO_SHOW - 1); // default to current month (last in window)
 
   const monthOptions = useMemo(() => {
     const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    // start N-1 months before current month
+    const start = new Date(now.getFullYear(), now.getMonth() - (MONTHS_TO_SHOW - 1), 1);
     return Array.from({ length: MONTHS_TO_SHOW }, (_, i) => {
       const d = new Date(start.getFullYear(), start.getMonth() + i, 1);
       return d.toLocaleDateString('es-HN', { year: 'numeric', month: 'long' });

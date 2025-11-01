@@ -38,8 +38,23 @@ export const TransactionsScreen = ({ navigation }: any) => {
   const styles = useMemo(() => createStyles(colors, borderRadius), [colors]);
   const insets = useSafeAreaInsets();
 
+  // Use same month selector behavior as ScheduledPayments (prev/next + 12 months)
+  const MONTHS_TO_SHOW = 12;
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState<number>(MONTHS_TO_SHOW - 1);
+
+  const monthDates = React.useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - (MONTHS_TO_SHOW - 1), 1);
+    return Array.from({ length: MONTHS_TO_SHOW }, (_, i) => new Date(start.getFullYear(), start.getMonth() + i, 1));
+  }, []);
+
+  const monthOptions = React.useMemo(() => monthDates.map((d) => d.toLocaleDateString('es-HN', { year: 'numeric', month: 'long' })), [monthDates]);
+
+  React.useEffect(() => {
+    const d = monthDates[selectedMonthIndex] || new Date();
+    setSelectedDate(new Date(d.getFullYear(), d.getMonth(), 1));
+  }, [selectedMonthIndex, monthDates]);
 
   /**
    * Convierte cualquier cantidad de una moneda a otra usando USD como base
@@ -120,27 +135,37 @@ export const TransactionsScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.container}>
-      {/* Month Selector Header */}
-      <View style={styles.header}>
+      {/* Month Selector Header (prev / label / next) - same as ScheduledPayments */}
+      <View style={styles.monthSelectorContainer}>
         <TouchableOpacity
-          style={styles.monthSelectorButton}
-          onPress={() => setShowMonthPicker(true)}
+          onPress={() => setSelectedMonthIndex((s) => Math.max(0, s - 1))}
+          style={styles.monthNavButton}
         >
-          <Ionicons name="calendar" size={20} color={colors.primary} />
-          <Text style={styles.monthSelectorText}>{currentMonthLabel}</Text>
-          <Ionicons name="chevron-down" size={20} color={colors.primary} />
+          <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+
+        <View style={styles.monthLabelButton}>
+          <Text style={styles.monthLabelText}>{monthOptions[selectedMonthIndex]}</Text>
+        </View>
+
+        <TouchableOpacity
+          onPress={() => setSelectedMonthIndex((s) => Math.min(MONTHS_TO_SHOW - 1, s + 1))}
+          style={styles.monthNavButton}
+        >
+          <Ionicons name="chevron-forward" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={filteredTransactions.length === 0 ? styles.emptyContainer : undefined}
+        showsVerticalScrollIndicator={false}
+      >
         {filteredTransactions.length === 0 ? (
-          <Card style={styles.emptyCard}>
-            <Ionicons name="receipt-outline" size={64} color={colors.textTertiary} />
+          <View style={styles.emptyInline}>
+            <Ionicons name="receipt-outline" size={48} color={colors.textTertiary} />
             <Text style={styles.emptyText}>Sin transacciones</Text>
-            <Text style={styles.emptySubtext}>
-              No hay transacciones en {currentMonthLabel}. Presiona el botón "+" para agregar una
-            </Text>
-          </Card>
+          </View>
         ) : (
           Object.entries(transactionsByDay).map(([day, dayTransactions]) => (
             <View key={day}>
@@ -233,61 +258,7 @@ export const TransactionsScreen = ({ navigation }: any) => {
         )}
       </ScrollView>
 
-      {/* Month Picker Modal */}
-      <Modal
-        visible={showMonthPicker}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowMonthPicker(false)}
-      >
-        <View style={styles.monthPickerOverlay}>
-          <View style={[styles.monthPickerContent, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
-            <View style={styles.monthPickerHeader}>
-              <Text style={styles.monthPickerTitle}>Seleccionar Mes</Text>
-              <TouchableOpacity onPress={() => setShowMonthPicker(false)}>
-                <Ionicons name="close" size={24} color={colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.monthList} showsVerticalScrollIndicator={false}>
-              {availableMonths.length === 0 ? (
-                <View style={styles.emptyMonthList}>
-                  <Text style={styles.emptyMonthText}>
-                    No hay transacciones registradas
-                  </Text>
-                </View>
-              ) : (
-                availableMonths.map((month) => (
-                  <TouchableOpacity
-                    key={month.monthYear}
-                    style={[
-                      styles.monthOption,
-                      selectedDate.getFullYear() === month.date.getFullYear() &&
-                      selectedDate.getMonth() === month.date.getMonth() &&
-                      styles.monthOptionActive,
-                    ]}
-                    onPress={() => {
-                      setSelectedDate(month.date);
-                      setShowMonthPicker(false);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.monthOptionText,
-                        selectedDate.getFullYear() === month.date.getFullYear() &&
-                        selectedDate.getMonth() === month.date.getMonth() &&
-                        styles.monthOptionTextActive,
-                      ]}
-                    >
-                      {month.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))
-              )}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      {/* Month selector now uses prev/next UI (no modal) */}
 
       {/* Floating Action Button */}
       <TouchableOpacity
@@ -331,6 +302,33 @@ const createStyles = (colors: any, br: any) => StyleSheet.create({
     fontWeight: typography.weights.semibold,
     color: colors.textPrimary,
     textTransform: 'capitalize',
+  },
+  monthSelectorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  monthNavButton: {
+    padding: spacing.sm,
+    borderRadius: br.sm,
+    backgroundColor: colors.surface,
+  },
+  monthLabelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: br.md,
+    backgroundColor: colors.surface,
+  },
+  monthLabelText: {
+    fontSize: typography.sizes.base,
+    color: colors.textPrimary,
+    marginRight: spacing.xs,
   },
   content: {
     flex: 1,
@@ -490,6 +488,17 @@ const createStyles = (colors: any, br: any) => StyleSheet.create({
   emptyMonthText: {
     fontSize: typography.sizes.base,
     color: colors.textSecondary,
+  },
+
+  // Empty inline (icon + text only)
+  emptyInline: {
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+  },
+  emptyContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: spacing.lg,
   },
 
   // Edit Modal Styles (using AddTransactionScreen styles)

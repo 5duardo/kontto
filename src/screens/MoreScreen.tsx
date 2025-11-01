@@ -56,18 +56,19 @@ const MENU_SECTIONS: MenuSection[] = [
         screen: 'ScheduledPayments',
       },
       {
-        id: 'categories',
-        title: 'Categorías',
-        icon: 'grid',
-        color: '#8B5CF6',
-        screen: 'Categories',
-      },
-      {
         id: 'budgets',
         title: 'Presupuestos',
         icon: 'wallet',
         color: '#06B6D4',
         screen: 'Budgets',
+      },
+      {
+        id: 'categories',
+        title: 'Categorías',
+        icon: 'grid',
+        // Color cambiado a otro solicitado (asumí verde #10B981)
+        color: '#10B981',
+        screen: 'Categories',
       },
     ],
   },

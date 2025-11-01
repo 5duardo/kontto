@@ -213,39 +213,7 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
           />
         </View>
 
-        {/* Category Selection */}
-        <TouchableOpacity
-          style={styles.categorySelector}
-          onPress={() => setShowCategoryModal(true)}
-        >
-          {selectedCategory ? (
-            <View style={styles.selectedCategory}>
-              <View
-                style={[
-                  styles.categoryIconContainer,
-                  { backgroundColor: `${selectedCategory.color}20` },
-                ]}
-              >
-                <Ionicons
-                  name={selectedCategory.icon as any}
-                  size={24}
-                  color={selectedCategory.color}
-                />
-              </View>
-              <Text style={styles.categoryName}>{selectedCategory.name}</Text>
-            </View>
-          ) : (
-            <View style={styles.selectedCategory}>
-              <View style={styles.categoryIconContainer}>
-                <Ionicons name="apps" size={24} color={colors.textSecondary} />
-              </View>
-              <Text style={styles.categoryPlaceholder}>Seleccionar categoría</Text>
-            </View>
-          )}
-          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        {/* Account Selector */}
+        {/* Account Selector (moved above category) */}
         <Text style={styles.label}>Cuenta (Requerida)</Text>
         <TouchableOpacity
           style={styles.categorySelector}
@@ -273,6 +241,39 @@ export const AddTransactionScreen = ({ navigation, route }: any) => {
                 <Ionicons name="wallet" size={24} color={colors.textSecondary} />
               </View>
               <Text style={styles.categoryPlaceholder}>Seleccionar cuenta</Text>
+            </View>
+          )}
+          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
+
+        {/* Category Selection (moved below account) */}
+        <Text style={styles.label}>Categoría (Requerida)</Text>
+        <TouchableOpacity
+          style={styles.categorySelector}
+          onPress={() => setShowCategoryModal(true)}
+        >
+          {selectedCategory ? (
+            <View style={styles.selectedCategory}>
+              <View
+                style={[
+                  styles.categoryIconContainer,
+                  { backgroundColor: `${selectedCategory.color}20` },
+                ]}
+              >
+                <Ionicons
+                  name={selectedCategory.icon as any}
+                  size={24}
+                  color={selectedCategory.color}
+                />
+              </View>
+              <Text style={styles.categoryName}>{selectedCategory.name}</Text>
+            </View>
+          ) : (
+            <View style={styles.selectedCategory}>
+              <View style={styles.categoryIconContainer}>
+                <Ionicons name="apps" size={24} color={colors.textSecondary} />
+              </View>
+              <Text style={styles.categoryPlaceholder}>Seleccionar categoría</Text>
             </View>
           )}
           <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
