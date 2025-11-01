@@ -2,7 +2,7 @@
   "expo": {
     "name": "Kontto",
     "slug": "kontto",
-    "version": "31.10.25",
+    "version": "01.11.25",
     "icon": "./assets/kontto.png",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
@@ -13,6 +13,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.kontto.app",
+      "buildNumber": "7",
       "icon": "./assets/kontto.png",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -44,7 +45,8 @@
             "./assets/fonts/Neo Sans Std Regular.otf"
           ]
         }
-      ]
+      ],
+      "react-native-iap"
     ]
   }
 }
