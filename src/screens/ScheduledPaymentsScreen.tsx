@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -32,22 +32,28 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: '$', CAD: 'C$', MXN: '$', BRL: 'R$', HNL: 'L', EUR: '€', GBP: '£',
 };
 
-const convertToHNL = (amount: number, currency: string, rates: Record<string, number>): number => {
-  const rate = rates[currency] || 1;
-  return amount * rate;
-};
-
+// Convert amount from one currency to another using provided rates
+// rates are expected to be in the format returned by the exchange service (base USD): rates[CUR] = units per 1 USD
 const convertCurrency = (
   amount: number,
   fromCurrency: string,
   toCurrency: string,
   rates: Record<string, number>
 ): number => {
-  if (fromCurrency === toCurrency) return amount;
-  const toHNL = convertToHNL(amount, fromCurrency, rates);
-  const targetRate = rates[toCurrency] || 1;
-  return toHNL / targetRate;
+  if (!amount || fromCurrency === toCurrency) return amount;
+
+  // rates use USD as base: rates[CUR] = how many CUR units == 1 USD
+  const fromRate = rates[fromCurrency] || 1; // units per USD
+  const toRate = rates[toCurrency] || 1;
+
+  // Convert amount -> USD, then USD -> target
+  const amountInUSD = amount / fromRate;
+  const amountInTarget = amountInUSD * toRate;
+  return amountInTarget;
 };
+
+// Número de meses a mostrar en el selector/ventana
+const MONTHS_TO_SHOW = 12;
 
 export const ScheduledPaymentsScreen = ({ navigation }: any) => {
   const {
@@ -65,6 +71,25 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
 
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<RecurringPayment | null>(null);
+  const [selectedOccurrenceDate, setSelectedOccurrenceDate] = useState<Date | null>(null);
+  // Selector de mes
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState<number>(0); // 0 = mes actual
+
+  const monthOptions = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    return Array.from({ length: MONTHS_TO_SHOW }, (_, i) => {
+      const d = new Date(start.getFullYear(), start.getMonth() + i, 1);
+      return d.toLocaleDateString('es-HN', { year: 'numeric', month: 'long' });
+    });
+  }, []);
+
+  const selectedMonthKey = monthOptions[selectedMonthIndex] || (() => {
+    const now = new Date();
+    return now.toLocaleDateString('es-HN', { year: 'numeric', month: 'long' });
+  })();
+
+
 
   const formatCurrency = (amount: number, curr: string = preferredCurrency) => {
     const symbol = CURRENCY_SYMBOLS[curr] || curr;
@@ -95,23 +120,111 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
       timeText = 'Próximamente';
     }
 
-    const dateFormatted = nextDate.toLocaleDateString('es-HN', { month: 'short', day: 'numeric' });
-    return `${timeText} (${dateFormatted})`;
+    // Mostrar sólo la representación relativa (ej. 'Hoy', 'Mañana', 'en 3 días')
+    return timeText;
   };
 
-  // Agrupar pagos por mes
+  // Agrupar pagos por mes generando ocurrencias para los próximos meses
   const paymentsByMonth = useMemo(() => {
-    const grouped: Record<string, RecurringPayment[]> = {};
-    // Sort by nextDate ascending (soonest first)
-    const sorted = [...recurringPayments].sort((a, b) => new Date(a.nextDate).getTime() - new Date(b.nextDate).getTime());
-    sorted.forEach((payment) => {
-      const date = new Date(payment.nextDate);
-      const key = date.toLocaleDateString('es-HN', { year: 'numeric', month: 'long' });
-      if (!grouped[key]) grouped[key] = [];
-      grouped[key].push(payment);
+    // Grouped maps month label -> array of { payment, date }
+    const grouped: Record<string, Array<{ payment: RecurringPayment; date: Date }>> = {};
+
+    const now = new Date();
+    const windowStart = new Date(now.getFullYear(), now.getMonth(), 1); // start of current month
+    const monthsToShow = 12;
+    const windowEnd = new Date(windowStart.getFullYear(), windowStart.getMonth() + monthsToShow, 0); // end of last month in window
+
+    const addMonthsSafe = (date: Date, months: number) => {
+      const d = new Date(date);
+      const day = d.getDate();
+      d.setMonth(d.getMonth() + months);
+      if (d.getDate() < day) {
+        d.setDate(0);
+      }
+      return d;
+    };
+
+    const getOccurrences = (payment: RecurringPayment, start: Date, end: Date) => {
+      const occurrences: Date[] = [];
+      let current = new Date(payment.nextDate);
+
+      const advanceOnce = () => {
+        switch (payment.frequency) {
+          case 'daily':
+            current = new Date(current.getFullYear(), current.getMonth(), current.getDate() + 1);
+            break;
+          case 'weekly':
+            current = new Date(current.getTime() + 7 * 24 * 60 * 60 * 1000);
+            break;
+          case 'biweekly':
+            current = new Date(current.getTime() + 14 * 24 * 60 * 60 * 1000);
+            break;
+          case 'monthly':
+            current = addMonthsSafe(current, 1);
+            break;
+          case 'yearly':
+            current = addMonthsSafe(current, 12);
+            break;
+          default:
+            current = addMonthsSafe(current, 1);
+        }
+      };
+
+      let safety = 0;
+      while (current < start && safety < 1000) {
+        advanceOnce();
+        safety += 1;
+      }
+
+      safety = 0;
+      while (current <= end && safety < 1000) {
+        occurrences.push(new Date(current));
+        advanceOnce();
+        safety += 1;
+      }
+
+      return occurrences;
+    };
+
+    const sortedPayments = [...recurringPayments].sort((a, b) => new Date(a.nextDate).getTime() - new Date(b.nextDate).getTime());
+    sortedPayments.forEach((payment) => {
+      const occs = getOccurrences(payment, windowStart, windowEnd);
+      if (occs.length === 0) {
+        const nd = new Date(payment.nextDate);
+        if (nd >= windowStart && nd <= windowEnd) occs.push(nd);
+      }
+
+      occs.forEach((date) => {
+        const key = date.toLocaleDateString('es-HN', { year: 'numeric', month: 'long' });
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push({ payment, date });
+      });
     });
+
     return grouped;
   }, [recurringPayments]);
+
+  // Totales para el mes seleccionado (por moneda y convertido a moneda preferida)
+  const monthTotals = useMemo(() => {
+    const paymentsForMonth = (paymentsByMonth[selectedMonthKey] || []) as Array<{ payment: RecurringPayment; date: Date }>;
+    const totalsByCurrency: Record<string, { income: number; expense: number }> = {};
+
+    paymentsForMonth.forEach(({ payment }) => {
+      const cur = payment.currency || preferredCurrency;
+      if (!totalsByCurrency[cur]) totalsByCurrency[cur] = { income: 0, expense: 0 };
+      if (payment.type === 'income') totalsByCurrency[cur].income += payment.amount;
+      else totalsByCurrency[cur].expense += payment.amount;
+    });
+
+    // Convert totals to preferred currency
+    const converted = { income: 0, expense: 0 };
+    Object.entries(totalsByCurrency).forEach(([cur, v]) => {
+      converted.income += convertCurrency(v.income, cur, preferredCurrency, exchangeRates);
+      converted.expense += convertCurrency(v.expense, cur, preferredCurrency, exchangeRates);
+    });
+
+    return { totalsByCurrency, converted };
+  }, [paymentsByMonth, selectedMonthKey, preferredCurrency, exchangeRates]);
 
   const handleDeletePayment = (paymentId: string) => {
     Alert.alert(
@@ -135,18 +248,26 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
     updateRecurringPayment(payment.id, { isActive: !payment.isActive });
   };
 
-  const openDetailModal = (payment: RecurringPayment) => {
+  const openDetailModal = (payment: RecurringPayment, occurrenceDate?: Date | null) => {
     setSelectedPayment(payment);
+    setSelectedOccurrenceDate(occurrenceDate || null);
     setDetailModalVisible(true);
   };
+
+  useEffect(() => {
+    if (!detailModalVisible) {
+      setSelectedPayment(null);
+      setSelectedOccurrenceDate(null);
+    }
+  }, [detailModalVisible]);
 
   // (Removed upcomingPayments section — we will list all payments sorted by nextDate)
 
   const totalMonthly = useMemo(() => {
     const total = recurringPayments
       .filter((p) => p.frequency === 'monthly' && p.isActive && p.type === 'expense')
-      .reduce((sum, p) => sum + convertToHNL(p.amount, p.currency, exchangeRates), 0);
-    return convertCurrency(total, 'HNL', preferredCurrency, exchangeRates);
+      .reduce((sum, p) => sum + convertCurrency(p.amount, p.currency, preferredCurrency, exchangeRates), 0);
+    return total;
   }, [recurringPayments, exchangeRates, preferredCurrency]);
 
   // Total de todos los pagos programados convertidos a moneda preferida
@@ -154,15 +275,36 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
     const total = recurringPayments
       .filter((p) => p.isActive)
       .reduce((sum, p) => {
-        const amountInHNL = convertToHNL(p.amount, p.currency, exchangeRates);
-        return p.type === 'income' ? sum + amountInHNL : sum - amountInHNL;
+        const amountInPref = convertCurrency(p.amount, p.currency, preferredCurrency, exchangeRates);
+        return p.type === 'income' ? sum + amountInPref : sum - amountInPref;
       }, 0);
-    return convertCurrency(total, 'HNL', preferredCurrency, exchangeRates);
+    return total;
   }, [recurringPayments, exchangeRates, preferredCurrency]);
 
   return (
     <View style={styles.container}>
-      {/* 'Próximos Pagos' section removed — showing full list below sorted by soonest date */}
+      {/* Selector de mes: botones prev/next y opción para abrir modal con lista de meses */}
+      <View style={styles.monthSelectorContainer}>
+        <TouchableOpacity
+          onPress={() => setSelectedMonthIndex((s) => Math.max(0, s - 1))}
+          style={styles.monthNavButton}
+        >
+          <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+
+        <View style={styles.monthLabelButton}>
+          <Text style={styles.monthLabelText}>{selectedMonthKey}</Text>
+        </View>
+
+        <TouchableOpacity
+          onPress={() => setSelectedMonthIndex((s) => Math.min(MONTHS_TO_SHOW - 1, s + 1))}
+          style={styles.monthNavButton}
+        >
+          <Ionicons name="chevron-forward" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Selector de mes ahora solo mediante flechas; modal eliminado */}
 
       {/* Lista de pagos */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -175,84 +317,118 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
             </Text>
           </Card>
         ) : (
-          // @ts-ignore
-          Object.entries(paymentsByMonth).map(([month, payments], index) =>
-            // @ts-ignore
-            <React.Fragment key={`month-${index}-${month}`}>
-              <View>
-                <Text style={styles.monthTitle}>{month}</Text>
-                {payments.map((payment) => {
-                  const paymentCardStyle = !payment.isActive
-                    ? [styles.paymentCard, styles.paymentCardInactive]
-                    : styles.paymentCard;
-                  return (
-                    <TouchableOpacity
-                      key={payment.id}
-                      onPress={() => openDetailModal(payment)}
-                      activeOpacity={0.7}
-                    >
-                      <Card
-                        style={paymentCardStyle as any}
-                      >
-                        <View style={styles.paymentHeader}>
-                          <View style={styles.paymentInfo}>
-                            <View
-                              style={[
-                                styles.categoryIconContainer,
-                                { backgroundColor: `${payment.color}20` },
-                              ]}
-                            >
-                              <Ionicons
-                                name={payment.icon as any}
-                                size={20}
-                                color={payment.color}
-                              />
-                            </View>
-                            <View style={styles.paymentTextInfo}>
-                              <Text style={styles.paymentDescription}>
-                                {payment.title}
-                              </Text>
-                              <View style={styles.paymentMeta}>
-                                <Text style={styles.paymentFrequency}>
-                                  {frequencyLabels[payment.frequency]}
+          // Mostrar sólo el mes seleccionado
+          (() => {
+            const paymentsForMonth = paymentsByMonth[selectedMonthKey] || [];
+            return (
+              <React.Fragment>
+                <View>
+                  {/* Resumen del mes: diseño simplificado */}
+                  <View style={styles.monthSummaryContainer}>
+                    <TouchableOpacity style={[styles.summaryBox, { marginRight: spacing.sm }]} activeOpacity={0.9}>
+                      <View style={styles.summaryHeader}>
+                        <Ionicons name="arrow-up" size={18} color={colors.success} />
+                        <Text style={styles.summaryBoxTitle}>Ingreso</Text>
+                      </View>
+                      <Text style={[styles.bigAmount, { color: colors.success }]}>{formatCurrency(monthTotals.converted.income)}</Text>
+                      <View style={{ marginTop: spacing.xs }}>
+                        {Object.entries(monthTotals.totalsByCurrency).length === 0 ? (
+                          <Text style={styles.summaryEmpty}>-</Text>
+                        ) : (
+                          Object.entries(monthTotals.totalsByCurrency).map(([cur, v]) => (
+                            <Text key={`inc-${cur}`} style={styles.currencyLineSmall}>{cur} {formatCurrency(v.income, cur)}</Text>
+                          ))
+                        )}
+                      </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.summaryBox} activeOpacity={0.9}>
+                      <View style={styles.summaryHeader}>
+                        <Ionicons name="arrow-down" size={18} color={colors.error} />
+                        <Text style={styles.summaryBoxTitle}>Gasto</Text>
+                      </View>
+                      <Text style={[styles.bigAmount, { color: colors.error }]}>{formatCurrency(monthTotals.converted.expense)}</Text>
+                      <View style={{ marginTop: spacing.xs }}>
+                        {Object.entries(monthTotals.totalsByCurrency).length === 0 ? (
+                          <Text style={styles.summaryEmpty}>-</Text>
+                        ) : (
+                          Object.entries(monthTotals.totalsByCurrency).map(([cur, v]) => (
+                            <Text key={`exp-${cur}`} style={styles.currencyLineSmall}>{cur} {formatCurrency(v.expense, cur)}</Text>
+                          ))
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+
+                  <Text style={styles.monthTitle}>{selectedMonthKey}</Text>
+                  {paymentsForMonth.length === 0 ? (
+                    <Card style={styles.emptyCard}>
+                      <Text style={styles.emptyText}>No hay pagos programados para este mes</Text>
+                    </Card>
+                  ) : (
+                    paymentsForMonth.map((item) => {
+                      const payment = item.payment;
+                      const occDate: Date = item.date;
+                      const paymentCardStyle = !payment.isActive
+                        ? [styles.paymentCard, styles.paymentCardInactive]
+                        : styles.paymentCard;
+                      return (
+                        <TouchableOpacity
+                          key={`${payment.id}-${occDate.toISOString()}`}
+                          onPress={() => openDetailModal(payment, occDate)}
+                          activeOpacity={0.7}
+                        >
+                          {/* Fecha explícita encima de cada pago */}
+                          <Text style={styles.occurrenceDateLabel}>{occDate.toLocaleDateString('es-HN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</Text>
+                          <Card style={paymentCardStyle as any}>
+                            <View style={[styles.cardStripe, { backgroundColor: payment.color }]} />
+                            <View style={styles.paymentHeader}>
+                              <View style={styles.paymentInfo}>
+                                <View
+                                  style={[
+                                    styles.categoryIconContainer,
+                                    { backgroundColor: `${payment.color}20` },
+                                  ]}
+                                >
+                                  <Ionicons name={payment.icon as any} size={20} color={payment.color} />
+                                </View>
+                                <View style={styles.paymentTextInfo}>
+                                  <Text style={styles.paymentDescription}>{payment.title}</Text>
+                                  <View style={styles.paymentMeta}>
+                                    <Text style={styles.paymentFrequency}>{frequencyLabels[payment.frequency]}</Text>
+                                    {payment.paid ? (
+                                      <View style={[styles.activeBadge, { backgroundColor: colors.success + '20', flexDirection: 'row', alignItems: 'center', gap: spacing.xs }]}>
+                                        <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                                        <Text style={[styles.activeBadgeText, { color: colors.success }]}>Pagado</Text>
+                                      </View>
+                                    ) : (
+                                      <View style={[styles.activeBadge, { backgroundColor: colors.textTertiary + '30', flexDirection: 'row', alignItems: 'center', gap: spacing.xs }]}>
+                                        <Ionicons name="close-circle" size={14} color={colors.textTertiary} />
+                                        <Text style={[styles.activeBadgeText, { color: colors.textTertiary }]}>No pagado</Text>
+                                      </View>
+                                    )}
+                                  </View>
+                                </View>
+                              </View>
+                              <View style={styles.paymentAmount}>
+                                <Text style={[
+                                  styles.amountText,
+                                  payment.type === 'income' ? styles.income : styles.amountExpense,
+                                ]}>
+                                  {formatCurrency(payment.amount, payment.currency)}
                                 </Text>
-                                {payment.paid ? (
-                                  <View style={[styles.activeBadge, { backgroundColor: colors.success + '20' }]}>
-                                    <Text style={[styles.activeBadgeText, { color: colors.success }]}>
-                                      Pagado
-                                    </Text>
-                                  </View>
-                                ) : (
-                                  <View style={[styles.activeBadge, { backgroundColor: colors.textTertiary + '30' }]}>
-                                    <Text style={[styles.activeBadgeText, { color: colors.textTertiary }]}>
-                                      No pagado
-                                    </Text>
-                                  </View>
-                                )}
+                                <Text style={styles.dateText}>{getRelativeDate(occDate)}</Text>
                               </View>
                             </View>
-                          </View>
-                          <View style={styles.paymentAmount}>
-                            <Text
-                              style={[
-                                styles.amountText,
-                                payment.type === 'income' ? styles.income : styles.amountWhite,
-                              ]}
-                            >
-                              {formatCurrency(payment.amount, payment.currency)}
-                            </Text>
-                            <Text style={styles.dateText}>
-                              {getRelativeDate(payment.nextDate)}
-                            </Text>
-                          </View>
-                        </View>
-                      </Card>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </React.Fragment>
-          )
+                          </Card>
+                        </TouchableOpacity>
+                      );
+                    })
+                  )}
+                </View>
+              </React.Fragment>
+            );
+          })()
         )}
 
         <View style={{ height: 100 }} />
@@ -293,7 +469,7 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
 
                     <View style={styles.detailRow}>
                       <Text style={styles.detailLabel}>Monto:</Text>
-                      <Text style={[styles.detailValue, { fontWeight: '700' }]}>
+                      <Text style={[styles.detailValue, { fontWeight: '700', color: selectedPayment.type === 'income' ? colors.success : colors.error }]}>
                         {formatCurrency(selectedPayment.amount)}
                       </Text>
                     </View>
@@ -315,14 +491,24 @@ export const ScheduledPaymentsScreen = ({ navigation }: any) => {
                     <View style={styles.detailRow}>
                       <Text style={styles.detailLabel}>Próximo pago:</Text>
                       <Text style={styles.detailValue}>
-                        {new Date(selectedPayment.nextDate).toLocaleDateString('es-HN')}
+                        {selectedOccurrenceDate ? selectedOccurrenceDate.toLocaleDateString('es-HN') : new Date(selectedPayment.nextDate).toLocaleDateString('es-HN')}
                       </Text>
                     </View>
 
                     <View style={styles.detailRow}>
                       <Text style={styles.detailLabel}>Pagado:</Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                        <Text style={styles.detailValue}>{selectedPayment.paid ? 'Sí' : 'No'}</Text>
+                        {selectedPayment.paid ? (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                            <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                            <Text style={styles.detailValue}>Sí</Text>
+                          </View>
+                        ) : (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                            <Ionicons name="close-circle" size={16} color={colors.textTertiary} />
+                            <Text style={styles.detailValue}>No</Text>
+                          </View>
+                        )}
                         <TouchableOpacity
                           onPress={() => {
                             updateRecurringPayment(selectedPayment.id, { paid: !selectedPayment.paid });
@@ -775,5 +961,138 @@ const createStyles = (colors: any, br: any) => StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.md,
     paddingHorizontal: spacing.lg,
+  },
+  monthSelectorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  monthNavButton: {
+    padding: spacing.sm,
+    borderRadius: br.sm,
+    backgroundColor: colors.surface,
+  },
+  monthLabelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: br.md,
+    backgroundColor: colors.surface,
+  },
+  monthLabelText: {
+    fontSize: typography.sizes.base,
+    color: colors.textPrimary,
+    marginRight: spacing.xs,
+  },
+  modalOverlayCentered: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.md,
+  },
+  monthPickerContent: {
+    width: '100%',
+    maxWidth: 480,
+    backgroundColor: colors.background,
+    borderRadius: br.lg,
+    padding: spacing.md,
+    maxHeight: '80%'
+  },
+  modalTitleSmall: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  monthOption: {
+    padding: spacing.sm,
+    borderRadius: br.sm,
+  },
+  monthOptionActive: {
+    backgroundColor: colors.primary + '10',
+  },
+  monthOptionText: {
+    fontSize: typography.sizes.base,
+    color: colors.textPrimary,
+    paddingVertical: spacing.xs,
+  },
+  monthOptionTextActive: {
+    fontSize: typography.sizes.base,
+    color: colors.primary,
+    fontWeight: typography.weights.semibold,
+    paddingVertical: spacing.xs,
+  },
+  occurrenceDateLabel: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    marginLeft: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  amountExpense: {
+    color: colors.error,
+  },
+  cardStripe: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 6,
+    borderTopLeftRadius: br.md,
+    borderBottomLeftRadius: br.md,
+  },
+  monthSummaryContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 0, // quitar espacio lateral para alinear con la lista
+    marginBottom: spacing.sm,
+    width: '100%',
+  },
+  summaryBox: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    padding: spacing.sm,
+    borderRadius: br.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    // asegurar que ocupen la misma anchura que la lista
+    minWidth: 0,
+  },
+  summaryBoxTitle: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  summaryEmpty: {
+    color: colors.textSecondary,
+  },
+  currencyLine: {
+    fontSize: typography.sizes.base,
+    color: colors.textPrimary,
+  },
+  convertedTotal: {
+    marginTop: spacing.xs,
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    fontWeight: typography.weights.semibold,
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  bigAmount: {
+    fontSize: typography.sizes['2xl'],
+    fontWeight: typography.weights.bold,
+    color: colors.textPrimary,
+  },
+  currencyLineSmall: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
   },
 });

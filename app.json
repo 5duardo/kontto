@@ -2,7 +2,7 @@
   "expo": {
     "name": "Kontto",
     "slug": "kontto",
-    "version": "1.0.0",
+    "version": "31.10.25",
     "icon": "./assets/kontto.png",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
