@@ -218,3 +218,4 @@ export const shareLocalBackup = async (fileUri: string): Promise<void> => {
         throw new Error('No se puede compartir archivos en esta plataforma.');
     }
 };
+

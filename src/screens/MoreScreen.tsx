@@ -280,3 +280,4 @@ const createStyles = (colors: any) => StyleSheet.create({
     height: spacing.xl,
   },
 });
+

@@ -1,4 +1,15 @@
-# EAS Build ignore file
+# Files and folders to exclude from the EAS build tarball
+# Excluding CI workflows and editor artifacts often avoids tar extraction permission issues
+.github
+.github/**
+.vscode
+*.md
+*.log
+.DS_Store
+Thumbs.db
+.expo
+.expo-shared
+node_modules# EAS Build ignore file
 # Prevent certain files from being uploaded to EAS Build
 
 # Environment files

@@ -115,3 +115,4 @@ const createStyles = (colors: any) =>
         rowSubtitle: { fontSize: typography.sizes.sm, color: colors.textSecondary },
         divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
     });
+

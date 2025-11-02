@@ -197,3 +197,4 @@ export const convertCurrencySync = (
   // Convertir usando la fórmula: (amount / fromRate) * toRate
   return (amount / fromRate) * toRate;
 };
+

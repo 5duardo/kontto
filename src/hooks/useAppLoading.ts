@@ -9,7 +9,7 @@ export const useAppLoading = () => {
     const loadFonts = async () => {
       try {
         await Font.loadAsync({
-          'Neo Sans Std Regular': require('../../assets/fonts/Neo Sans Std Regular.otf'),
+          'Neo Sans Std Regular': require('../../assets/fonts/NeoSansStd-Regular.otf'),
         });
         setFontsLoaded(true);
       } catch (error) {
@@ -41,3 +41,4 @@ export const useAppLoading = () => {
     finishLoading,
   };
 };
+

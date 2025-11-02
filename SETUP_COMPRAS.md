@@ -158,3 +158,4 @@ npx expo-doctor
 ---
 
 ✨ **El proyecto está correctamente configurado. Solo espera a que el build termine.** ✨
+

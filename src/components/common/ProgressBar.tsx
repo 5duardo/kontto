@@ -85,3 +85,4 @@ const createStyles = (colors: any) => StyleSheet.create({
     textAlign: 'right',
   },
 });
+

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Kontto",
     "slug": "kontto",
-    "version": "1.0.0",
+    "version": "1.11.25",
     "icon": "./assets/kontto.png",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
@@ -13,7 +13,6 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.kontto.app",
-      "buildNumber": "7",
       "icon": "./assets/kontto.png",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -42,7 +41,7 @@
         "expo-font",
         {
           "fonts": [
-            "./assets/fonts/Neo Sans Std Regular.otf"
+            "./assets/fonts/NeoSansStd-Regular.otf"
           ]
         }
       ],

@@ -143,3 +143,4 @@ export const TEST_AD_UNIT_IDS = {
 - Los anuncios de recompensa generan más ingresos pero usa con moderación
 - Siempre da opción Premium para eliminar anuncios
 - Monitorea el engagement de tus usuarios con los anuncios
+

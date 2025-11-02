@@ -46,3 +46,4 @@ export const useExchangeRates = (
 
   return { rates, isLoading, error, refresh };
 };
+

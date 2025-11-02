@@ -28,3 +28,4 @@ export const typography = {
     bold: 'Neo Sans Std Regular',
   },
 };
+

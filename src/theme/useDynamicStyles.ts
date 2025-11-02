@@ -12,3 +12,4 @@ export const useDynamicStyles = (createStylesFn: (colors: any) => any) => {
   const { colors } = useTheme();
   return useMemo(() => createStylesFn(colors), [colors]);
 };
+

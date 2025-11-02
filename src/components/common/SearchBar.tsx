@@ -23,3 +23,4 @@ export const SearchBar: React.FC<SearchBarProps> = ({ value, onChange, placehold
 };
 
 export default SearchBar;
+

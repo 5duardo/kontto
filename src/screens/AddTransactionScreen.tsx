@@ -745,3 +745,4 @@ const createStyles = (colors: any, br: any, insets: any) => StyleSheet.create({
     shadowRadius: 8,
   },
 });
+

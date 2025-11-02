@@ -82,3 +82,4 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderColor: colors.border,
   },
 });
+

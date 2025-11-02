@@ -648,3 +648,4 @@ const createStyles = (colors: any) =>
             fontWeight: typography.weights.medium as any,
         },
     });
+

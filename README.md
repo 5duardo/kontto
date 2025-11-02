@@ -182,3 +182,4 @@ Sugerencias futuras:
 - Añadir un workflow de CI (por ejemplo, GitHub Actions) que ejecute `npm run typecheck` y `npm run lint` en PRs.
 - Crear un `README` para describir convenciones de estilos de UI y cómo agregar nuevas pantallas/componentes.
 
+

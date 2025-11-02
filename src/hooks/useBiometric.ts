@@ -94,3 +94,4 @@ export const useBiometric = () => {
         isBiometricSupported: biometricAvailability.isBiometricAvailable,
     };
 };
+

@@ -553,3 +553,4 @@ const createStyles = (colors: any, br: any) => StyleSheet.create({
     borderColor: colors.textPrimary,
   },
 });
+

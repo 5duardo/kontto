@@ -213,3 +213,4 @@ const createStyles = (colors: any) => StyleSheet.create({
     lineHeight: 22,
   },
 });
+

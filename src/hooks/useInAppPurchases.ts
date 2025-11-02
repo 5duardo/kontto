@@ -180,3 +180,4 @@ const useInAppPurchases = (productIds: string[] = Object.values(DEFAULT_PRODUCT_
 };
 
 export default useInAppPurchases;
+

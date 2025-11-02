@@ -8,3 +8,4 @@ export const colors = colorSchemes.dark;
 export const getThemeColors = (theme: 'dark' | 'light') => {
   return colorSchemes[theme];
 };
+
