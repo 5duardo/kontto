@@ -1,26 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
-import * as Font from 'expo-font';
 
 export const useAppLoading = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
   useEffect(() => {
-    const loadFonts = async () => {
-      try {
-        await Font.loadAsync({
-          'Neo Sans Std Regular': require('../../assets/fonts/NeoSansStd-Regular.otf'),
-        });
-        setFontsLoaded(true);
-        console.log('✅ Fonts loaded successfully');
-      } catch (error) {
-        console.warn('⚠️ Error loading fonts:', error);
-        // Si hay error cargando fuentes, continuar de todas formas
-        setFontsLoaded(true);
-      }
-    };
-
-    loadFonts();
+    // No custom fonts to load, mark as ready immediately
+    setFontsLoaded(true);
   }, []);
 
   // Terminar loading cuando las fuentes estén cargadas
