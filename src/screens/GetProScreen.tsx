@@ -10,7 +10,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, typography, useTheme } from '../theme';
 import { useAppStore, FREE_LIMITS } from '../store/useAppStore';
-import useInAppPurchases from '../hooks/useInAppPurchases';
 
 interface ProFeature {
   id: string;
@@ -83,36 +82,52 @@ export const GetProScreen = ({ navigation }: any) => {
 
   const setPro = useAppStore(state => state.setPro);
 
-  // Setup in-app purchases
-  const { buy, loading, error, products, DEFAULT_PRODUCT_IDS, isModuleAvailable } = useInAppPurchases();
-
-  // Handle purchase
+  // Handle purchase - just unlock Pro locally
   const handlePurchase = async (productId: string) => {
-    if (!isModuleAvailable) {
-      Alert.alert(
-        'Módulo no disponible',
-        'El módulo nativo de compras in-app no está disponible.\n\nPara usar compras reales, necesitas reconstruir la app:\n\n1. npx expo prebuild --clean\n2. eas build --platform ios --profile preview\n\nO instala desde TestFlight cuando esté lista.',
-        [{ text: 'Entendido', onPress: () => { } }]
-      );
-      return;
-    }
-    if (loading) {
-      Alert.alert('Por favor espera', 'Una compra está en progreso...');
-      return;
-    }
-    if (error) {
-      Alert.alert('Error', `Error al procesar compra: ${error}`);
-      return;
-    }
-    try {
-      await buy(productId);
-      // After successful purchase, enable Pro
-      setPro(true);
-      Alert.alert('¡Éxito!', '¡Gracias por tu compra! Pro ha sido activado.');
-    } catch (err: any) {
-      Alert.alert('Error', `Hubo un problema al procesar tu compra: ${err?.message || err}`);
-    }
+    Alert.alert(
+      'Función deshabilitada',
+      'Las compras in-app no están disponibles en esta versión.\n\nPro está habilitado manualmente para pruebas.',
+      [{
+        text: 'Aceptar', onPress: () => {
+          setPro(true);
+        }
+      }]
+    );
   };
+
+  // Small reusable simple pricing card to keep all boxes identical and minimal
+  const PricingCard = ({
+    icon,
+    title,
+    price,
+    period,
+    subtitle,
+    onPress,
+    featured = false,
+  }: any) => (
+    <View style={[styles.pricingCard, featured && styles.pricingCardFeaturedSimple, { borderColor: colors.border }]}>
+      <View style={styles.planHeaderSimple}>
+        <Ionicons name={icon} size={20} color={colors.primary} />
+        <Text style={styles.planName}>{title}</Text>
+      </View>
+
+      <View style={styles.priceContainer}>
+        <Text style={[styles.price, featured ? { color: colors.success } : { color: colors.primary }]}>{price}</Text>
+        {period ? <Text style={styles.period}>{period}</Text> : null}
+      </View>
+
+      {subtitle ? <Text style={styles.subtitleSimple}>{subtitle}</Text> : null}
+
+      <TouchableOpacity
+        style={[styles.purchaseButton, { backgroundColor: featured ? colors.success : colors.primary }]}
+        onPress={onPress}
+      >
+        <Text style={[styles.purchaseButtonText, { color: '#fff' }]}>
+          {price ? `Comprar ${price}` : 'Obtener'}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   // renderFeature removed — features are shown in the comparison table instead
 
@@ -214,68 +229,45 @@ export const GetProScreen = ({ navigation }: any) => {
 
         {/* Features Section removed: premium features are displayed inside the comparison table above */}
 
-        {/* Subscription Plans Section */}
+        {/* Subscription Plans Section (simplified uniform boxes) */}
         <View style={styles.pricingSection}>
           <Text style={styles.sectionTitle}>Elige tu plan</Text>
 
-          {/* Weekly Plan */}
-          <View style={styles.pricingCard}>
-            <Text style={styles.planName}>1 Semana</Text>
-            <View style={styles.priceContainer}>
-              <Text style={styles.price}>$2.99</Text>
-              <Text style={styles.period}>/semana</Text>
-            </View>
-            <Text style={styles.savingsText}>Prueba Pro sin compromiso</Text>
-            <TouchableOpacity
-              style={[styles.purchaseButton, { backgroundColor: colors.primary, opacity: loading ? 0.6 : 1 }]}
-              onPress={() => handlePurchase(DEFAULT_PRODUCT_IDS.weekly)}
-              disabled={loading}
-            >
-              <Text style={[styles.purchaseButtonText, { color: '#fff' }]}>
-                {loading ? 'Procesando...' : 'Comprar suscripción'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <View style={styles.pricingList}>
+            <PricingCard
+              icon="flash"
+              title="1 Semana"
+              price="$0.99"
+              period="/sem"
+              subtitle="Prueba Pro"
+              onPress={() => handlePurchase('weekly')}
+            />
 
-          {/* Monthly Plan */}
-          <View style={styles.pricingCard}>
-            <Text style={styles.planName}>1 Mes</Text>
-            <View style={styles.priceContainer}>
-              <Text style={styles.price}>$9.99</Text>
-              <Text style={styles.period}>/mes</Text>
-            </View>
-            <Text style={styles.savingsText}>Mejor valor mensual</Text>
-            <TouchableOpacity
-              style={[styles.purchaseButton, { backgroundColor: colors.primary, opacity: loading ? 0.6 : 1 }]}
-              onPress={() => handlePurchase(DEFAULT_PRODUCT_IDS.monthly)}
-              disabled={loading}
-            >
-              <Text style={[styles.purchaseButtonText, { color: '#fff' }]}>
-                {loading ? 'Procesando...' : 'Comprar suscripción'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+            <PricingCard
+              icon="calendar"
+              title="1 Mes"
+              price="$2.99"
+              period="/mes"
+              subtitle="Renovable"
+              onPress={() => handlePurchase('monthly')}
+            />
 
-          {/* Annual Plan */}
-          <View style={[styles.pricingCard, { borderColor: colors.primary, borderWidth: 2 }]}>
-            <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-              <Text style={styles.badgeText}>Mejor precio</Text>
-            </View>
-            <Text style={styles.planName}>1 Año</Text>
-            <View style={styles.priceContainer}>
-              <Text style={styles.price}>$79.99</Text>
-              <Text style={styles.period}>/año</Text>
-            </View>
-            <Text style={styles.savingsText}>Ahorra 33% vs mensual</Text>
-            <TouchableOpacity
-              style={[styles.purchaseButton, { backgroundColor: colors.primary, opacity: loading ? 0.6 : 1 }]}
-              onPress={() => handlePurchase(DEFAULT_PRODUCT_IDS.annual)}
-              disabled={loading}
-            >
-              <Text style={[styles.purchaseButtonText, { color: '#fff' }]}>
-                {loading ? 'Procesando...' : 'Comprar suscripción'}
-              </Text>
-            </TouchableOpacity>
+            <PricingCard
+              icon="trending-down"
+              title="1 Año"
+              price="$9.99"
+              period="/año"
+              subtitle="Mejor precio"
+              onPress={() => handlePurchase('annual')}
+            />
+
+            <PricingCard
+              icon="diamond"
+              title="De por vida"
+              price="$19.99"
+              subtitle="Pago único"
+              onPress={() => handlePurchase('lifetime')}
+            />
           </View>
         </View>
 
@@ -371,6 +363,16 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     position: 'relative',
+    marginBottom: spacing.md,
+  },
+  pricingCardFeatured: {
+    borderWidth: 2,
+    backgroundColor: `${colors.primary}08`,
+  },
+  planHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
   },
   badge: {
     position: 'absolute',
@@ -379,6 +381,9 @@ const createStyles = (colors: any) => StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   badgeText: {
     color: '#FFF',
@@ -389,7 +394,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
     color: colors.textPrimary,
-    marginTop: spacing.md,
+    marginLeft: spacing.sm,
   },
   priceContainer: {
     flexDirection: 'row',
@@ -406,16 +411,44 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: colors.textSecondary,
     marginLeft: spacing.xs,
   },
-  savings: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
-    marginBottom: spacing.md,
-  },
   savingsText: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
     color: colors.textSecondary,
     marginBottom: spacing.md,
+  },
+  discountBanner: {
+    backgroundColor: `${colors.success}12`,
+    borderRadius: 8,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginVertical: spacing.md,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.success,
+  },
+  discountText: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.bold,
+    color: colors.success,
+  },
+  savingsCalculation: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  featuresList: {
+    marginVertical: spacing.md,
+    gap: spacing.sm,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  featureListText: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    flex: 1,
   },
   purchaseButton: {
     paddingVertical: spacing.md,
@@ -423,9 +456,30 @@ const createStyles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
     marginTop: spacing.md,
   },
+  purchaseButtonFeatured: {
+    paddingVertical: spacing.lg,
+  },
   purchaseButtonText: {
     fontSize: typography.sizes.base,
     fontWeight: typography.weights.bold,
+  },
+  pricingList: {
+    gap: spacing.md,
+  },
+  planHeaderSimple: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  subtitleSimple: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
+  pricingCardFeaturedSimple: {
+    borderWidth: 2,
+    backgroundColor: `${colors.primary}08`,
   },
   faqSection: {
     paddingHorizontal: spacing.md,

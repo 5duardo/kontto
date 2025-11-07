@@ -12,8 +12,9 @@ export const useAppLoading = () => {
           'Neo Sans Std Regular': require('../../assets/fonts/NeoSansStd-Regular.otf'),
         });
         setFontsLoaded(true);
+        console.log('✅ Fonts loaded successfully');
       } catch (error) {
-        console.warn('Error loading fonts:', error);
+        console.warn('⚠️ Error loading fonts:', error);
         // Si hay error cargando fuentes, continuar de todas formas
         setFontsLoaded(true);
       }

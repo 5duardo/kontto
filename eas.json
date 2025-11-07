@@ -28,7 +28,18 @@
         "buildType": "app-bundle"
       },
       "ios": {
-        "autoIncrement": true
+        "autoIncrement": true,
+        "simulator": false
+      }
+    },
+    "testflight": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "ios": {
+        "autoIncrement": true,
+        "simulator": false,
+        "distribution": "store"
       }
     },
     "production-aab": {
@@ -38,6 +49,13 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {},
+    "testflight": {
+      "ios": {
+        "appleId": "",
+        "ascAppId": "",
+        "appleTeamId": ""
+      }
+    }
   }
 }

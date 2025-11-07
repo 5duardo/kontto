@@ -117,9 +117,9 @@ const TabNavigator = () => {
 
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
+      screenOptions={({ route }: any) => ({
         tabBarShowLabel: true,
-        tabBarIcon: ({ focused, color, size }) => {
+        tabBarIcon: ({ focused, color, size }: any) => {
           let iconName: keyof typeof Ionicons.glyphMap = 'home';
 
           if (route.name === 'Accounts') {
@@ -136,7 +136,7 @@ const TabNavigator = () => {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarLabel: ({ focused, color }) => {
+        tabBarLabel: ({ focused, color }: any) => {
           let label = '';
 
           if (route.name === 'Accounts') {
@@ -220,7 +220,7 @@ const TabNavigator = () => {
       <Tab.Screen
         name="AddTransactionFAB"
         component={View}
-        listeners={({ navigation }) => ({
+        listeners={({ navigation }: any) => ({
           tabPress: (e: any) => {
             e.preventDefault();
           },
@@ -352,7 +352,7 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="EditGoal"
           component={EditGoalScreen}
-          options={({ navigation }) => ({
+          options={({ navigation }: any) => ({
             title: 'Editar meta',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -364,7 +364,7 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="EditAccount"
           component={EditAccountScreen}
-          options={({ navigation }) => ({
+          options={({ navigation }: any) => ({
             title: 'Editar cuenta',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -376,7 +376,7 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="Budgets"
           component={BudgetsScreen}
-          options={({ navigation }) => ({
+          options={({ navigation }: any) => ({
             title: 'Presupuestos',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -388,7 +388,7 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="Settings"
           component={SettingsScreen}
-          options={({ navigation }) => ({
+          options={({ navigation }: any) => ({
             title: 'Ajustes',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -400,7 +400,7 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="Profile"
           component={ProfileScreen}
-          options={({ navigation }) => ({
+          options={({ navigation }: any) => ({
             title: 'Perfil',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -412,7 +412,7 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="GetPro"
           component={GetProScreen}
-          options={({ navigation }) => ({
+          options={({ navigation }: any) => ({
             title: 'Obtener Pro',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -424,7 +424,7 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="ScheduledPayments"
           component={ScheduledPaymentsScreen}
-          options={({ navigation }) => ({
+          options={({ navigation }: any) => ({
             title: 'Pagos Programados',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -436,7 +436,7 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="AddPayment"
           component={AddPaymentScreen}
-          options={({ navigation }) => ({
+          options={({ navigation }: any) => ({
             title: 'Nuevo Pago',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -448,7 +448,7 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="EditPayment"
           component={EditPaymentScreen}
-          options={({ navigation }) => ({
+          options={({ navigation }: any) => ({
             title: 'Editar Pago',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -460,7 +460,7 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="About"
           component={AboutScreen}
-          options={({ navigation }) => ({
+          options={({ navigation }: any) => ({
             title: 'Acerca de',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -472,7 +472,7 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="Data"
           component={DataScreen}
-          options={({ navigation }) => ({
+          options={({ navigation }: any) => ({
             title: 'Datos',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -484,7 +484,7 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="LocalBackups"
           component={LocalBackupsScreen}
-          options={({ navigation }) => ({
+          options={({ navigation }: any) => ({
             title: 'Copias de Seguridad',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -496,7 +496,7 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="FormatSettings"
           component={FormatSettingsScreen}
-          options={({ navigation }) => ({
+          options={({ navigation }: any) => ({
             title: 'Formato',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -508,7 +508,7 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="StylesSettings"
           component={StylesSettingsScreen}
-          options={({ navigation }) => ({
+          options={({ navigation }: any) => ({
             title: 'Estilos y elementos',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -520,7 +520,7 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="SyncSettings"
           component={SyncSettingsScreen}
-          options={({ navigation }) => ({
+          options={({ navigation }: any) => ({
             title: 'Sincronización',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -532,7 +532,7 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="NotificationsSettings"
           component={NotificationsSettingsScreen}
-          options={({ navigation }) => ({
+          options={({ navigation }: any) => ({
             title: 'Notificaciones',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -544,7 +544,7 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="SecuritySettings"
           component={SecuritySettingsScreen}
-          options={({ navigation }) => ({
+          options={({ navigation }: any) => ({
             title: 'Seguridad',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -556,7 +556,7 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="Transactions"
           component={TransactionsScreen}
-          options={({ navigation }) => ({
+          options={({ navigation }: any) => ({
             title: 'Transacciones',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -568,7 +568,7 @@ export const AppNavigator = () => {
         <Stack.Screen
           name="Categories"
           component={CategoriesScreen}
-          options={({ navigation }) => ({
+          options={({ navigation }: any) => ({
             title: 'Categorías',
             headerLeft: () => (
               <TouchableOpacity onPress={() => navigation.goBack()}>
