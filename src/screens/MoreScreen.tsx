@@ -127,18 +127,7 @@ const MENU_SECTIONS: MenuSection[] = [
           });
         },
       },
-      {
-        id: 'ack',
-        title: 'Agradecimientos',
-        icon: 'heart',
-        color: '#10B981',
-        action: () => {
-          Alert.alert(
-            'Agradecimientos',
-            'Quiero expresar mi más sincero agradecimiento a mi familia y a mis amigos por su apoyo incondicional, paciencia y ánimo durante todas las etapas de este proyecto. Su confianza, observaciones y compañía han sido fundamentales para llevar Kontto adelante.'
-          );
-        },
-      },
+
     ],
   },
 ];
@@ -183,14 +172,7 @@ export const MoreScreen = ({ navigation }: any) => {
           <View key={sectionIndex} style={styles.section}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
             <View style={styles.sectionContent}>
-              {section.items.map((item, itemIndex) => (
-                <View key={item.id}>
-                  {renderMenuItem(item)}
-                  {itemIndex < section.items.length - 1 && (
-                    <View style={styles.divider} />
-                  )}
-                </View>
-              ))}
+              {section.items.map((item) => renderMenuItem(item))}
             </View>
           </View>
         ))}

@@ -71,8 +71,8 @@ export const SetupOnboardingScreen: React.FC<SetupOnboardingScreenProps> = ({ on
     const [mainCurrency, setMainCurrency] = useState(preferredCurrency);
     const [searchMainCurrency, setSearchMainCurrency] = useState('');
 
-    // Conversion Currency
-    const [conversionCurrency, setConversionCurrencyState] = useState('HNL');
+    // Conversion Currency (default changed to USD)
+    const [conversionCurrency, setConversionCurrencyState] = useState('USD');
     const [searchConversionCurrency, setSearchConversionCurrency] = useState('');
 
     // First Account
