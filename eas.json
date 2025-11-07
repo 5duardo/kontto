@@ -50,12 +50,6 @@
   },
   "submit": {
     "production": {},
-    "testflight": {
-      "ios": {
-        "appleId": "",
-        "ascAppId": "",
-        "appleTeamId": ""
-      }
-    }
+    "testflight": {}
   }
 }
