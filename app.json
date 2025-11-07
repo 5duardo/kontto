@@ -37,14 +37,6 @@
     "owner": "5duardo",
     "plugins": [
       "expo-system-ui",
-      [
-        "expo-font",
-        {
-          "fonts": [
-            "./assets/fonts/NeoSansStd-Regular.otf"
-          ]
-        }
-      ],
       "react-native-iap"
     ]
   }
