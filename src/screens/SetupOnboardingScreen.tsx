@@ -324,103 +324,128 @@ export const SetupOnboardingScreen: React.FC<SetupOnboardingScreenProps> = ({ on
                         </View>
 
                         <Card style={styles.formCard}>
-                            <Text style={styles.label}>Nombre de la Cuenta</Text>
-                            <TextInput
-                                style={[styles.input, { color: colors.textPrimary, borderColor: colors.border }]}
-                                placeholder="Mi Cuenta Principal"
-                                placeholderTextColor={colors.textTertiary}
-                                value={accountTitle}
-                                onChangeText={setAccountTitle}
-                            />
-
-                            <Text style={styles.label}>Tipo de Cuenta</Text>
-                            <View style={styles.typeSelector}>
-                                {ACCOUNT_TYPES.map(type => (
-                                    <TouchableOpacity
-                                        key={type.id}
-                                        style={[
-                                            styles.typeOption,
-                                            accountType === type.id && styles.typeOptionActive,
-                                            { borderColor: accountType === type.id ? colors.primary : colors.border },
-                                        ]}
-                                        onPress={() => setAccountType(type.id)}
-                                    >
-                                        <Ionicons name={type.icon as any} size={24} color={accountType === type.id ? colors.primary : colors.textSecondary} />
-                                        <Text style={[styles.typeOptionText, accountType === type.id && styles.typeOptionTextActive]}>
-                                            {type.name}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-
-                            <Text style={styles.label}>Saldo Inicial</Text>
-                            <View style={styles.currencyInput}>
-                                <Text style={styles.currencyPrefix}>{mainCurrency}</Text>
+                            {/* Account Name */}
+                            <View style={styles.formSection}>
+                                <Text style={styles.label}>Nombre de la Cuenta</Text>
                                 <TextInput
-                                    style={[styles.input, styles.inputFlex, { color: colors.textPrimary, borderColor: colors.border }]}
-                                    placeholder="0.00"
+                                    style={[styles.input, { color: colors.textPrimary, borderColor: colors.border }]}
+                                    placeholder="Mi Cuenta Principal"
                                     placeholderTextColor={colors.textTertiary}
-                                    value={accountBalance}
-                                    onChangeText={setAccountBalance}
-                                    keyboardType="decimal-pad"
+                                    value={accountTitle}
+                                    onChangeText={setAccountTitle}
                                 />
                             </View>
 
-                            <Text style={styles.label}>Icono y Color</Text>
-                            <View style={styles.previewContainer}>
-                                <View style={[styles.iconPreview, { backgroundColor: accountIconColor }]}>
-                                    <Ionicons name={accountIcon as any} size={40} color="#FFFFFF" />
+                            {/* Account Type */}
+                            <View style={styles.formSection}>
+                                <Text style={styles.label}>Tipo de Cuenta</Text>
+                                <View style={styles.typeSelector}>
+                                    {ACCOUNT_TYPES.map(type => (
+                                        <TouchableOpacity
+                                            key={type.id}
+                                            style={[
+                                                styles.typeOption,
+                                                accountType === type.id && styles.typeOptionActive,
+                                                { borderColor: accountType === type.id ? colors.primary : colors.border },
+                                            ]}
+                                            onPress={() => setAccountType(type.id)}
+                                        >
+                                            <Ionicons name={type.icon as any} size={24} color={accountType === type.id ? colors.primary : colors.textSecondary} />
+                                            <Text style={[styles.typeOptionText, accountType === type.id && styles.typeOptionTextActive]}>
+                                                {type.name}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
                                 </View>
-                                <Text style={styles.previewLabel}>Vista previa</Text>
                             </View>
 
-                            <Text style={styles.sectionLabel}>Seleccionar Icono</Text>
-                            <ScrollView
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                style={styles.horizontalScroll}
-                                contentContainerStyle={styles.horizontalScrollContent}
-                            >
-                                {ACCOUNT_ICONS.map(icon => (
-                                    <TouchableOpacity
-                                        key={icon}
-                                        style={[
-                                            styles.iconOptionBox,
-                                            {
-                                                backgroundColor: icon === accountIcon ? `${accountIconColor}20` : colors.backgroundSecondary,
-                                                borderColor: icon === accountIcon ? accountIconColor : colors.border,
-                                                borderWidth: icon === accountIcon ? 3 : 2,
-                                            },
-                                        ]}
-                                        onPress={() => setAccountIcon(icon)}
-                                    >
-                                        <Ionicons name={icon as any} size={32} color={accountIconColor} />
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-
-                            <Text style={styles.sectionLabel}>Seleccionar Color</Text>
-                            <ScrollView
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                style={styles.horizontalScroll}
-                                contentContainerStyle={styles.horizontalScrollContent}
-                            >
-                                {ICON_COLORS.map(color => (
-                                    <TouchableOpacity
-                                        key={color}
-                                        style={[
-                                            styles.colorOptionBox,
-                                            {
-                                                backgroundColor: color,
-                                                borderWidth: accountIconColor === color ? 4 : 2,
-                                                borderColor: accountIconColor === color ? colors.textPrimary : colors.border,
-                                            },
-                                        ]}
-                                        onPress={() => setAccountIconColor(color)}
+                            {/* Initial Balance */}
+                            <View style={styles.formSection}>
+                                <Text style={styles.label}>Saldo Inicial</Text>
+                                <View style={styles.currencyInput}>
+                                    <Text style={styles.currencyPrefix}>{mainCurrency}</Text>
+                                    <TextInput
+                                        style={[styles.inputCurrency, { color: colors.textPrimary }]}
+                                        placeholder="0.00"
+                                        placeholderTextColor={colors.textTertiary}
+                                        value={accountBalance}
+                                        onChangeText={setAccountBalance}
+                                        keyboardType="decimal-pad"
                                     />
-                                ))}
-                            </ScrollView>
+                                </View>
+                            </View>
+
+                            {/* Icon and Color Selection */}
+                            <View style={[styles.formSection, { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.lg, marginTop: spacing.lg }]}>
+                                <Text style={styles.label}>Apariencia</Text>
+
+                                {/* Preview */}
+                                <View style={styles.previewContainer}>
+                                    <View style={[styles.iconPreview, { backgroundColor: accountIconColor }]}>
+                                        <Ionicons name={accountIcon as any} size={40} color="#FFFFFF" />
+                                    </View>
+                                    <View>
+                                        <Text style={[styles.previewLabel, { color: colors.textPrimary, fontWeight: '600' }]}>
+                                            Vista previa
+                                        </Text>
+                                        <Text style={[styles.previewLabel, { color: colors.textSecondary, fontSize: 12, marginTop: spacing.xs }]}>
+                                            {accountTitle || 'Mi Cuenta Principal'}
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                {/* Icon Selection */}
+                                <Text style={[styles.sectionLabel, { marginBottom: spacing.md }]}>Seleccionar Icono</Text>
+                                <ScrollView
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    style={styles.horizontalScroll}
+                                    contentContainerStyle={styles.horizontalScrollContent}
+                                >
+                                    {ACCOUNT_ICONS.map(icon => (
+                                        <TouchableOpacity
+                                            key={icon}
+                                            style={[
+                                                styles.iconOptionBox,
+                                                {
+                                                    backgroundColor: icon === accountIcon ? `${accountIconColor}20` : colors.backgroundSecondary,
+                                                    borderColor: icon === accountIcon ? accountIconColor : colors.border,
+                                                    borderWidth: icon === accountIcon ? 3 : 2,
+                                                },
+                                            ]}
+                                            onPress={() => setAccountIcon(icon)}
+                                        >
+                                            <Ionicons name={icon as any} size={32} color={accountIconColor} />
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+
+                                {/* Color Selection */}
+                                <Text style={[styles.sectionLabel, { marginBottom: spacing.md, marginTop: spacing.lg }]}>Seleccionar Color</Text>
+                                <ScrollView
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    style={styles.horizontalScroll}
+                                    contentContainerStyle={styles.horizontalScrollContent}
+                                >
+                                    {ICON_COLORS.map(color => (
+                                        <TouchableOpacity
+                                            key={color}
+                                            style={[
+                                                styles.iconOptionBox,
+                                                {
+                                                    backgroundColor: color === accountIconColor ? `${accountIconColor}20` : colors.backgroundSecondary,
+                                                    borderColor: color === accountIconColor ? accountIconColor : colors.border,
+                                                    borderWidth: color === accountIconColor ? 3 : 2,
+                                                },
+                                            ]}
+                                            onPress={() => setAccountIconColor(color)}
+                                        >
+                                            <View style={[styles.colorSwatch, { backgroundColor: color }]} />
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            </View>
                         </Card>
                     </View>
                 )}
@@ -437,96 +462,121 @@ export const SetupOnboardingScreen: React.FC<SetupOnboardingScreenProps> = ({ on
                         </View>
 
                         <Card style={styles.formCard}>
-                            <Text style={styles.label}>Nombre de la Meta</Text>
-                            <TextInput
-                                style={[styles.input, { color: colors.textPrimary, borderColor: colors.border }]}
-                                placeholder="Mi Primera Meta"
-                                placeholderTextColor={colors.textTertiary}
-                                value={goalName}
-                                onChangeText={setGoalName}
-                            />
-
-                            <Text style={styles.label}>Monto Objetivo</Text>
-                            <View style={styles.currencyInput}>
-                                <Text style={styles.currencyPrefix}>{mainCurrency}</Text>
+                            {/* Goal Name */}
+                            <View style={styles.formSection}>
+                                <Text style={styles.label}>Nombre de la Meta</Text>
                                 <TextInput
-                                    style={[styles.input, styles.inputFlex, { color: colors.textPrimary, borderColor: colors.border }]}
-                                    placeholder="0.00"
+                                    style={[styles.input, { color: colors.textPrimary, borderColor: colors.border }]}
+                                    placeholder="Mi Primera Meta"
                                     placeholderTextColor={colors.textTertiary}
-                                    value={goalTarget}
-                                    onChangeText={setGoalTarget}
-                                    keyboardType="decimal-pad"
+                                    value={goalName}
+                                    onChangeText={setGoalName}
                                 />
                             </View>
 
-                            <Text style={styles.label}>Monto Actual</Text>
-                            <View style={styles.currencyInput}>
-                                <Text style={styles.currencyPrefix}>{mainCurrency}</Text>
-                                <TextInput
-                                    style={[styles.input, styles.inputFlex, { color: colors.textPrimary, borderColor: colors.border }]}
-                                    placeholder="0.00"
-                                    placeholderTextColor={colors.textTertiary}
-                                    value={goalCurrentAmount}
-                                    onChangeText={setGoalCurrentAmount}
-                                    keyboardType="decimal-pad"
-                                />
-                            </View>
-
-                            <Text style={styles.label}>Icono y Color</Text>
-                            <View style={styles.previewContainer}>
-                                <View style={[styles.iconPreview, { backgroundColor: goalIconColor }]}>
-                                    <Ionicons name={goalIcon as any} size={40} color="#FFFFFF" />
-                                </View>
-                                <Text style={styles.previewLabel}>Vista previa</Text>
-                            </View>
-
-                            <Text style={styles.sectionLabel}>Seleccionar Icono</Text>
-                            <ScrollView
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                style={styles.horizontalScroll}
-                                contentContainerStyle={styles.horizontalScrollContent}
-                            >
-                                {GOAL_ICONS.map(icon => (
-                                    <TouchableOpacity
-                                        key={icon}
-                                        style={[
-                                            styles.iconOptionBox,
-                                            {
-                                                backgroundColor: icon === goalIcon ? `${goalIconColor}20` : colors.backgroundSecondary,
-                                                borderColor: icon === goalIcon ? goalIconColor : colors.border,
-                                                borderWidth: icon === goalIcon ? 3 : 2,
-                                            },
-                                        ]}
-                                        onPress={() => setGoalIcon(icon)}
-                                    >
-                                        <Ionicons name={icon as any} size={32} color={goalIconColor} />
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-
-                            <Text style={styles.sectionLabel}>Seleccionar Color</Text>
-                            <ScrollView
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                style={styles.horizontalScroll}
-                                contentContainerStyle={styles.horizontalScrollContent}
-                            >
-                                {ICON_COLORS.map(color => (
-                                    <TouchableOpacity
-                                        key={color}
-                                        style={[
-                                            styles.colorOptionBox,
-                                            {
-                                                backgroundColor: color,
-                                                borderWidth: goalIconColor === color ? 4 : 2,
-                                                borderColor: goalIconColor === color ? colors.textPrimary : colors.border,
-                                            },
-                                        ]}
-                                        onPress={() => setGoalIconColor(color)}
+                            {/* Target Amount */}
+                            <View style={styles.formSection}>
+                                <Text style={styles.label}>Monto Objetivo</Text>
+                                <View style={styles.currencyInput}>
+                                    <Text style={styles.currencyPrefix}>{mainCurrency}</Text>
+                                    <TextInput
+                                        style={[styles.inputCurrency, { color: colors.textPrimary }]}
+                                        placeholder="0.00"
+                                        placeholderTextColor={colors.textTertiary}
+                                        value={goalTarget}
+                                        onChangeText={setGoalTarget}
+                                        keyboardType="decimal-pad"
                                     />
-                                ))}
-                            </ScrollView>
+                                </View>
+                            </View>
+
+                            {/* Current Amount */}
+                            <View style={styles.formSection}>
+                                <Text style={styles.label}>Monto Actual</Text>
+                                <View style={styles.currencyInput}>
+                                    <Text style={styles.currencyPrefix}>{mainCurrency}</Text>
+                                    <TextInput
+                                        style={[styles.inputCurrency, { color: colors.textPrimary }]}
+                                        placeholder="0.00"
+                                        placeholderTextColor={colors.textTertiary}
+                                        value={goalCurrentAmount}
+                                        onChangeText={setGoalCurrentAmount}
+                                        keyboardType="decimal-pad"
+                                    />
+                                </View>
+                            </View>
+
+                            {/* Icon and Color Selection */}
+                            <View style={[styles.formSection, { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.lg, marginTop: spacing.lg }]}>
+                                <Text style={styles.label}>Apariencia</Text>
+
+                                {/* Preview */}
+                                <View style={styles.previewContainer}>
+                                    <View style={[styles.iconPreview, { backgroundColor: goalIconColor }]}>
+                                        <Ionicons name={goalIcon as any} size={40} color="#FFFFFF" />
+                                    </View>
+                                    <View>
+                                        <Text style={[styles.previewLabel, { color: colors.textPrimary, fontWeight: '600' }]}>
+                                            Vista previa
+                                        </Text>
+                                        <Text style={[styles.previewLabel, { color: colors.textSecondary, fontSize: 12, marginTop: spacing.xs }]}>
+                                            {goalName || 'Mi Primera Meta'}
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                {/* Icon Selection */}
+                                <Text style={[styles.sectionLabel, { marginBottom: spacing.md }]}>Seleccionar Icono</Text>
+                                <ScrollView
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    style={styles.horizontalScroll}
+                                    contentContainerStyle={styles.horizontalScrollContent}
+                                >
+                                    {GOAL_ICONS.map(icon => (
+                                        <TouchableOpacity
+                                            key={icon}
+                                            style={[
+                                                styles.iconOptionBox,
+                                                {
+                                                    backgroundColor: icon === goalIcon ? `${goalIconColor}20` : colors.backgroundSecondary,
+                                                    borderColor: icon === goalIcon ? goalIconColor : colors.border,
+                                                    borderWidth: icon === goalIcon ? 3 : 2,
+                                                },
+                                            ]}
+                                            onPress={() => setGoalIcon(icon)}
+                                        >
+                                            <Ionicons name={icon as any} size={32} color={goalIconColor} />
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+
+                                {/* Color Selection */}
+                                <Text style={[styles.sectionLabel, { marginBottom: spacing.md, marginTop: spacing.lg }]}>Seleccionar Color</Text>
+                                <ScrollView
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    style={styles.horizontalScroll}
+                                    contentContainerStyle={styles.horizontalScrollContent}
+                                >
+                                    {ICON_COLORS.map(color => (
+                                        <TouchableOpacity
+                                            key={color}
+                                            style={[
+                                                styles.iconOptionBox,
+                                                {
+                                                    backgroundColor: color === goalIconColor ? `${goalIconColor}20` : colors.backgroundSecondary,
+                                                    borderColor: color === goalIconColor ? goalIconColor : colors.border,
+                                                    borderWidth: color === goalIconColor ? 3 : 2,
+                                                },
+                                            ]}
+                                            onPress={() => setGoalIconColor(color)}
+                                        >
+                                            <View style={[styles.colorSwatch, { backgroundColor: color }]} />
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            </View>
                         </Card>
                     </View>
                 )}
@@ -611,7 +661,14 @@ const createStyles = (colors: any) =>
         },
         formCard: {
             padding: spacing.lg,
-            gap: spacing.lg,
+            gap: spacing.md,
+            backgroundColor: colors.backgroundSecondary,
+            borderWidth: 2,
+            borderColor: colors.border,
+            borderRadius: borderRadius.md,
+        },
+        formSection: {
+            gap: spacing.md,
         },
         label: {
             fontSize: 14,
@@ -630,13 +687,22 @@ const createStyles = (colors: any) =>
         inputFlex: {
             flex: 1,
         },
+        // Input específico para campos monetarios dentro de `currencyInput`.
+        inputCurrency: {
+            flex: 1,
+            borderWidth: 0,
+            paddingHorizontal: 0,
+            paddingVertical: spacing.md,
+            fontSize: 16,
+            fontWeight: '500',
+        },
         currencyInput: {
             flexDirection: 'row',
             alignItems: 'center',
             borderWidth: 1,
             borderColor: colors.border,
             borderRadius: borderRadius.md,
-            paddingHorizontal: spacing.md,
+            paddingHorizontal: spacing.sm,
             overflow: 'hidden',
         },
         currencyPrefix: {
@@ -644,6 +710,7 @@ const createStyles = (colors: any) =>
             fontWeight: '600',
             color: colors.textSecondary,
             marginRight: spacing.sm,
+            paddingHorizontal: spacing.md,
         },
         currencyGrid: {
             flexDirection: 'row',
@@ -882,6 +949,12 @@ const createStyles = (colors: any) =>
             marginBottom: spacing.lg,
             justifyContent: 'center',
         },
+        colorGridContainer: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: spacing.md,
+            justifyContent: 'flex-start',
+        },
         colorOptionLarge: {
             width: '20%',
             aspectRatio: 1,
@@ -889,8 +962,9 @@ const createStyles = (colors: any) =>
             minWidth: 60,
         },
         previewContainer: {
+            flexDirection: 'row',
             alignItems: 'center',
-            gap: spacing.md,
+            gap: spacing.lg,
             paddingVertical: spacing.lg,
             paddingHorizontal: spacing.md,
             borderRadius: borderRadius.md,
@@ -929,6 +1003,13 @@ const createStyles = (colors: any) =>
             width: 64,
             height: 64,
             borderRadius: borderRadius.lg,
+        },
+        colorSwatch: {
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            borderWidth: 1,
+            borderColor: 'rgba(0,0,0,0.12)',
         },
         currencyListContainer: {
             flex: 1,
