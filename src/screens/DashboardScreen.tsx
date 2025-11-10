@@ -965,7 +965,7 @@ export const DashboardScreen = ({ navigation }: any) => {
         }}
         onTransactions={() => {
           handleCloseModal();
-          navigation.navigate('Transactions');
+          navigation.navigate('Transactions', { accountId: selectedAccount?.id });
         }}
         onIncome={() => {
           handleCloseModal();

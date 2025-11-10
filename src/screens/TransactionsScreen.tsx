@@ -31,12 +31,15 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   AOA: 'Kz', ETB: 'Br', AUD: 'A$', NZD: 'NZ$', FJD: 'FJ$', BTC: '₿', ETH: 'Ξ',
 };
 
-export const TransactionsScreen = ({ navigation }: any) => {
+export const TransactionsScreen = ({ navigation, route }: any) => {
   const { colors } = useTheme();
   const { transactions, categories, accounts, preferredCurrency } = useAppStore();
   const { rates: exchangeRates } = useExchangeRates();
   const styles = useMemo(() => createStyles(colors, borderRadius), [colors]);
   const insets = useSafeAreaInsets();
+
+  // Get accountId from route params if available
+  const filterAccountId = route?.params?.accountId;
 
   // Use same month selector behavior as ScheduledPayments (prev/next + 12 months)
   const MONTHS_TO_SHOW = 12;
@@ -104,18 +107,18 @@ export const TransactionsScreen = ({ navigation }: any) => {
       });
   }, [transactions]);
 
-  // Transacciones filtradas por mes seleccionado
+  // Transacciones filtradas por mes seleccionado y cuenta (si aplica)
   const filteredTransactions = useMemo(() => {
     return [...transactions]
       .filter((t) => {
         const tDate = new Date(t.date);
-        return (
-          tDate.getFullYear() === selectedDate.getFullYear() &&
-          tDate.getMonth() === selectedDate.getMonth()
-        );
+        const monthMatch = tDate.getFullYear() === selectedDate.getFullYear() && tDate.getMonth() === selectedDate.getMonth();
+        // If accountId filter is provided, only show transactions from that account
+        const accountMatch = !filterAccountId || t.accountId === filterAccountId;
+        return monthMatch && accountMatch;
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [transactions, selectedDate]);
+  }, [transactions, selectedDate, filterAccountId]);
 
   const currentMonthLabel = selectedDate.toLocaleDateString('es-HN', {
     month: 'long',
@@ -132,6 +135,9 @@ export const TransactionsScreen = ({ navigation }: any) => {
     });
     return grouped;
   }, [filteredTransactions]);
+
+  // Get the filtered account if available
+  const filteredAccount = filterAccountId ? accounts.find((a) => a.id === filterAccountId) : null;
 
   return (
     <View style={styles.container}>
@@ -164,7 +170,22 @@ export const TransactionsScreen = ({ navigation }: any) => {
         {filteredTransactions.length === 0 ? (
           <View style={styles.emptyInline}>
             <Ionicons name="receipt-outline" size={48} color={colors.textTertiary} />
-            <Text style={styles.emptyText}>Sin transacciones</Text>
+            <Text style={styles.emptyText}>
+              {filterAccountId ? `Sin transacciones en ${filteredAccount?.title}` : 'Sin transacciones'}
+            </Text>
+            {filterAccountId && (
+              <TouchableOpacity
+                onPress={() => {
+                  // Clear the filter to show all transactions
+                  navigation.setParams({ accountId: undefined });
+                }}
+                style={[styles.viewAllButton, { backgroundColor: colors.primary }]}
+              >
+                <Text style={[styles.viewAllButtonText, { color: 'white' }]}>
+                  Ver todas las transacciones
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
           Object.entries(transactionsByDay).map(([day, dayTransactions]) => (
@@ -205,15 +226,39 @@ export const TransactionsScreen = ({ navigation }: any) => {
                             <Text style={styles.transactionTitle}>
                               {displayCategoryName}
                             </Text>
-                            <Text style={styles.transactionDescription}>
-                              {transaction.description}
-                            </Text>
-                            <Text style={styles.transactionTime}>
-                              {new Date(transaction.date).toLocaleTimeString('es-HN', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </Text>
+                            {transaction.description && (
+                              <Text style={styles.transactionDescription}>
+                                {transaction.description}
+                              </Text>
+                            )}
+                            <View style={styles.transactionMetaInfo}>
+                              {(() => {
+                                const account = transaction.accountId ? accounts.find(a => a.id === transaction.accountId) : undefined;
+                                const time = new Date(transaction.date).toLocaleTimeString('es-HN', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                });
+
+                                return (
+                                  <View style={styles.metaRow}>
+                                    {account && (
+                                      <>
+                                        <View style={styles.accountBadge}>
+                                          <Ionicons name={account.icon as any} size={12} color={account.color} />
+                                          <Text style={[styles.accountName, { color: account.color }]}>
+                                            {account.title}
+                                          </Text>
+                                        </View>
+                                        <Text style={styles.metaSeparator}>•</Text>
+                                      </>
+                                    )}
+                                    <Text style={styles.transactionTime}>
+                                      {time}
+                                    </Text>
+                                  </View>
+                                );
+                              })()}
+                            </View>
                           </View>
                         </View>
                         <View style={styles.transactionRight}>
@@ -401,6 +446,31 @@ const createStyles = (colors: any, br: any) => StyleSheet.create({
     color: colors.textTertiary,
     marginTop: 2,
   },
+  transactionMetaInfo: {
+    marginTop: spacing.xs,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  metaSeparator: {
+    fontSize: typography.sizes.xs,
+    color: colors.textTertiary,
+  },
+  accountBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    backgroundColor: 'transparent',
+    borderRadius: 4,
+  },
+  accountName: {
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.medium,
+  },
   transactionRight: {
     alignItems: 'flex-end',
     justifyContent: 'space-between',
@@ -494,6 +564,18 @@ const createStyles = (colors: any, br: any) => StyleSheet.create({
   emptyInline: {
     alignItems: 'center',
     paddingVertical: spacing.lg,
+  },
+  viewAllButton: {
+    marginTop: spacing.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewAllButtonText: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold,
   },
   emptyContainer: {
     flexGrow: 1,

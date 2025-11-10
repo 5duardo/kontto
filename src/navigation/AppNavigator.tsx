@@ -76,7 +76,7 @@ export type RootStackParamList = {
   SyncSettings: undefined;
   NotificationsSettings: undefined;
   SecuritySettings: undefined;
-  Transactions: undefined;
+  Transactions: { accountId?: string } | undefined;
   Authentication: undefined;
 };
 

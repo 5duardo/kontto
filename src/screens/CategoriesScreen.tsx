@@ -157,7 +157,7 @@ export const CategoriesScreen = ({ navigation }: any) => {
         </View>
         <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
       </TouchableOpacity>
-      {!category.isDefault && (
+      {!category.isDefault && category.id !== 'adjustment' && category.name !== 'Ajuste de saldo' && (
         <TouchableOpacity
           style={styles.deleteButton}
           onPress={() => handleDeleteCategory(category)}

@@ -584,23 +584,27 @@ export const SetupOnboardingScreen: React.FC<SetupOnboardingScreenProps> = ({ on
 
             {/* Navigation Buttons */}
             <View style={[styles.buttonContainer, { backgroundColor: colors.background }]}>
-                <View style={styles.buttonWrapper}>
-                    <Button
-                        title={currentStepIndex === 0 ? 'Omitir' : 'Anterior'}
-                        onPress={currentStepIndex === 0 ? onComplete : handlePrev}
-                        variant="outline"
-                        size="large"
+                <TouchableOpacity
+                    onPress={currentStepIndex === 0 ? onComplete : handlePrev}
+                    style={[styles.iconButtonNav, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}
+                >
+                    <Ionicons
+                        name={currentStepIndex === 0 ? 'close' : 'chevron-back'}
+                        size={24}
+                        color={colors.textPrimary}
                     />
-                </View>
+                </TouchableOpacity>
 
-                <View style={styles.buttonWrapper}>
-                    <Button
-                        title={currentStepIndex === steps.length - 1 ? 'Finalizar' : 'Siguiente'}
-                        onPress={handleStepComplete}
-                        variant="solidPrimary"
-                        size="large"
+                <TouchableOpacity
+                    onPress={handleStepComplete}
+                    style={[styles.iconButtonNav, { backgroundColor: colors.primary }]}
+                >
+                    <Ionicons
+                        name={currentStepIndex === steps.length - 1 ? 'checkmark' : 'chevron-forward'}
+                        size={24}
+                        color="#FFFFFF"
                     />
-                </View>
+                </TouchableOpacity>
             </View>
         </SafeAreaView>
     );
@@ -740,11 +744,11 @@ const createStyles = (colors: any) =>
             color: colors.primary,
         },
         typeSelector: {
-            flexDirection: 'row',
+            flexDirection: 'column',
             gap: spacing.md,
         },
         typeOption: {
-            flex: 1,
+            width: '100%',
             paddingVertical: spacing.md,
             paddingHorizontal: spacing.md,
             borderRadius: borderRadius.md,
@@ -752,7 +756,8 @@ const createStyles = (colors: any) =>
             backgroundColor: colors.backgroundSecondary,
             alignItems: 'center',
             justifyContent: 'center',
-            gap: spacing.sm,
+            gap: spacing.md,
+            flexDirection: 'row',
         },
         typeOptionActive: {
             backgroundColor: `${colors.primary}20`,
@@ -780,6 +785,14 @@ const createStyles = (colors: any) =>
             fontSize: 14,
             fontWeight: '600',
             color: colors.textSecondary,
+        },
+        iconButtonNav: {
+            width: '50%',
+            height: 56,
+            borderRadius: borderRadius.md,
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderWidth: 2,
         },
         modalOverlay: {
             flex: 1,
@@ -907,7 +920,7 @@ const createStyles = (colors: any) =>
             paddingVertical: spacing.lg,
             borderTopWidth: 1,
             borderTopColor: colors.border,
-            justifyContent: 'space-between',
+            justifyContent: 'center',
         },
         buttonWrapper: {
             flex: 0.48,

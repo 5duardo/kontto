@@ -7,7 +7,7 @@ import { AppNavigator } from '@navigation/AppNavigator';
 import { ThemeProvider, useTheme } from '@theme';
 import { LoadingScreen } from '@components';
 import { OnboardingScreen, SetupOnboardingScreen } from '@screens';
-import { useAppLoading, useOnboarding } from '@hooks';
+import { useAppLoading, useOnboarding, useRevenueCat } from '@hooks';
 import { useAppStore } from '@store/useAppStore';
 
 function AppContent() {
@@ -15,6 +15,9 @@ function AppContent() {
   const { isLoading, finishLoading } = useAppLoading();
   const { hasCompletedOnboarding, completeOnboarding, hasCompletedSetupOnboarding, completeSetupOnboarding } = useOnboarding();
   const { migrateData } = useAppStore();
+
+  // Initialize RevenueCat subscriptions
+  const { isInitializing } = useRevenueCat();
 
   useEffect(() => {
     // Migrate data to ensure all transactions have accountId

@@ -1,15 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, typography, useTheme } from '../theme';
 import { useAppStore, FREE_LIMITS } from '../store/useAppStore';
+import { useRevenueCat } from '@hooks/useRevenueCat';
+import { OfficialRevenueCatPaywall } from '@components/OfficialRevenueCatPaywall';
 
 interface ProFeature {
   id: string;
@@ -72,6 +75,7 @@ const PRO_FEATURES: ProFeature[] = [
 export const GetProScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   // Get current counts from store to show comparison
   const accountsCount = useAppStore(state => state.accounts.length);
@@ -80,20 +84,8 @@ export const GetProScreen = ({ navigation }: any) => {
   const recurringCount = useAppStore(state => state.recurringPayments.length);
   const isPro = useAppStore(state => state.isPro);
 
-  const setPro = useAppStore(state => state.setPro);
-
-  // Handle purchase - just unlock Pro locally
-  const handlePurchase = async (productId: string) => {
-    Alert.alert(
-      'Función deshabilitada',
-      'Las compras in-app no están disponibles en esta versión.\n\nPro está habilitado manualmente para pruebas.',
-      [{
-        text: 'Aceptar', onPress: () => {
-          setPro(true);
-        }
-      }]
-    );
-  };
+  // Get RevenueCat subscription status
+  const { hasKottoPro, subscriptionRenewalDate, isInitializing } = useRevenueCat();
 
   // Small reusable simple pricing card to keep all boxes identical and minimal
   const PricingCard = ({
@@ -129,7 +121,21 @@ export const GetProScreen = ({ navigation }: any) => {
     </View>
   );
 
-  // renderFeature removed — features are shown in the comparison table instead
+  // Show paywall modal when requested
+  if (showPaywall) {
+    return (
+      <Modal
+        visible={true}
+        animationType="slide"
+        onRequestClose={() => setShowPaywall(false)}
+      >
+        <OfficialRevenueCatPaywall
+          onClose={() => setShowPaywall(false)}
+          onPurchaseSuccess={() => setShowPaywall(false)}
+        />
+      </Modal>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -142,27 +148,56 @@ export const GetProScreen = ({ navigation }: any) => {
             Desbloquea todas las funciones premium y lleva tu gestión financiera al siguiente nivel
           </Text>
         </View>
-        {/* Plan actual (badge con subtítulo) */}
-        <View style={[
-          styles.planBadge,
-          isPro
-            ? { backgroundColor: `${colors.success}18`, borderColor: colors.success }
-            : { backgroundColor: `${colors.primary}12`, borderColor: colors.primary },
-        ]}>
-          <Ionicons name={isPro ? 'checkmark-circle' : 'information-circle'} size={18} color={isPro ? colors.success : colors.primary} style={styles.planBadgeIcon} />
-          <View style={styles.planBadgeTextContainer}>
-            <Text style={[styles.planBadgeText, isPro ? { color: colors.success } : { color: colors.primary }]}>
-              {isPro ? 'Pro activo' : 'Plan gratuito activo'}
-            </Text>
-            <Text style={[styles.planBadgeSubText, isPro ? { color: colors.success } : { color: colors.textSecondary }]}>
-              {isPro
-                ? 'Tienes acceso a todas las funciones.'
-                : 'Mejora a Pro para disfrutar de funciones avanzadas y recursos ilimitados.'}
+
+        {/* Current Status */}
+        {isInitializing ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={{ marginTop: spacing.md, color: colors.textSecondary }}>
+              Verificando suscripción...
             </Text>
           </View>
-        </View>
+        ) : (
+          <View
+            style={[
+              styles.planBadge,
+              hasKottoPro || isPro
+                ? { backgroundColor: `${colors.success}18`, borderColor: colors.success }
+                : { backgroundColor: `${colors.primary}12`, borderColor: colors.primary },
+            ]}
+          >
+            <Ionicons
+              name={hasKottoPro || isPro ? 'checkmark-circle' : 'information-circle'}
+              size={18}
+              color={hasKottoPro || isPro ? colors.success : colors.primary}
+              style={styles.planBadgeIcon}
+            />
+            <View style={styles.planBadgeTextContainer}>
+              <Text
+                style={[
+                  styles.planBadgeText,
+                  hasKottoPro || isPro ? { color: colors.success } : { color: colors.primary },
+                ]}
+              >
+                {hasKottoPro || isPro ? 'Pro activo' : 'Plan gratuito activo'}
+              </Text>
+              <Text
+                style={[
+                  styles.planBadgeSubText,
+                  hasKottoPro || isPro ? { color: colors.success } : { color: colors.textSecondary },
+                ]}
+              >
+                {hasKottoPro || isPro
+                  ? subscriptionRenewalDate
+                    ? `Renovación: ${subscriptionRenewalDate.toLocaleDateString()}`
+                    : 'Tienes acceso a todas las funciones.'
+                  : 'Mejora a Pro para disfrutar de funciones avanzadas y recursos ilimitados.'}
+              </Text>
+            </View>
+          </View>
+        )}
 
-        {/* Comparison Section: Free vs Pro (resources + premium features) */}
+        {/* Comparison Section: Free vs Pro */}
         <View style={styles.comparisonSection}>
           <Text style={styles.sectionTitle}>Comparación: Gratis vs Pro</Text>
 
@@ -179,7 +214,12 @@ export const GetProScreen = ({ navigation }: any) => {
               { key: 'accounts', label: 'Cuentas', used: accountsCount, limit: FREE_LIMITS.accounts },
               { key: 'goals', label: 'Metas', used: goalsCount, limit: FREE_LIMITS.goals },
               { key: 'budgets', label: 'Presupuestos', used: budgetsCount, limit: FREE_LIMITS.budgets },
-              { key: 'recurring', label: 'Pagos programados', used: recurringCount, limit: FREE_LIMITS.recurringPayments },
+              {
+                key: 'recurring',
+                label: 'Pagos programados',
+                used: recurringCount,
+                limit: FREE_LIMITS.recurringPayments,
+              },
             ].map((item) => {
               const atLimit = item.used >= item.limit;
               return (
@@ -188,8 +228,7 @@ export const GetProScreen = ({ navigation }: any) => {
                     <Text style={styles.resourceName}>{item.label}</Text>
                   </View>
                   <View style={[styles.cellCenter, { width: 96 }]}>
-                    <Text style={[styles.freeValue, atLimit && { color: colors.error }]}
-                    >
+                    <Text style={[styles.freeValue, atLimit && { color: colors.error }]}>
                       {item.used}/{item.limit}
                     </Text>
                   </View>
@@ -203,9 +242,8 @@ export const GetProScreen = ({ navigation }: any) => {
 
           {/* Premium features rows */}
           <View style={[styles.comparisonContainer, { marginTop: spacing.md }]}>
-            {PRO_FEATURES
-              .filter(f => !['unlimited', 'recurring-transactions', 'budget-tracking'].includes(f.id))
-              .map((feature) => (
+            {PRO_FEATURES.filter(f => !['unlimited', 'recurring-transactions', 'budget-tracking'].includes(f.id)).map(
+              (feature) => (
                 <View key={feature.id} style={styles.tableRowFeature}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.featureName}>{feature.title}</Text>
@@ -219,57 +257,24 @@ export const GetProScreen = ({ navigation }: any) => {
                     <Ionicons name="checkmark-circle" size={20} color={colors.success} />
                   </View>
                 </View>
-              ))}
-          </View>
-
-          {/* comparisonNote removed to keep table compact */}
-        </View>
-
-        {/* Current Plan Info removed (now displayed as badge above) */}
-
-        {/* Features Section removed: premium features are displayed inside the comparison table above */}
-
-        {/* Subscription Plans Section (simplified uniform boxes) */}
-        <View style={styles.pricingSection}>
-          <Text style={styles.sectionTitle}>Elige tu plan</Text>
-
-          <View style={styles.pricingList}>
-            <PricingCard
-              icon="flash"
-              title="1 Semana"
-              price="$0.99"
-              period="/sem"
-              subtitle="Prueba Pro"
-              onPress={() => handlePurchase('weekly')}
-            />
-
-            <PricingCard
-              icon="calendar"
-              title="1 Mes"
-              price="$2.99"
-              period="/mes"
-              subtitle="Renovable"
-              onPress={() => handlePurchase('monthly')}
-            />
-
-            <PricingCard
-              icon="trending-down"
-              title="1 Año"
-              price="$9.99"
-              period="/año"
-              subtitle="Mejor precio"
-              onPress={() => handlePurchase('annual')}
-            />
-
-            <PricingCard
-              icon="diamond"
-              title="De por vida"
-              price="$19.99"
-              subtitle="Pago único"
-              onPress={() => handlePurchase('lifetime')}
-            />
+              )
+            )}
           </View>
         </View>
+
+        {/* CTA Section */}
+        {!isPro && !hasKottoPro && (
+          <View style={styles.ctaSection}>
+            <TouchableOpacity
+              style={[styles.ctaButton, { backgroundColor: colors.primary }]}
+              onPress={() => setShowPaywall(true)}
+            >
+              <Ionicons name="lock-open" size={18} color="#FFF" />
+              <Text style={styles.ctaButtonText}>Ver opciones de suscripción</Text>
+              <Ionicons name="chevron-forward" size={18} color="#FFF" />
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
@@ -631,6 +636,32 @@ const createStyles = (colors: any) => StyleSheet.create({
   planBadgeSubText: {
     fontSize: typography.sizes.sm,
     marginTop: spacing.xs,
+  },
+  loadingContainer: {
+    marginHorizontal: spacing.md,
+    marginTop: spacing.lg,
+    paddingVertical: spacing.xl,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ctaSection: {
+    marginHorizontal: spacing.md,
+    marginTop: spacing.xl,
+    marginBottom: spacing.lg,
+  },
+  ctaButton: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ctaButtonText: {
+    fontSize: typography.sizes.base,
+    fontWeight: typography.weights.semibold,
+    color: '#FFF',
+    marginHorizontal: spacing.sm,
   },
 });
 

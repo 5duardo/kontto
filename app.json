@@ -36,8 +36,7 @@
     },
     "owner": "5duardo",
     "plugins": [
-      "expo-system-ui",
-      "react-native-iap"
+      "expo-system-ui"
     ]
   }
 }
